@@ -304,8 +304,19 @@
         }
 
         function copyToClipboard(text) {
-            navigator.clipboard.writeText(text);
-            alert('Link copied to clipboard!');
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                alert('Link copied to clipboard!');
+            } catch (err) {
+                alert('Failed to copy. Please copy manually: ' + text);
+            }
+            document.body.removeChild(textarea);
         }
 
         function addCourseToList(course) {
