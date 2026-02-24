@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - AKC Feedback Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="AKC Logo" class="logo" style="max-height: 50px; margin-right: 15px;">
+            <h1>AKC Feedback Management System</h1>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('courses')">Create Course Link</button>
+            <button class="tab" onclick="showTab('forms')">Edit Form Questions</button>
+            <button class="tab" onclick="showTab('existing')">Existing Course Links</button>
+        </div>
+
+        <div id="courses" class="tab-content active">
+            <div class="card">
+                <div class="card-header">Create New Course Evaluation Link</div>
+                <div class="card-body">
+                    <form id="createCourseForm">
+                        <div class="form-group">
+                            <label>Select Form Type:</label>
+                            <select id="formSelect" name="form_id" required onchange="updateFormFields()">
+                                {% for form_id, form in config.forms.items() %}
+                                <option value="{{ form_id }}">{{ form.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Course Title:</label>
+                            <input type="text" id="courseTitle" name="course_title" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Course Date:</label>
+                            <input type="date" id="courseDate" name="course_date" required>
+                        </div>
+                    
+                        <div class="form-group" id="classroomGroup">
+                            <label>Classroom:</label>
+                            <input type="text" id="classroom" name="classroom">
+                        </div>
+                    
+                        <div class="form-group" id="assessmentLocationGroup" style="display: none;">
+                            <label>Assessment Location:</label>
+                            <input type="text" id="assessmentLocation" name="assessment_location">
+                        </div>
+                        
+                        <div id="instructorSection">
+                            <div class="form-group">
+                                <label>Number of Instructors:</label>
+                                <select id="numInstructors" name="num_instructors" onchange="updateInstructorFields()">
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                </select>
+                            </div>
+                            
+                            <div class="instructor-fields" id="instructorFields">
+                                <div class="instructor-field">
+                                    <label>Instructor 1:</label>
+                                    <input type="text" name="instructor_1">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="assessorSection" style="display: none;">
+                            <div class="form-group">
+                                <label>Number of Assessors:</label>
+                                <select id="numAssessors" name="num_assessors" onchange="updateAssessorFields()">
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                </select>
+                            </div>
+                            
+                            <div class="instructor-fields" id="assessorFields">
+                                <div class="instructor-field">
+                                    <label>Assessor 1:</label>
+                                    <input type="text" name="assessor_1">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Generate Link</button>
+                    </form>
+                    
+                    <div id="generatedLink" style="display: none; margin-top: 20px;">
+                        <div class="alert alert-success">
+                            <strong>Course link generated successfully!</strong>
+                            <p>Share this link with participants:</p>
+                            <input type="text" id="linkInput" readonly style="width: 100%; margin-top: 10px;">
+                            <button class="btn btn-secondary btn-sm" onclick="copyLink()" style="margin-top: 10px;">Copy Link</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="forms" class="tab-content">
+            <div class="card">
+                <div class="card-header">Edit Form Questions</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>Select Form to Edit:</label>
+                        <select id="editFormSelect" onchange="loadFormForEdit()">
+                            {% for form_id, form in config.forms.items() %}
+                            <option value="{{ form_id }}">{{ form.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div id="formEditor"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="existing" class="tab-content">
+            <div class="card">
+                <div class="card-header">Existing Course Evaluation Links</div>
+                <div class="card-body">
+                    <ul class="course-list" id="courseList">
+                        {% for course in config.courses %}
+                        <li class="course-item" id="course-{{ course.id }}">
+                            <div class="course-info">
+                                <h4>{{ course.course_title }} <span style="font-size: 12px; color: #666;">({{ course.form_id }})</span></h4>
+                                {% if course.form_id == 'form2' %}
+                                <p>Date: {{ course.course_date }} | Location: {{ course.assessment_location }}</p>
+                                <p>Assessors: {{ course.assessors | join(', ') }}</p>
+                                {% else %}
+                                <p>Date: {{ course.course_date }} | Classroom: {{ course.classroom }}</p>
+                                <p>Instructors: {{ course.instructors | join(', ') }}</p>
+                                {% endif %}
+                                <p class="course-link">{{ request.host_url }}form/{{ course.id }}</p>
+                            </div>
+                            <div class="course-actions">
+                                <button class="btn btn-secondary btn-sm" onclick="copyToClipboard('{{ request.host_url }}form/{{ course.id }}')">Copy Link</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteCourse('{{ course.id }}')">Delete</button>
+                            </div>
+                        </li>
+                        {% else %}
+                        <li class="course-item" id="noCourses">
+                            <p>No courses created yet.</p>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="addQuestionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Question</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="addQuestionForm">
+                <input type="hidden" id="modalSectionId">
+                <div class="form-group">
+                    <label>Question ID:</label>
+                    <input type="text" id="newQuestionId" required>
+                </div>
+                <div class="form-group">
+                    <label>Question Text:</label>
+                    <textarea id="newQuestionText" rows="3" required></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Question</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentFormId = 'form1';
+        let currentFormData = null;
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+            
+            if (tabId === 'forms') {
+                loadFormForEdit();
+            }
+        }
+
+        function updateFormFields() {
+            const formType = document.getElementById('formSelect').value;
+            
+            if (formType === 'form2') {
+                document.getElementById('classroomGroup').style.display = 'none';
+                document.getElementById('assessmentLocationGroup').style.display = 'block';
+                document.getElementById('instructorSection').style.display = 'none';
+                document.getElementById('assessorSection').style.display = 'block';
+            } else {
+                document.getElementById('classroomGroup').style.display = 'block';
+                document.getElementById('assessmentLocationGroup').style.display = 'none';
+                document.getElementById('instructorSection').style.display = 'block';
+                document.getElementById('assessorSection').style.display = 'none';
+            }
+        }
+
+        function updateInstructorFields() {
+            const num = parseInt(document.getElementById('numInstructors').value);
+            const container = document.getElementById('instructorFields');
+            
+            let html = '';
+            for (let i = 1; i <= num; i++) {
+                html += `
+                    <div class="instructor-field">
+                        <label>Instructor ${i}:</label>
+                        <input type="text" name="instructor_${i}" required>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function updateAssessorFields() {
+            const num = parseInt(document.getElementById('numAssessors').value);
+            const container = document.getElementById('assessorFields');
+            
+            let html = '';
+            for (let i = 1; i <= num; i++) {
+                html += `
+                    <div class="instructor-field">
+                        <label>Assessor ${i}:</label>
+                        <input type="text" name="assessor_${i}" required>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        document.getElementById('createCourseForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const formType = formData.get('form_id');
+            
+            let data = {
+                form_id: formType,
+                course_title: formData.get('course_title'),
+                course_date: formData.get('course_date')
+            };
+            
+            if (formType === 'form2') {
+                const numAssessors = parseInt(formData.get('num_assessors'));
+                const assessors = [];
+                for (let i = 1; i <= numAssessors; i++) {
+                    assessors.push(formData.get(`assessor_${i}`));
+                }
+                data.assessment_location = formData.get('assessment_location');
+                data.num_assessors = numAssessors;
+                data.assessors = assessors;
+            } else {
+                const numInstructors = parseInt(formData.get('num_instructors'));
+                const instructors = [];
+                for (let i = 1; i <= numInstructors; i++) {
+                    instructors.push(formData.get(`instructor_${i}`));
+                }
+                data.classroom = formData.get('classroom');
+                data.num_instructors = numInstructors;
+                data.instructors = instructors;
+            }
+            
+            try {
+                const response = await fetch('/api/courses', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const link = window.location.origin + '/form/' + result.course.id;
+                    document.getElementById('linkInput').value = link;
+                    document.getElementById('generatedLink').style.display = 'block';
+                    addCourseToList(result.course);
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('An error occurred. Please try again.');
+            }
+        });
+
+        function copyLink() {
+            const linkInput = document.getElementById('linkInput');
+            linkInput.select();
+            document.execCommand('copy');
+            alert('Link copied to clipboard!');
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+            alert('Link copied to clipboard!');
+        }
+
+        function addCourseToList(course) {
+            const list = document.getElementById('courseList');
+            const noCourses = document.getElementById('noCourses');
+            if (noCourses) noCourses.remove();
+            const li = document.createElement('li');
+            li.className = 'course-item';
+            li.id = `course-${course.id}`;
+            
+            let locationInfo, personnelInfo;
+            if (course.form_id === 'form2') {
+                locationInfo = `Date: ${course.course_date} | Location: ${course.assessment_location}`;
+                personnelInfo = `Assessors: ${course.assessors.join(', ')}`;
+            } else {
+                locationInfo = `Date: ${course.course_date} | Classroom: ${course.classroom}`;
+                personnelInfo = `Instructors: ${course.instructors.join(', ')}`;
+            }
+            
+            li.innerHTML = `
+                <div class="course-info">
+                    <h4>${course.course_title} <span style="font-size: 12px; color: #666;">(${course.form_id})</span></h4>
+                    <p>${locationInfo}</p>
+                    <p>${personnelInfo}</p>
+                    <p class="course-link">${window.location.origin}/form/${course.id}</p>
+                </div>
+                <div class="course-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="copyToClipboard('${window.location.origin}/form/${course.id}')">Copy Link</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteCourse('${course.id}')">Delete</button>
+                </div>
+            `;
+            list.prepend(li);
+        }
+
+        async function deleteCourse(courseId) {
+            if (!confirm('Are you sure you want to delete this course link?')) return;
+            
+            try {
+                const response = await fetch(`/api/courses/${courseId}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById(`course-${courseId}`).remove();
+                }
+            } catch (error) {
+                alert('An error occurred. Please try again.');
+            }
+        }
+
+        async function loadFormForEdit() {
+            currentFormId = document.getElementById('editFormSelect').value;
+            
+            try {
+                const response = await fetch(`/api/forms/${currentFormId}`);
+                currentFormData = await response.json();
+                renderFormEditor();
+            } catch (error) {
+                alert('Error loading form data');
+            }
+        }
+
+        function renderFormEditor() {
+            const container = document.getElementById('formEditor');
+            let html = '';
+            
+            for (const section of currentFormData.sections) {
+                html += `
+                    <div class="card" style="margin-top: 20px;">
+                        <div class="card-header">
+                            ${section.id} - ${section.title || 'Questions'}
+                            <span style="font-size: 12px; margin-left: 10px;">(${section.type})</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="question-editor">
+                `;
+                
+                for (const question of section.questions) {
+                    html += `
+                        <div class="question-item" id="q-${section.id}-${question.id}">
+                            <strong style="min-width: 50px;">${question.id}</strong>
+                            <input type="text" value="${question.text}" 
+                                   onchange="updateQuestion('${section.id}', '${question.id}', this.value)">
+                            <button class="btn btn-danger btn-sm" 
+                                    onclick="deleteQuestion('${section.id}', '${question.id}')">Delete</button>
+                        </div>
+                    `;
+                }
+                
+                html += `
+                            </div>
+                            <button class="btn btn-success btn-sm" style="margin-top: 10px;" 
+                                    onclick="openAddQuestionModal('${section.id}')">+ Add Question</button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="saveForm()">Save All Changes</button>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        function updateQuestion(sectionId, questionId, newText) {
+            for (const section of currentFormData.sections) {
+                if (section.id === sectionId) {
+                    for (const question of section.questions) {
+                        if (question.id === questionId) {
+                            question.text = newText;
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Delete question
+        async function deleteQuestion(sectionId, questionId) {
+            if (!confirm('Are you sure you want to delete this question?')) return;
+            
+            try {
+                const response = await fetch(`/api/forms/${currentFormId}/sections/${sectionId}/questions/${questionId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    document.getElementById(`q-${sectionId}-${questionId}`).remove();
+                    for (const section of currentFormData.sections) {
+                        if (section.id === sectionId) {
+                            section.questions = section.questions.filter(q => q.id !== questionId);
+                            break;
+                        }
+                    }
+                }
+            } catch (error) {
+                alert('Error deleting question');
+            }
+        }
+
+        function openAddQuestionModal(sectionId) {
+            document.getElementById('modalSectionId').value = sectionId;
+            document.getElementById('newQuestionId').value = '';
+            document.getElementById('newQuestionText').value = '';
+            document.getElementById('addQuestionModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('addQuestionModal').classList.remove('show');
+        }
+
+        document.getElementById('addQuestionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const sectionId = document.getElementById('modalSectionId').value;
+            const questionId = document.getElementById('newQuestionId').value;
+            const questionText = document.getElementById('newQuestionText').value;
+            
+            try {
+                const response = await fetch(`/api/forms/${currentFormId}/sections/${sectionId}/questions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: questionId, text: questionText })
+                });
+                
+                if (response.ok) {
+                    closeModal();
+                    loadFormForEdit();
+                }
+            } catch (error) {
+                alert('Error adding question');
+            }
+        });
+
+        async function saveForm() {
+            try {
+                const response = await fetch(`/api/forms/${currentFormId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(currentFormData)
+                });
+                
+                if (response.ok) {
+                    alert('Form saved successfully!');
+                } else {
+                    alert('Error saving form');
+                }
+            } catch (error) {
+                alert('Error saving form');
+            }
+        }
+    </script>
+</body>
+</html>

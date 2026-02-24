@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ form.title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="form-container" id="formContainer">
+        <!-- Header -->
+        <div class="form-header">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="AKC Logo" class="logo">
+            <div class="form-title">
+                <h1>{{ form.title }}</h1>
+            </div>
+            <div class="form-number">{{ form.formNumber }}</div>
+        </div>
+
+        <!-- Description -->
+        <div class="form-description">
+            {{ form.description }}
+        </div>
+
+        <form id="evaluationForm">
+            <div class="header-fields">
+                <div class="header-field">
+                    <label>Course Title:</label>
+                    <input type="text" value="{{ course.course_title }}" readonly>
+                </div>
+                <div class="header-field">
+                    {% if form.id == 'form2' %}
+                    <label>Assessment Location:</label>
+                    <input type="text" value="{{ course.assessment_location }}" readonly>
+                    {% else %}
+                    <label>Classroom:</label>
+                    <input type="text" value="{{ course.classroom }}" readonly>
+                    {% endif %}
+                </div>
+                <div class="header-field">
+                    <label>Course Date:</label>
+                    <input type="text" value="{{ course.course_date }}" readonly>
+                </div>
+                <div class="header-field">
+                    <label>Name (Optional):</label>
+                    <input type="text" name="name" id="name">
+                </div>
+                <div class="header-field">
+                    <label>Position:</label>
+                    <input type="text" name="position" id="position" required>
+                </div>
+            </div>
+
+            <div class="rating-legend">
+                <span>Please rate:</span>
+                <span>① Poor</span>
+                <span>② Unsatisfactory</span>
+                <span>③ Satisfactory</span>
+                <span>④ Very Good</span>
+                <span>⑤ Excellent</span>
+            </div>
+
+            {% for section in form.sections %}
+                {% if section.type == 'rating' %}
+                    <div class="form-section">
+                        {% if section.title %}
+                        <div class="section-title">{{ section.id }} &nbsp;&nbsp; {{ section.title }}</div>
+                        {% endif %}
+                        {% for question in section.questions %}
+                        <div class="question-row">
+                            <span class="question-number">{{ loop.index }}</span>
+                            <span class="question-text">{{ question.text }}</span>
+                            <div class="rating-options">
+                                {% for i in range(1, 6) %}
+                                <div class="rating-option">
+                                    <input type="radio" name="{{ question.id }}" id="{{ question.id }}_{{ i }}" value="{{ i }}" required>
+                                    <label for="{{ question.id }}_{{ i }}">{{ i }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                {% elif section.type == 'instructor_rating' %}
+                    {% for inst_num in range(1, course.num_instructors + 1) %}
+                    <div class="form-section">
+                        <div class="section-title instructor">
+                            B{{ inst_num }} &nbsp;&nbsp; Instructor {{ inst_num }}: {{ course.instructors[inst_num - 1] if course.instructors|length >= inst_num else '' }}
+                        </div>
+                        {% for question in section.questions %}
+                        <div class="question-row">
+                            <span class="question-number">{{ question.id }}</span>
+                            <span class="question-text">{{ question.text }}</span>
+                            <div class="rating-options">
+                                {% for i in range(1, 6) %}
+                                <div class="rating-option">
+                                    <input type="radio" name="B{{ inst_num }}_{{ question.id }}" id="B{{ inst_num }}_{{ question.id }}_{{ i }}" value="{{ i }}" required>
+                                    <label for="B{{ inst_num }}_{{ question.id }}_{{ i }}">{{ i }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+
+                {% elif section.type == 'assessor_rating' %}
+                    {% for assess_num in range(1, course.num_assessors + 1) %}
+                    <div class="form-section">
+                        <div class="section-title instructor">
+                            A{{ assess_num }} &nbsp;&nbsp; Assessor {{ assess_num }}: {{ course.assessors[assess_num - 1] if course.assessors|length >= assess_num else '' }}
+                        </div>
+                        {% for question in section.questions %}
+                        <div class="question-row">
+                            <span class="question-number">{{ question.id }}</span>
+                            <span class="question-text">{{ question.text }}</span>
+                            <div class="rating-options">
+                                {% for i in range(1, 6) %}
+                                <div class="rating-option">
+                                    <input type="radio" name="A{{ assess_num }}_{{ question.id }}" id="A{{ assess_num }}_{{ question.id }}_{{ i }}" value="{{ i }}" required>
+                                    <label for="A{{ assess_num }}_{{ question.id }}_{{ i }}">{{ i }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+
+                {% elif section.type == 'text_questions' %}
+                    <div class="form-section text-section">
+                        {% for question in section.questions %}
+                        <div class="text-question">
+                            <div class="text-question-header">
+                                <span class="text-question-id">{{ question.id }}</span>
+                                <span class="text-question-label">{{ question.text }}</span>
+                            </div>
+                            <textarea name="{{ question.id }}" id="{{ question.id }}" rows="4"></textarea>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+
+            <div class="submit-section">
+                <button type="submit" class="submit-btn" id="submitBtn">Submit Evaluation</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="form-container success-message" id="successMessage" style="display: none;">
+        <h2>✓ Thank You!</h2>
+        <p>Your evaluation has been submitted successfully.</p>
+        <p>We appreciate your feedback!</p>
+    </div>
+
+    <script>
+        document.getElementById('evaluationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+            const formData = new FormData(this);
+            const data = {};
+            
+            for (let [key, value] of formData.entries()) {
+                data[key] = value;
+            }
+            
+            try {
+                const response = await fetch('/api/submit/{{ course.id }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('formContainer').style.display = 'none';
+                    document.getElementById('successMessage').style.display = 'block';
+                } else {
+                    alert('Error: ' + result.error);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit Evaluation';
+                }
+            } catch (error) {
+                alert('An error occurred. Please try again.');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Evaluation';
+            }
+        });
+    </script>
+</body>
+</html>

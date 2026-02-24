@@ -1,0 +1,330 @@
+from flask import Flask, render_template, request, jsonify, redirect, url_for
+import json
+import os
+from datetime import datetime
+from openpyxl import Workbook, load_workbook
+import uuid
+
+app = Flask(__name__)
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(BASE_DIR, 'config.json')
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+
+os.makedirs(DATA_DIR, exist_ok=True)
+
+
+def load_config():
+    """Load configuration from JSON file"""
+    with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def save_config(config):
+    """Save configuration to JSON file"""
+    with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
+        json.dump(config, f, indent=2, ensure_ascii=False)
+
+
+def get_excel_path(form_id):
+    """Get the Excel file path for a form"""
+    return os.path.join(DATA_DIR, f'{form_id}_responses.xlsx')
+
+
+def init_excel(form_id):
+    """Initialize Excel file with headers if it doesn't exist"""
+    excel_path = get_excel_path(form_id)
+    
+    if os.path.exists(excel_path):
+        return
+    
+    config = load_config()
+    form = config['forms'].get(form_id)
+    if not form:
+        return
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Responses"
+    headers = ['Submission Time']
+    
+    for field in form['headerFields']:
+        headers.append(field['label'].replace(' (Optional)', ''))
+    
+    for section in form['sections']:
+        if section['type'] == 'rating':
+            for q in section['questions']:
+                headers.append(q['id'])
+        elif section['type'] == 'instructor_rating':
+            # Add columns for up to 3 instructors
+            for i in range(1, 4):
+                headers.append(f'Instructor {i} Name')
+                for q in section['questions']:
+                    headers.append(f'B{i}-{q["id"]}')
+        elif section['type'] == 'assessor_rating':
+            # Add columns for up to 2 assessors
+            for i in range(1, 3):
+                headers.append(f'Assessor {i} Name')
+                for q in section['questions']:
+                    headers.append(f'A{i}-{q["id"]}')
+        elif section['type'] == 'text_questions':
+            for q in section['questions']:
+                headers.append(q['id'])
+    
+    ws.append(headers)
+    wb.save(excel_path)
+
+
+def save_response(form_id, course_id, data):
+    """Save form response to Excel"""
+    excel_path = get_excel_path(form_id)
+    init_excel(form_id)
+    
+    config = load_config()
+    form = config['forms'].get(form_id)
+    
+    course = None
+    for c in config['courses']:
+        if c['id'] == course_id:
+            course = c
+            break
+    
+    wb = load_workbook(excel_path)
+    ws = wb.active
+    
+    row = [datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
+    row.append(course['course_title'] if course else '')
+    row.append(course['course_date'] if course else '')
+    if form_id == 'form2':
+        row.append(course.get('assessment_location', '') if course else '')
+    else:
+        row.append(course.get('classroom', '') if course else '')
+    row.append(data.get('name', ''))
+    row.append(data.get('position', ''))
+    
+    # Ratings
+    for section in form['sections']:
+        if section['type'] == 'rating':
+            for q in section['questions']:
+                row.append(data.get(q['id'], ''))
+        elif section['type'] == 'instructor_rating':
+            num_instructors = course.get('num_instructors', 1) if course else 1
+            instructors = course.get('instructors', []) if course else []
+            
+            for i in range(1, 4):
+                if i <= num_instructors and i <= len(instructors):
+                    row.append(instructors[i-1])
+                    for q in section['questions']:
+                        row.append(data.get(f'B{i}_{q["id"]}', ''))
+                else:
+                    row.append('')  # Instructor name
+                    for q in section['questions']:
+                        row.append('')  # Empty rating
+        elif section['type'] == 'assessor_rating':
+            num_assessors = course.get('num_assessors', 1) if course else 1
+            assessors = course.get('assessors', []) if course else []
+            
+            for i in range(1, 3):
+                if i <= num_assessors and i <= len(assessors):
+                    row.append(assessors[i-1])
+                    for q in section['questions']:
+                        row.append(data.get(f'A{i}_{q["id"]}', ''))
+                else:
+                    row.append('')  # Assessor name
+                    for q in section['questions']:
+                        row.append('')  # Empty rating
+        elif section['type'] == 'text_questions':
+            for q in section['questions']:
+                row.append(data.get(q['id'], ''))
+    
+    ws.append(row)
+    wb.save(excel_path)
+
+@app.route('/')
+def index():
+    """Redirect to admin page"""
+    return redirect(url_for('admin'))
+
+
+@app.route('/admin')
+def admin():
+    """Admin dashboard"""
+    config = load_config()
+    return render_template('admin.html', config=config)
+
+
+@app.route('/admin/form/<form_id>')
+def admin_form(form_id):
+    """Admin page for editing a specific form"""
+    config = load_config()
+    form = config['forms'].get(form_id)
+    if not form:
+        return "Form not found", 404
+    return render_template('admin_form.html', form=form, config=config)
+
+
+@app.route('/api/forms/<form_id>', methods=['GET'])
+def get_form(form_id):
+    """Get form configuration"""
+    config = load_config()
+    form = config['forms'].get(form_id)
+    if not form:
+        return jsonify({'error': 'Form not found'}), 404
+    return jsonify(form)
+
+
+@app.route('/api/forms/<form_id>', methods=['PUT'])
+def update_form(form_id):
+    """Update form configuration"""
+    config = load_config()
+    if form_id not in config['forms']:
+        return jsonify({'error': 'Form not found'}), 404
+    
+    data = request.json
+    config['forms'][form_id] = data
+    save_config(config)
+    return jsonify({'success': True})
+
+
+@app.route('/api/forms/<form_id>/sections', methods=['POST'])
+def add_section(form_id):
+    """Add a new section to form"""
+    config = load_config()
+    if form_id not in config['forms']:
+        return jsonify({'error': 'Form not found'}), 404
+    
+    data = request.json
+    config['forms'][form_id]['sections'].append(data)
+    save_config(config)
+    return jsonify({'success': True})
+
+
+@app.route('/api/forms/<form_id>/sections/<section_id>/questions', methods=['POST'])
+def add_question(form_id, section_id):
+    """Add a question to a section"""
+    config = load_config()
+    if form_id not in config['forms']:
+        return jsonify({'error': 'Form not found'}), 404
+    
+    data = request.json
+    form = config['forms'][form_id]
+    
+    for section in form['sections']:
+        if section['id'] == section_id:
+            section['questions'].append(data)
+            break
+    
+    save_config(config)
+    return jsonify({'success': True})
+
+
+@app.route('/api/forms/<form_id>/sections/<section_id>/questions/<question_id>', methods=['DELETE'])
+def delete_question(form_id, section_id, question_id):
+    """Delete a question from a section"""
+    config = load_config()
+    if form_id not in config['forms']:
+        return jsonify({'error': 'Form not found'}), 404
+    
+    form = config['forms'][form_id]
+    
+    for section in form['sections']:
+        if section['id'] == section_id:
+            section['questions'] = [q for q in section['questions'] if q['id'] != question_id]
+            break
+    
+    save_config(config)
+    return jsonify({'success': True})
+
+
+@app.route('/api/courses', methods=['GET'])
+def get_courses():
+    """Get all courses"""
+    config = load_config()
+    return jsonify(config['courses'])
+
+
+@app.route('/api/courses', methods=['POST'])
+def create_course():
+    """Create a new course instance"""
+    config = load_config()
+    data = request.json
+    
+    course = {
+        'id': str(uuid.uuid4())[:8],
+        'form_id': data['form_id'],
+        'course_title': data['course_title'],
+        'course_date': data['course_date'],
+        'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    }
+    
+    # Form-specific fields
+    if data['form_id'] == 'form2':
+        course['assessment_location'] = data.get('assessment_location', '')
+        course['num_assessors'] = data.get('num_assessors', 1)
+        course['assessors'] = data.get('assessors', [])
+    else:
+        course['classroom'] = data.get('classroom', '')
+        course['num_instructors'] = data.get('num_instructors', 1)
+        course['instructors'] = data.get('instructors', [])
+    
+    config['courses'].append(course)
+    save_config(config)
+    
+    return jsonify({'success': True, 'course': course})
+
+
+@app.route('/api/courses/<course_id>', methods=['DELETE'])
+def delete_course(course_id):
+    """Delete a course"""
+    config = load_config()
+    config['courses'] = [c for c in config['courses'] if c['id'] != course_id]
+    save_config(config)
+    return jsonify({'success': True})
+
+
+@app.route('/form/<course_id>')
+def form_page(course_id):
+    """Public form page for participants to fill"""
+    config = load_config()
+    course = None
+    for c in config['courses']:
+        if c['id'] == course_id:
+            course = c
+            break
+    
+    if not course:
+        return "Course not found. The link may be invalid or expired.", 404
+    
+    form = config['forms'].get(course['form_id'])
+    if not form:
+        return "Form not found", 404
+    
+    return render_template('form.html', form=form, course=course)
+
+
+@app.route('/api/submit/<course_id>', methods=['POST'])
+def submit_form(course_id):
+    """Submit form response"""
+    config = load_config()
+    
+    course = None
+    for c in config['courses']:
+        if c['id'] == course_id:
+            course = c
+            break
+    
+    if not course:
+        return jsonify({'error': 'Course not found'}), 404
+    
+    data = request.json
+    save_response(course['form_id'], course_id, data)
+    
+    return jsonify({'success': True, 'message': 'Thank you for your feedback!'})
+
+
+if __name__ == '__main__':
+    config = load_config()
+    for form_id in config['forms']:
+        init_excel(form_id)
+    
+    app.run(debug=True, host='0.0.0.0', port=5000)
