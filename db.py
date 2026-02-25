@@ -25,11 +25,12 @@ def get_connection():
     """Create and return a database connection."""
     try:
         conn_str = (
-            f'DRIVER={{ODBC Driver 17 for SQL Server}};'
+            f'DRIVER={{ODBC Driver 18 for SQL Server}};'
             f'SERVER={DB_SERVER};'
             f'DATABASE={DB_DATABASE};'
             f'UID={DB_USERNAME};'
-            f'PWD={DB_PASSWORD}'
+            f'PWD={DB_PASSWORD};'
+            f'TrustServerCertificate=yes'
         )
         return pyodbc.connect(conn_str)
     except pyodbc.Error as e:
