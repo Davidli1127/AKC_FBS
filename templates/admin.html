@@ -124,24 +124,23 @@
                 <div class="card-header">View Participants by Course</div>
                 <div class="card-body">
                     <div class="form-group">
-                        <label>Search Course:</label>
+                        <label>Course Code:</label>
                         <div class="course-input-wrapper">
                             <input type="text" id="participantCourseSearch" 
-                                   placeholder="Type course code to search..." 
+                                   placeholder="Enter course code (e.g., ACMDSEN)..." 
                                    autocomplete="off"
                                    oninput="searchParticipantCourses(this.value)">
                             <div id="participantCourseSuggestions" class="suggestions-dropdown" style="display: none;"></div>
                         </div>
+                        <small style="color: #666;">Type course code from database or select from suggestions</small>
                     </div>
                     
-                    <input type="hidden" id="selectedParticipantCourseCode">
-                    
-                    <button class="btn btn-primary" onclick="loadParticipants()" id="loadParticipantsBtn" disabled>
+                    <button class="btn btn-primary" onclick="loadParticipants()" id="loadParticipantsBtn">
                         Load Participants
                     </button>
                     
                     <div id="participantsResult" style="margin-top: 20px;">
-                        <p style="color: #666;">Select a course to view participants.</p>
+                        <p style="color: #666;">Enter a course code and click Load Participants.</p>
                     </div>
                 </div>
             </div>
@@ -319,16 +318,21 @@
         }
         
         function selectParticipantCourse(code, displayText) {
-            document.getElementById('participantCourseSearch').value = displayText;
-            document.getElementById('selectedParticipantCourseCode').value = code;
+            document.getElementById('participantCourseSearch').value = code;
             document.getElementById('participantCourseSuggestions').style.display = 'none';
-            document.getElementById('loadParticipantsBtn').disabled = false;
         }
         
         async function loadParticipants() {
-            const courseCode = document.getElementById('selectedParticipantCourseCode').value;
+            // Get course code from input - either typed manually or selected
+            let courseCode = document.getElementById('participantCourseSearch').value.trim();
+            
+            // If it contains " - ", extract just the code part
+            if (courseCode.includes(' - ')) {
+                courseCode = courseCode.split(' - ')[0].trim();
+            }
+            
             if (!courseCode) {
-                alert('Please select a course first');
+                alert('Please enter a course code first');
                 return;
             }
             
@@ -339,8 +343,13 @@
                 const response = await fetch(`/api/db/participants?course_code=${encodeURIComponent(courseCode)}`);
                 const participants = await response.json();
                 
+                if (participants.error) {
+                    resultDiv.innerHTML = `<p style="color: red;">Error: ${participants.error}</p>`;
+                    return;
+                }
+                
                 if (participants.length > 0) {
-                    let html = `<h4>Found ${participants.length} participants:</h4>`;
+                    let html = `<h4>Found ${participants.length} participants for course "${courseCode}":</h4>`;
                     html += '<table class="participants-table"><thead><tr>';
                     html += '<th>Name</th><th>Email</th><th>Designation</th><th>Survey Sent</th>';
                     html += '</tr></thead><tbody>';
@@ -359,9 +368,10 @@
                     html += '</tbody></table>';
                     resultDiv.innerHTML = html;
                 } else {
-                    resultDiv.innerHTML = '<p style="color: #666;">No participants found for this course.</p>';
+                    resultDiv.innerHTML = `<p style="color: #666;">No participants found for course "${courseCode}".</p>`;
                 }
             } catch (error) {
+                console.error('Error:', error);
                 resultDiv.innerHTML = '<p style="color: red;">Error loading participants. Check database connection.</p>';
             }
         }

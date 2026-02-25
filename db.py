@@ -99,7 +99,7 @@ def get_participants_by_course(course_code):
     """
     conn = get_connection()
     if not conn:
-        return []
+        return {'error': 'Could not connect to database'}
     
     try:
         cursor = conn.cursor()
@@ -112,11 +112,13 @@ def get_participants_by_course(course_code):
                 [Trainee Designation],
                 [Survey Sent]
             FROM {PARTICIPANT_TABLE}
-            WHERE [Course Code] = ?
+            WHERE [Course Code] LIKE ?
             ORDER BY [Participant Name]
         """
         
-        cursor.execute(query, (course_code,))
+        # Use LIKE for flexible matching
+        search_pattern = f'%{course_code}%'
+        cursor.execute(query, (search_pattern,))
         
         participants = []
         for row in cursor.fetchall():
@@ -125,14 +127,14 @@ def get_participants_by_course(course_code):
                 'name': row[1] if row[1] else '',
                 'email': row[2] if row[2] else '',
                 'designation': row[3] if row[3] else '',
-                'survey_sent': row[4] if row[4] else False
+                'survey_sent': bool(row[4]) if row[4] else False
             })
         
         conn.close()
         return participants
     except Exception as e:
         print(f"Error fetching participants: {e}")
-        return []
+        return {'error': str(e)}
 
 
 def update_survey_sent(course_code, participant_name, sent=True):
