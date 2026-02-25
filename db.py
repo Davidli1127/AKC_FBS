@@ -92,10 +92,10 @@ def get_courses_from_db(search_term=None, limit=50):
         return []
 
 
-def get_participants_by_course(course_code):
+def get_participants_by_course(course_code, offset=0, limit=20):
     """
-    Fetch participants for a specific course.
-    Returns list of participant info (name, email, designation, survey_sent).
+    Fetch participants for a specific course with pagination.
+    Returns dict with participants list, total count, and pagination info.
     """
     conn = get_connection()
     if not conn:
@@ -103,7 +103,18 @@ def get_participants_by_course(course_code):
     
     try:
         cursor = conn.cursor()
+        search_pattern = f'%{course_code}%'
         
+        # First get total count
+        count_query = f"""
+            SELECT COUNT(*) 
+            FROM {PARTICIPANT_TABLE}
+            WHERE [Course Code] LIKE ?
+        """
+        cursor.execute(count_query, (search_pattern,))
+        total_count = cursor.fetchone()[0]
+        
+        # Then get paginated results
         query = f"""
             SELECT 
                 [Course Code],
@@ -114,11 +125,11 @@ def get_participants_by_course(course_code):
             FROM {PARTICIPANT_TABLE}
             WHERE [Course Code] LIKE ?
             ORDER BY [Participant Name]
+            OFFSET ? ROWS
+            FETCH NEXT ? ROWS ONLY
         """
         
-        # Use LIKE for flexible matching
-        search_pattern = f'%{course_code}%'
-        cursor.execute(query, (search_pattern,))
+        cursor.execute(query, (search_pattern, offset, limit))
         
         participants = []
         for row in cursor.fetchall():
@@ -131,7 +142,13 @@ def get_participants_by_course(course_code):
             })
         
         conn.close()
-        return participants
+        return {
+            'participants': participants,
+            'total': total_count,
+            'offset': offset,
+            'limit': limit,
+            'has_more': (offset + limit) < total_count
+        }
     except Exception as e:
         print(f"Error fetching participants: {e}")
         return {'error': str(e)}

@@ -264,12 +264,16 @@ def search_db_courses():
 
 @app.route('/api/db/participants', methods=['GET'])
 def get_participants():
-    """Get participants for a course"""
+    """Get participants for a course with pagination"""
     course_code = request.args.get('course_code', '')
+    offset = request.args.get('offset', 0, type=int)
+    limit = request.args.get('limit', 20, type=int)
+    
     if not course_code:
         return jsonify({'error': 'Course code required'}), 400
-    participants = db.get_participants_by_course(course_code)
-    return jsonify(participants)
+    
+    result = db.get_participants_by_course(course_code, offset, limit)
+    return jsonify(result)
 
 
 @app.route('/api/db/update-survey-sent', methods=['POST'])

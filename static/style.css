@@ -652,6 +652,19 @@ body {
     color: #dc3545;
 }
 
+.participants-header {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f0f7ff;
+    border-radius: 5px;
+    border-left: 4px solid #003366;
+}
+
+.participants-header h4 {
+    margin: 0;
+    color: #003366;
+}
+
 @media (max-width: 768px) {
     .form-container {
         margin: 10px;

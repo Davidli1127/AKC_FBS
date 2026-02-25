@@ -322,7 +322,13 @@
             document.getElementById('participantCourseSuggestions').style.display = 'none';
         }
         
-        async function loadParticipants() {
+        // Pagination state
+        let currentCourseCode = '';
+        let currentOffset = 0;
+        let currentLimit = 20;
+        let allParticipants = [];
+        
+        async function loadParticipants(loadMore = false) {
             // Get course code from input - either typed manually or selected
             let courseCode = document.getElementById('participantCourseSearch').value.trim();
             
@@ -337,24 +343,38 @@
             }
             
             const resultDiv = document.getElementById('participantsResult');
-            resultDiv.innerHTML = '<p>Loading...</p>';
+            
+            // Reset if new search
+            if (!loadMore || courseCode !== currentCourseCode) {
+                currentCourseCode = courseCode;
+                currentOffset = 0;
+                allParticipants = [];
+                resultDiv.innerHTML = '<p>Loading...</p>';
+            }
             
             try {
-                const response = await fetch(`/api/db/participants?course_code=${encodeURIComponent(courseCode)}`);
-                const participants = await response.json();
+                const response = await fetch(`/api/db/participants?course_code=${encodeURIComponent(courseCode)}&offset=${currentOffset}&limit=${currentLimit}`);
+                const data = await response.json();
                 
-                if (participants.error) {
-                    resultDiv.innerHTML = `<p style="color: red;">Error: ${participants.error}</p>`;
+                if (data.error) {
+                    resultDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
                     return;
                 }
                 
-                if (participants.length > 0) {
-                    let html = `<h4>Found ${participants.length} participants for course "${courseCode}":</h4>`;
+                // Add new participants to our list
+                allParticipants = allParticipants.concat(data.participants);
+                currentOffset = allParticipants.length;
+                
+                if (data.total > 0) {
+                    let html = `<div class="participants-header">
+                        <h4>Showing ${allParticipants.length} of ${data.total} participants for course "${courseCode}"</h4>
+                    </div>`;
+                    
                     html += '<table class="participants-table"><thead><tr>';
                     html += '<th>Name</th><th>Email</th><th>Designation</th><th>Survey Sent</th>';
-                    html += '</tr></thead><tbody>';
+                    html += '</tr></thead><tbody id="participantsTableBody">';
                     
-                    for (const p of participants) {
+                    for (const p of allParticipants) {
                         const surveyStatus = p.survey_sent ? '✓ Yes' : '✗ No';
                         const statusClass = p.survey_sent ? 'status-sent' : 'status-pending';
                         html += `<tr>
@@ -366,6 +386,20 @@
                     }
                     
                     html += '</tbody></table>';
+                    
+                    // Show "Load More" button if there are more participants
+                    if (data.has_more) {
+                        const remaining = data.total - allParticipants.length;
+                        html += `<div style="text-align: center; margin-top: 15px;">
+                            <button class="btn btn-secondary" onclick="loadParticipants(true)">
+                                Load More (${remaining} remaining)
+                            </button>
+                            <button class="btn btn-secondary" onclick="loadAllParticipants()" style="margin-left: 10px;">
+                                Load All ${data.total} Participants
+                            </button>
+                        </div>`;
+                    }
+                    
                     resultDiv.innerHTML = html;
                 } else {
                     resultDiv.innerHTML = `<p style="color: #666;">No participants found for course "${courseCode}".</p>`;
@@ -373,6 +407,51 @@
             } catch (error) {
                 console.error('Error:', error);
                 resultDiv.innerHTML = '<p style="color: red;">Error loading participants. Check database connection.</p>';
+            }
+        }
+        
+        async function loadAllParticipants() {
+            const courseCode = currentCourseCode;
+            const resultDiv = document.getElementById('participantsResult');
+            resultDiv.innerHTML = '<p>Loading all participants... This may take a moment.</p>';
+            
+            try {
+                // Load with a very high limit to get all
+                const response = await fetch(`/api/db/participants?course_code=${encodeURIComponent(courseCode)}&offset=0&limit=50000`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    resultDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                    return;
+                }
+                
+                allParticipants = data.participants;
+                currentOffset = allParticipants.length;
+                
+                let html = `<div class="participants-header">
+                    <h4>Showing all ${data.total} participants for course "${courseCode}"</h4>
+                </div>`;
+                
+                html += '<table class="participants-table"><thead><tr>';
+                html += '<th>Name</th><th>Email</th><th>Designation</th><th>Survey Sent</th>';
+                html += '</tr></thead><tbody>';
+                
+                for (const p of allParticipants) {
+                    const surveyStatus = p.survey_sent ? '✓ Yes' : '✗ No';
+                    const statusClass = p.survey_sent ? 'status-sent' : 'status-pending';
+                    html += `<tr>
+                        <td>${p.name || '-'}</td>
+                        <td>${p.email || '-'}</td>
+                        <td>${p.designation || '-'}</td>
+                        <td class="${statusClass}">${surveyStatus}</td>
+                    </tr>`;
+                }
+                
+                html += '</tbody></table>';
+                resultDiv.innerHTML = html;
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = '<p style="color: red;">Error loading participants.</p>';
             }
         }
         
