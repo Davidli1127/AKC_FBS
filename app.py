@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from openpyxl import Workbook, load_workbook
 import uuid
 from dotenv import load_dotenv
@@ -13,6 +13,9 @@ app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, 'config.json')
 DATA_DIR = os.path.join(BASE_DIR, 'data')
+
+# Course link expiration time (in hours)
+COURSE_EXPIRY_HOURS = 24
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -27,6 +30,42 @@ def save_config(config):
     """Save configuration to JSON file"""
     with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
+
+
+def clean_expired_courses():
+    """Remove courses that are older than COURSE_EXPIRY_HOURS (default 24 hours)"""
+    config = load_config()
+    now = datetime.now()
+    
+    original_count = len(config['courses'])
+    valid_courses = []
+    
+    for course in config['courses']:
+        created_at = course.get('created_at', '')
+        if created_at:
+            try:
+                created_time = datetime.strptime(created_at, '%Y-%m-%d %H:%M:%S')
+                age_hours = (now - created_time).total_seconds() / 3600
+                
+                if age_hours < COURSE_EXPIRY_HOURS:
+                    valid_courses.append(course)
+                else:
+                    print(f"Removing expired course: {course.get('course_title', 'Unknown')} (created {age_hours:.1f} hours ago)")
+            except ValueError:
+                # If date parsing fails, keep the course
+                valid_courses.append(course)
+        else:
+            # No created_at field, keep the course
+            valid_courses.append(course)
+    
+    removed_count = original_count - len(valid_courses)
+    
+    if removed_count > 0:
+        config['courses'] = valid_courses
+        save_config(config)
+        print(f"Cleaned up {removed_count} expired course(s)")
+    
+    return removed_count
 
 
 def get_excel_path(form_id):
@@ -159,6 +198,8 @@ def index():
 @app.route('/admin')
 def admin():
     """Admin dashboard"""
+    # Clean up expired courses on each admin visit
+    clean_expired_courses()
     config = load_config()
     return render_template('admin.html', config=config)
 
@@ -384,6 +425,10 @@ def submit_form(course_id):
 
 
 if __name__ == '__main__':
+    # Clean up expired courses on startup
+    print("Checking for expired course links...")
+    clean_expired_courses()
+    
     config = load_config()
     for form_id in config['forms']:
         init_excel(form_id)
