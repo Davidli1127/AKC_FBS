@@ -425,7 +425,6 @@ def submit_form(course_id):
 
 
 if __name__ == '__main__':
-    # Clean up expired courses on startup
     print("Checking for expired course links...")
     clean_expired_courses()
     
