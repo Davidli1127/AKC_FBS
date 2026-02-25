@@ -4,6 +4,9 @@ import os
 from datetime import datetime
 from openpyxl import Workbook, load_workbook
 import uuid
+from dotenv import load_dotenv
+load_dotenv()
+import db
 
 app = Flask(__name__)
 
@@ -76,7 +79,7 @@ def init_excel(form_id):
 
 
 def save_response(form_id, course_id, data):
-    """Save form response to Excel"""
+    """Save form response to Excel and database"""
     excel_path = get_excel_path(form_id)
     init_excel(form_id)
     
@@ -89,6 +92,7 @@ def save_response(form_id, course_id, data):
             course = c
             break
     
+    # Save to Excel
     wb = load_workbook(excel_path)
     ws = wb.active
     
@@ -139,6 +143,12 @@ def save_response(form_id, course_id, data):
     
     ws.append(row)
     wb.save(excel_path)
+    
+    # Also save to database
+    try:
+        db.save_to_database(form_id, course_id, course, data)
+    except Exception as e:
+        print(f"Warning: Could not save to database: {e}")
 
 @app.route('/')
 def index():
@@ -234,6 +244,53 @@ def delete_question(form_id, section_id, question_id):
     
     save_config(config)
     return jsonify({'success': True})
+
+
+@app.route('/api/db/test', methods=['GET'])
+def test_db_connection():
+    """Test database connection"""
+    success, message = db.test_connection()
+    return jsonify({'success': success, 'message': message})
+
+
+@app.route('/api/db/courses', methods=['GET'])
+def search_db_courses():
+    """Search courses from database"""
+    search_term = request.args.get('search', '')
+    limit = request.args.get('limit', 50, type=int)
+    courses = db.get_courses_from_db(search_term, limit)
+    return jsonify(courses)
+
+
+@app.route('/api/db/participants', methods=['GET'])
+def get_participants():
+    """Get participants for a course"""
+    course_code = request.args.get('course_code', '')
+    if not course_code:
+        return jsonify({'error': 'Course code required'}), 400
+    participants = db.get_participants_by_course(course_code)
+    return jsonify(participants)
+
+
+@app.route('/api/db/update-survey-sent', methods=['POST'])
+def update_survey_sent():
+    """Update Survey Sent flag for a participant"""
+    data = request.json
+    course_code = data.get('course_code')
+    participant_name = data.get('participant_name')
+    
+    if not course_code or not participant_name:
+        return jsonify({'error': 'Course code and participant name required'}), 400
+    
+    success = db.update_survey_sent(course_code, participant_name, True)
+    return jsonify({'success': success})
+
+
+@app.route('/api/db/create-tables', methods=['POST'])
+def create_tables():
+    """Create feedback tables in database"""
+    success, message = db.create_feedback_tables()
+    return jsonify({'success': success, 'message': message})
 
 
 @app.route('/api/courses', methods=['GET'])

@@ -15,6 +15,7 @@
 
         <div class="tabs">
             <button class="tab active" onclick="showTab('courses')">Create Course Link</button>
+            <button class="tab" onclick="showTab('participants')">View Participants</button>
             <button class="tab" onclick="showTab('forms')">Edit Form Questions</button>
             <button class="tab" onclick="showTab('existing')">Existing Course Links</button>
         </div>
@@ -35,7 +36,20 @@
                         
                         <div class="form-group">
                             <label>Course Title:</label>
-                            <input type="text" id="courseTitle" name="course_title" required>
+                            <div class="course-input-wrapper">
+                                <input type="text" id="courseTitle" name="course_title" required 
+                                       placeholder="Type to search or enter manually..." 
+                                       autocomplete="off"
+                                       oninput="searchCourses(this.value)">
+                                <div id="courseSuggestions" class="suggestions-dropdown" style="display: none;"></div>
+                            </div>
+                            <small style="color: #666;">Type a course code/name from database or enter manually</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Course Code (Optional):</label>
+                            <input type="text" id="courseCode" name="course_code" 
+                                   placeholder="Auto-filled from selection or enter manually">
                         </div>
                         
                         <div class="form-group">
@@ -101,6 +115,43 @@
                             <button class="btn btn-secondary btn-sm" onclick="copyLink()" style="margin-top: 10px;">Copy Link</button>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="participants" class="tab-content">
+            <div class="card">
+                <div class="card-header">View Participants by Course</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>Search Course:</label>
+                        <div class="course-input-wrapper">
+                            <input type="text" id="participantCourseSearch" 
+                                   placeholder="Type course code to search..." 
+                                   autocomplete="off"
+                                   oninput="searchParticipantCourses(this.value)">
+                            <div id="participantCourseSuggestions" class="suggestions-dropdown" style="display: none;"></div>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" id="selectedParticipantCourseCode">
+                    
+                    <button class="btn btn-primary" onclick="loadParticipants()" id="loadParticipantsBtn" disabled>
+                        Load Participants
+                    </button>
+                    
+                    <div id="participantsResult" style="margin-top: 20px;">
+                        <p style="color: #666;">Select a course to view participants.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card" style="margin-top: 20px;">
+                <div class="card-header">Database Status</div>
+                <div class="card-body">
+                    <button class="btn btn-secondary" onclick="testDbConnection()">Test Database Connection</button>
+                    <button class="btn btn-secondary" onclick="createFeedbackTables()">Create Feedback Tables</button>
+                    <div id="dbStatus" style="margin-top: 10px;"></div>
                 </div>
             </div>
         </div>
@@ -184,6 +235,182 @@
     <script>
         let currentFormId = 'form1';
         let currentFormData = null;
+        let searchTimeout = null;
+
+        
+        async function searchCourses(term) {
+            if (searchTimeout) clearTimeout(searchTimeout);
+            
+            const suggestionsDiv = document.getElementById('courseSuggestions');
+            
+            if (term.length < 2) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+            
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/api/db/courses?search=${encodeURIComponent(term)}&limit=10`);
+                    const courses = await response.json();
+                    
+                    if (courses.length > 0) {
+                        let html = '';
+                        for (const course of courses) {
+                            const displayText = course.description 
+                                ? `${course.code} - ${course.description}` 
+                                : course.code;
+                            html += `<div class="suggestion-item" onclick="selectCourse('${course.code}', '${displayText.replace(/'/g, "\\'")}')">
+                                ${displayText}
+                            </div>`;
+                        }
+                        suggestionsDiv.innerHTML = html;
+                        suggestionsDiv.style.display = 'block';
+                    } else {
+                        suggestionsDiv.style.display = 'none';
+                    }
+                } catch (error) {
+                    console.error('Error searching courses:', error);
+                    suggestionsDiv.style.display = 'none';
+                }
+            }, 300);
+        }
+        
+        function selectCourse(code, displayText) {
+            document.getElementById('courseTitle').value = displayText;
+            document.getElementById('courseCode').value = code;
+            document.getElementById('courseSuggestions').style.display = 'none';
+        }
+        
+        async function searchParticipantCourses(term) {
+            if (searchTimeout) clearTimeout(searchTimeout);
+            
+            const suggestionsDiv = document.getElementById('participantCourseSuggestions');
+            
+            if (term.length < 2) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+            
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/api/db/courses?search=${encodeURIComponent(term)}&limit=10`);
+                    const courses = await response.json();
+                    
+                    if (courses.length > 0) {
+                        let html = '';
+                        for (const course of courses) {
+                            const displayText = course.description 
+                                ? `${course.code} - ${course.description}` 
+                                : course.code;
+                            html += `<div class="suggestion-item" onclick="selectParticipantCourse('${course.code}', '${displayText.replace(/'/g, "\\'")}')">
+                                ${displayText}
+                            </div>`;
+                        }
+                        suggestionsDiv.innerHTML = html;
+                        suggestionsDiv.style.display = 'block';
+                    } else {
+                        suggestionsDiv.style.display = 'none';
+                    }
+                } catch (error) {
+                    console.error('Error searching courses:', error);
+                    suggestionsDiv.style.display = 'none';
+                }
+            }, 300);
+        }
+        
+        function selectParticipantCourse(code, displayText) {
+            document.getElementById('participantCourseSearch').value = displayText;
+            document.getElementById('selectedParticipantCourseCode').value = code;
+            document.getElementById('participantCourseSuggestions').style.display = 'none';
+            document.getElementById('loadParticipantsBtn').disabled = false;
+        }
+        
+        async function loadParticipants() {
+            const courseCode = document.getElementById('selectedParticipantCourseCode').value;
+            if (!courseCode) {
+                alert('Please select a course first');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('participantsResult');
+            resultDiv.innerHTML = '<p>Loading...</p>';
+            
+            try {
+                const response = await fetch(`/api/db/participants?course_code=${encodeURIComponent(courseCode)}`);
+                const participants = await response.json();
+                
+                if (participants.length > 0) {
+                    let html = `<h4>Found ${participants.length} participants:</h4>`;
+                    html += '<table class="participants-table"><thead><tr>';
+                    html += '<th>Name</th><th>Email</th><th>Designation</th><th>Survey Sent</th>';
+                    html += '</tr></thead><tbody>';
+                    
+                    for (const p of participants) {
+                        const surveyStatus = p.survey_sent ? '✓ Yes' : '✗ No';
+                        const statusClass = p.survey_sent ? 'status-sent' : 'status-pending';
+                        html += `<tr>
+                            <td>${p.name || '-'}</td>
+                            <td>${p.email || '-'}</td>
+                            <td>${p.designation || '-'}</td>
+                            <td class="${statusClass}">${surveyStatus}</td>
+                        </tr>`;
+                    }
+                    
+                    html += '</tbody></table>';
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = '<p style="color: #666;">No participants found for this course.</p>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<p style="color: red;">Error loading participants. Check database connection.</p>';
+            }
+        }
+        
+        async function testDbConnection() {
+            const statusDiv = document.getElementById('dbStatus');
+            statusDiv.innerHTML = '<span style="color: #666;">Testing connection...</span>';
+            
+            try {
+                const response = await fetch('/api/db/test');
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusDiv.innerHTML = '<span style="color: green;">✓ Database connection successful!</span>';
+                } else {
+                    statusDiv.innerHTML = `<span style="color: red;">✗ Connection failed: ${result.message}</span>`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = '<span style="color: red;">✗ Error testing connection</span>';
+            }
+        }
+        
+        async function createFeedbackTables() {
+            const statusDiv = document.getElementById('dbStatus');
+            statusDiv.innerHTML = '<span style="color: #666;">Creating tables...</span>';
+            
+            try {
+                const response = await fetch('/api/db/create-tables', { method: 'POST' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusDiv.innerHTML = '<span style="color: green;">✓ Feedback tables created successfully!</span>';
+                } else {
+                    statusDiv.innerHTML = `<span style="color: red;">✗ Error: ${result.message}</span>`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = '<span style="color: red;">✗ Error creating tables</span>';
+            }
+        }
+        
+        document.addEventListener('click', function(e) {
+            if (!e.target.matches('#courseTitle') && !e.target.matches('.suggestion-item')) {
+                document.getElementById('courseSuggestions').style.display = 'none';
+            }
+            if (!e.target.matches('#participantCourseSearch') && !e.target.matches('.suggestion-item')) {
+                const elem = document.getElementById('participantCourseSuggestions');
+                if (elem) elem.style.display = 'none';
+            }
+        });
 
         function showTab(tabId) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
