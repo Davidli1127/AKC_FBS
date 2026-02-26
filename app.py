@@ -14,7 +14,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, 'config.json')
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 
-# Course link expiration time (in hours)
+# Course link expiration time
 COURSE_EXPIRY_HOURS = 24
 
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -52,10 +52,8 @@ def clean_expired_courses():
                 else:
                     print(f"Removing expired course: {course.get('course_title', 'Unknown')} (created {age_hours:.1f} hours ago)")
             except ValueError:
-                # If date parsing fails, keep the course
                 valid_courses.append(course)
         else:
-            # No created_at field, keep the course
             valid_courses.append(course)
     
     removed_count = original_count - len(valid_courses)
@@ -68,9 +66,17 @@ def clean_expired_courses():
     return removed_count
 
 
+# Mapping form_id to friendly file names
+FORM_FILE_NAMES = {
+    'form1': 'Trainer_Evaluation',
+    'form2': 'Assessor_Evaluation'
+}
+
+
 def get_excel_path(form_id):
     """Get the Excel file path for a form"""
-    return os.path.join(DATA_DIR, f'{form_id}_responses.xlsx')
+    file_name = FORM_FILE_NAMES.get(form_id, form_id)
+    return os.path.join(DATA_DIR, f'{file_name}_responses.xlsx')
 
 
 def init_excel(form_id):
