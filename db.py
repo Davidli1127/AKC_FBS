@@ -105,8 +105,6 @@ def get_participants_by_class(class_code, offset=0, limit=20):
     try:
         cursor = conn.cursor()
         search_pattern = f'%{class_code}%'
-        
-        # First get total count
         count_query = f"""
             SELECT COUNT(*) 
             FROM {PARTICIPANT_TABLE}
@@ -114,8 +112,6 @@ def get_participants_by_class(class_code, offset=0, limit=20):
         """
         cursor.execute(count_query, (search_pattern,))
         total_count = cursor.fetchone()[0]
-        
-        # Then get paginated results
         query = f"""
             SELECT 
                 [Class Code],
@@ -165,7 +161,6 @@ def update_survey_sent(course_code, participant_name, sent=True):
     
     try:
         cursor = conn.cursor()
-        
         query = f"""
             UPDATE {PARTICIPANT_TABLE}
             SET [Survey Sent] = ?

@@ -94,30 +94,71 @@ def init_excel(form_id):
     wb = Workbook()
     ws = wb.active
     ws.title = "Responses"
-    headers = ['Submission Time']
     
-    for field in form['headerFields']:
-        headers.append(field['label'].replace(' (Optional)', ''))
-    
-    for section in form['sections']:
-        if section['type'] == 'rating':
-            for q in section['questions']:
-                headers.append(q['id'])
-        elif section['type'] == 'instructor_rating':
-            # Add columns for up to 3 instructors
-            for i in range(1, 4):
-                headers.append(f'Instructor {i} Name')
+    if form_id == 'form1':
+        # Trainer Evaluation form 
+        headers = [
+            'COURSE NAME',
+            'DATE',
+            'CLASSROOM',
+            'INSTRUCTOR',
+            'LANGUAGE'
+        ]
+        
+        for section in form['sections']:
+            if section['type'] == 'rating':
                 for q in section['questions']:
-                    headers.append(f'B{i}-{q["id"]}')
-        elif section['type'] == 'assessor_rating':
-            # Add columns for up to 2 assessors
-            for i in range(1, 3):
-                headers.append(f'Assessor {i} Name')
+                    headers.append(f"{q['id']} - {q['text']}")
+            elif section['type'] == 'instructor_rating':
                 for q in section['questions']:
-                    headers.append(f'A{i}-{q["id"]}')
-        elif section['type'] == 'text_questions':
-            for q in section['questions']:
-                headers.append(q['id'])
+                    headers.append(f"B1{q['id']} - {q['text']}")
+            elif section['type'] == 'text_questions':
+                for q in section['questions']:
+                    headers.append(f"{q['id']} - {q['text']}")
+    elif form_id == 'form2':
+        # Assessor Evaluation form
+        headers = [
+            'COURSE NAME',
+            'DATE',
+            'CLASSROOM',
+            'ASSESSOR 1',
+            'ASSESSOR 2',
+            'LANGUAGE'
+        ]
+        
+        for section in form['sections']:
+            if section['type'] == 'assessor_rating':
+                for i in range(1, 3):
+                    for q in section['questions']:
+                        headers.append(f"A{i}.{q['id']} - {q['text']}")
+            elif section['type'] == 'text_questions':
+                for q in section['questions']:
+                    headers.append(f"{q['id']} - {q['text']}")
+    else:
+        headers = ['Submission Time']
+        
+        for field in form['headerFields']:
+            headers.append(field['label'].replace(' (Optional)', ''))
+        
+        for section in form['sections']:
+            if section['type'] == 'rating':
+                for q in section['questions']:
+                    headers.append(q['id'])
+            elif section['type'] == 'instructor_rating':
+                # Add columns for up to 3 instructors
+                for i in range(1, 4):
+                    headers.append(f'Instructor {i} Name')
+                    for q in section['questions']:
+                        headers.append(f'B{i}-{q["id"]}')
+            elif section['type'] == 'assessor_rating':
+                # Add columns for up to 2 assessors
+                for i in range(1, 3):
+                    headers.append(f'Assessor {i} Name')
+                    for q in section['questions']:
+                        headers.append(f'A{i}-{q["id"]}')
+            elif section['type'] == 'text_questions':
+                for q in section['questions']:
+                    headers.append(q['id'])
     
     ws.append(headers)
     wb.save(excel_path)
@@ -141,50 +182,93 @@ def save_response(form_id, course_id, data):
     wb = load_workbook(excel_path)
     ws = wb.active
     
-    row = [datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
-    row.append(course['course_title'] if course else '')
-    row.append(course['course_date'] if course else '')
-    if form_id == 'form2':
-        row.append(course.get('assessment_location', '') if course else '')
-    else:
-        row.append(course.get('classroom', '') if course else '')
-    row.append(data.get('name', ''))
-    row.append(data.get('position', ''))
-    
-    # Ratings
-    for section in form['sections']:
-        if section['type'] == 'rating':
-            for q in section['questions']:
-                row.append(data.get(q['id'], ''))
-        elif section['type'] == 'instructor_rating':
-            num_instructors = course.get('num_instructors', 1) if course else 1
-            instructors = course.get('instructors', []) if course else []
-            
-            for i in range(1, 4):
-                if i <= num_instructors and i <= len(instructors):
-                    row.append(instructors[i-1])
-                    for q in section['questions']:
-                        row.append(data.get(f'B{i}_{q["id"]}', ''))
-                else:
-                    row.append('')  # Instructor name
-                    for q in section['questions']:
-                        row.append('')  # Empty rating
-        elif section['type'] == 'assessor_rating':
-            num_assessors = course.get('num_assessors', 1) if course else 1
-            assessors = course.get('assessors', []) if course else []
-            
-            for i in range(1, 3):
-                if i <= num_assessors and i <= len(assessors):
-                    row.append(assessors[i-1])
+    if form_id == 'form1':
+        instructors = course.get('instructors', []) if course else []
+        instructor_name = instructors[0] if instructors else ''
+        
+        row = [
+            course['course_title'] if course else '',
+            course['course_date'] if course else '',
+            course.get('classroom', '') if course else '',
+            instructor_name,
+            ''
+        ]
+        
+        for section in form['sections']:
+            if section['type'] == 'rating':
+                for q in section['questions']:
+                    row.append(data.get(q['id'], ''))
+            elif section['type'] == 'instructor_rating':
+                for q in section['questions']:
+                    row.append(data.get(f'B1_{q["id"]}', ''))
+            elif section['type'] == 'text_questions':
+                for q in section['questions']:
+                    row.append(data.get(q['id'], ''))
+    elif form_id == 'form2':
+        # Assessor Evaluation form
+        assessors = course.get('assessors', []) if course else []
+        assessor1_name = assessors[0] if len(assessors) > 0 else ''
+        assessor2_name = assessors[1] if len(assessors) > 1 else ''
+        
+        row = [
+            course['course_title'] if course else '',
+            course['course_date'] if course else '',
+            course.get('classroom', '') if course else '',
+            assessor1_name,
+            assessor2_name,
+            '' 
+        ]
+        
+        for section in form['sections']:
+            if section['type'] == 'assessor_rating':
+                for i in range(1, 3):
                     for q in section['questions']:
                         row.append(data.get(f'A{i}_{q["id"]}', ''))
-                else:
-                    row.append('')  # Assessor name
-                    for q in section['questions']:
-                        row.append('')  # Empty rating
-        elif section['type'] == 'text_questions':
-            for q in section['questions']:
-                row.append(data.get(q['id'], ''))
+            elif section['type'] == 'text_questions':
+                for q in section['questions']:
+                    row.append(data.get(q['id'], ''))
+    else:
+        row = [datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
+        row.append(course['course_title'] if course else '')
+        row.append(course['course_date'] if course else '')
+        row.append(course.get('classroom', '') if course else '')
+        row.append(data.get('name', ''))
+        row.append(data.get('position', ''))
+        
+        # Ratings
+        for section in form['sections']:
+            if section['type'] == 'rating':
+                for q in section['questions']:
+                    row.append(data.get(q['id'], ''))
+            elif section['type'] == 'instructor_rating':
+                num_instructors = course.get('num_instructors', 1) if course else 1
+                instructors = course.get('instructors', []) if course else []
+                
+                for i in range(1, 4):
+                    if i <= num_instructors and i <= len(instructors):
+                        row.append(instructors[i-1])
+                        for q in section['questions']:
+                            row.append(data.get(f'B{i}_{q["id"]}', ''))
+                    else:
+                        row.append('')  # Instructor name
+                        for q in section['questions']:
+                            row.append('')  # Empty rating
+            elif section['type'] == 'assessor_rating':
+                num_assessors = course.get('num_assessors', 1) if course else 1
+                assessors = course.get('assessors', []) if course else []
+                
+                for i in range(1, 3):
+                    if i <= num_assessors and i <= len(assessors):
+                        row.append(assessors[i-1])
+                        for q in section['questions']:
+                            row.append(data.get(f'A{i}_{q["id"]}', ''))
+                    else:
+                        row.append('')  # Assessor name
+                        for q in section['questions']:
+                            row.append('')  # Empty rating
+            elif section['type'] == 'text_questions':
+                for q in section['questions']:
+                    row.append(data.get(q['id'], ''))
     
     ws.append(row)
     wb.save(excel_path)
@@ -203,7 +287,6 @@ def index():
 @app.route('/admin')
 def admin():
     """Admin dashboard"""
-    # Clean up expired courses on each admin visit
     clean_expired_courses()
     config = load_config()
     return render_template('admin.html', config=config)
