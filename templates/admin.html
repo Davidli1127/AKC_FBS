@@ -35,15 +35,9 @@
                         </div>
                         
                         <div class="form-group">
-                            <label>Class Code (Course Title):</label>
-                            <div class="course-input-wrapper">
-                                <input type="text" id="courseTitle" name="course_title" required 
-                                       placeholder="Enter class code..." 
-                                       autocomplete="off"
-                                       oninput="searchCourses(this.value)">
-                                <div id="courseSuggestions" class="suggestions-dropdown" style="display: none;"></div>
-                            </div>
-                            <small style="color: #666;">Enter the class code (this will be used to find participants)</small>
+                            <label>Course Title:</label>
+                            <input type="text" id="courseTitle" name="course_title" required 
+                                   placeholder="Enter course title...">
                         </div>
                         
                         <div class="form-group">
@@ -317,37 +311,37 @@
         }
         
         // Pagination state
-        let currentCourseCode = '';
+        let currentClassCode = '';
         let currentOffset = 0;
         let currentLimit = 20;
         let allParticipants = [];
         
         async function loadParticipants(loadMore = false) {
-            // Get course code from input - either typed manually or selected
-            let courseCode = document.getElementById('participantCourseSearch').value.trim();
+            // Get class code from input - either typed manually or selected
+            let classCode = document.getElementById('participantCourseSearch').value.trim();
             
             // If it contains " - ", extract just the code part
-            if (courseCode.includes(' - ')) {
-                courseCode = courseCode.split(' - ')[0].trim();
+            if (classCode.includes(' - ')) {
+                classCode = classCode.split(' - ')[0].trim();
             }
             
-            if (!courseCode) {
-                alert('Please enter a course code first');
+            if (!classCode) {
+                alert('Please enter a class code first');
                 return;
             }
             
             const resultDiv = document.getElementById('participantsResult');
             
             // Reset if new search
-            if (!loadMore || courseCode !== currentCourseCode) {
-                currentCourseCode = courseCode;
+            if (!loadMore || classCode !== currentClassCode) {
+                currentClassCode = classCode;
                 currentOffset = 0;
                 allParticipants = [];
                 resultDiv.innerHTML = '<p>Loading...</p>';
             }
             
             try {
-                const response = await fetch(`/api/db/participants?course_code=${encodeURIComponent(courseCode)}&offset=${currentOffset}&limit=${currentLimit}`);
+                const response = await fetch(`/api/db/participants?class_code=${encodeURIComponent(classCode)}&offset=${currentOffset}&limit=${currentLimit}`);
                 const data = await response.json();
                 
                 if (data.error) {
@@ -361,7 +355,7 @@
                 
                 if (data.total > 0) {
                     let html = `<div class="participants-header">
-                        <h4>Showing ${allParticipants.length} of ${data.total} participants for class "${courseCode}"</h4>
+                        <h4>Showing ${allParticipants.length} of ${data.total} participants for class "${classCode}"</h4>
                     </div>`;
                     
                     html += '<table class="participants-table"><thead><tr>';
@@ -396,7 +390,7 @@
                     
                     resultDiv.innerHTML = html;
                 } else {
-                    resultDiv.innerHTML = `<p style="color: #666;">No participants found for class "${courseCode}".</p>`;
+                    resultDiv.innerHTML = `<p style="color: #666;">No participants found for class "${classCode}".</p>`;
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -405,13 +399,13 @@
         }
         
         async function loadAllParticipants() {
-            const courseCode = currentCourseCode;
+            const classCode = currentClassCode;
             const resultDiv = document.getElementById('participantsResult');
             resultDiv.innerHTML = '<p>Loading all participants... This may take a moment.</p>';
             
             try {
                 // Load with a very high limit to get all
-                const response = await fetch(`/api/db/participants?course_code=${encodeURIComponent(courseCode)}&offset=0&limit=50000`);
+                const response = await fetch(`/api/db/participants?class_code=${encodeURIComponent(classCode)}&offset=0&limit=50000`);
                 const data = await response.json();
                 
                 if (data.error) {
@@ -423,7 +417,7 @@
                 currentOffset = allParticipants.length;
                 
                 let html = `<div class="participants-header">
-                    <h4>Showing all ${data.total} participants for class "${courseCode}"</h4>
+                    <h4>Showing all ${data.total} participants for class "${classCode}"</h4>
                 </div>`;
                 
                 html += '<table class="participants-table"><thead><tr>';

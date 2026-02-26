@@ -311,15 +311,15 @@ def search_db_courses():
 
 @app.route('/api/db/participants', methods=['GET'])
 def get_participants():
-    """Get participants for a course with pagination"""
-    course_code = request.args.get('course_code', '')
+    """Get participants for a class with pagination"""
+    class_code = request.args.get('class_code', '')
     offset = request.args.get('offset', 0, type=int)
     limit = request.args.get('limit', 20, type=int)
     
-    if not course_code:
-        return jsonify({'error': 'Course code required'}), 400
+    if not class_code:
+        return jsonify({'error': 'Class code required'}), 400
     
-    result = db.get_participants_by_course(course_code, offset, limit)
+    result = db.get_participants_by_class(class_code, offset, limit)
     return jsonify(result)
 
 

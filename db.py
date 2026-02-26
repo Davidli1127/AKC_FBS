@@ -92,10 +92,11 @@ def get_courses_from_db(search_term=None, limit=50):
         return []
 
 
-def get_participants_by_course(course_code, offset=0, limit=20):
+def get_participants_by_class(class_code, offset=0, limit=20):
     """
-    Fetch participants for a specific course with pagination.
+    Fetch participants for a specific class with pagination.
     Returns dict with participants list, total count, and pagination info.
+    Uses [Class Code] column instead of [Course Code].
     """
     conn = get_connection()
     if not conn:
@@ -103,13 +104,13 @@ def get_participants_by_course(course_code, offset=0, limit=20):
     
     try:
         cursor = conn.cursor()
-        search_pattern = f'%{course_code}%'
+        search_pattern = f'%{class_code}%'
         
         # First get total count
         count_query = f"""
             SELECT COUNT(*) 
             FROM {PARTICIPANT_TABLE}
-            WHERE [Course Code] LIKE ?
+            WHERE [Class Code] LIKE ?
         """
         cursor.execute(count_query, (search_pattern,))
         total_count = cursor.fetchone()[0]
@@ -117,13 +118,13 @@ def get_participants_by_course(course_code, offset=0, limit=20):
         # Then get paginated results
         query = f"""
             SELECT 
-                [Course Code],
+                [Class Code],
                 [Participant Name],
                 [Email Address],
                 [Trainee Designation],
                 [Survey Sent]
             FROM {PARTICIPANT_TABLE}
-            WHERE [Course Code] LIKE ?
+            WHERE [Class Code] LIKE ?
             ORDER BY [Participant Name]
             OFFSET ? ROWS
             FETCH NEXT ? ROWS ONLY
@@ -134,7 +135,7 @@ def get_participants_by_course(course_code, offset=0, limit=20):
         participants = []
         for row in cursor.fetchall():
             participants.append({
-                'course_code': row[0] if row[0] else '',
+                'class_code': row[0] if row[0] else '',
                 'name': row[1] if row[1] else '',
                 'email': row[2] if row[2] else '',
                 'designation': row[3] if row[3] else '',
