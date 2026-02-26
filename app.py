@@ -384,6 +384,70 @@ def delete_question(form_id, section_id, question_id):
     return jsonify({'success': True})
 
 
+@app.route('/api/forms/<form_id>/update-excel', methods=['POST'])
+def update_excel_columns(form_id):
+    """Update Excel columns based on form changes"""
+    try:
+        excel_path = get_excel_path(form_id)
+        
+        if not os.path.exists(excel_path):
+            return jsonify({'success': True, 'message': 'Excel file does not exist yet, will be created on first response'})
+        
+        changes = request.json
+        added_questions = changes.get('addedQuestions', [])
+        deleted_questions = changes.get('deletedQuestions', [])
+        modified_questions = changes.get('modifiedQuestions', [])
+        
+        wb = load_workbook(excel_path)
+        ws = wb.active
+        headers = [cell.value for cell in ws[1]]
+        
+        for mod in modified_questions:
+            q_id = mod['questionId']
+            new_text = mod['newText']
+            section_id = mod['sectionId']
+            for col_idx, header in enumerate(headers):
+                if header and header.startswith(f"{q_id} -"):
+                    ws.cell(row=1, column=col_idx + 1).value = f"{q_id} - {new_text}"
+                    headers[col_idx] = f"{q_id} - {new_text}"
+                    break
+    
+        for added in added_questions:
+            q_id = added['questionId']
+            q_text = added['questionText']
+            section_id = added['sectionId']
+            new_header = f"{q_id} - {q_text}"
+            new_col = len(headers) + 1
+            ws.cell(row=1, column=new_col).value = new_header
+            headers.append(new_header)
+        
+        columns_to_delete = []
+        for deleted in deleted_questions:
+            q_id = deleted['questionId']
+            delete_data = deleted.get('deleteData', False)
+            for col_idx, header in enumerate(headers):
+                if header and (header.startswith(f"{q_id} -") or header == q_id):
+                    if delete_data:
+                        columns_to_delete.append(col_idx + 1)  
+                    else:
+                        ws.cell(row=1, column=col_idx + 1).value = f"[REMOVED] {header}"
+                    break
+        
+        for col_idx in sorted(columns_to_delete, reverse=True):
+            ws.delete_cols(col_idx)
+        
+        wb.save(excel_path)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Excel updated: {len(added_questions)} added, {len(modified_questions)} modified, {len(deleted_questions)} deleted'
+        })
+        
+    except Exception as e:
+        print(f"Error updating Excel: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/db/test', methods=['GET'])
 def test_db_connection():
     """Test database connection"""

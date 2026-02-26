@@ -219,9 +219,26 @@
         </div>
     </div>
 
+    <div class="modal" id="confirmChangesModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>Confirm Form Changes</h2>
+                <button class="modal-close" onclick="closeConfirmModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="confirmChangesBody">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="confirmAndSave()">Confirm & Save</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentFormId = 'form1';
         let currentFormData = null;
+        let originalFormData = null; 
+        let pendingChanges = null; 
         let searchTimeout = null;
 
         
@@ -677,6 +694,7 @@
             try {
                 const response = await fetch(`/api/forms/${currentFormId}`);
                 currentFormData = await response.json();
+                originalFormData = JSON.parse(JSON.stringify(currentFormData));
                 renderFormEditor();
             } catch (error) {
                 alert('Error loading form data');
@@ -743,26 +761,15 @@
         }
 
         // Delete question
-        async function deleteQuestion(sectionId, questionId) {
-            if (!confirm('Are you sure you want to delete this question?')) return;
-            
-            try {
-                const response = await fetch(`/api/forms/${currentFormId}/sections/${sectionId}/questions/${questionId}`, {
-                    method: 'DELETE'
-                });
-                
-                if (response.ok) {
-                    document.getElementById(`q-${sectionId}-${questionId}`).remove();
-                    for (const section of currentFormData.sections) {
-                        if (section.id === sectionId) {
-                            section.questions = section.questions.filter(q => q.id !== questionId);
-                            break;
-                        }
-                    }
+        function deleteQuestion(sectionId, questionId) {
+            if (!confirm('Mark this question for deletion? Click "Save All Changes" to apply.')) return;
+            for (const section of currentFormData.sections) {
+                if (section.id === sectionId) {
+                    section.questions = section.questions.filter(q => q.id !== questionId);
+                    break;
                 }
-            } catch (error) {
-                alert('Error deleting question');
             }
+            renderFormEditor();
         }
 
         function openAddQuestionModal(sectionId) {
@@ -783,24 +790,165 @@
             const questionId = document.getElementById('newQuestionId').value;
             const questionText = document.getElementById('newQuestionText').value;
             
-            try {
-                const response = await fetch(`/api/forms/${currentFormId}/sections/${sectionId}/questions`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: questionId, text: questionText })
-                });
-                
-                if (response.ok) {
-                    closeModal();
-                    loadFormForEdit();
+
+            for (const section of currentFormData.sections) {
+                if (section.id === sectionId) {
+                    section.questions.push({ id: questionId, text: questionText });
+                    break;
                 }
-            } catch (error) {
-                alert('Error adding question');
             }
+            closeModal();
+            renderFormEditor();
         });
 
+        function detectFormChanges() {
+            const changes = {
+                addedQuestions: [],
+                deletedQuestions: [],
+                modifiedQuestions: []
+            };
+            
+            const originalQuestions = new Map();
+            const currentQuestions = new Map();
+            
+            for (const section of originalFormData.sections) {
+                for (const q of section.questions) {
+                    const key = `${section.id}:${q.id}`;
+                    originalQuestions.set(key, { section: section, question: q });
+                }
+            }
+            
+            for (const section of currentFormData.sections) {
+                for (const q of section.questions) {
+                    const key = `${section.id}:${q.id}`;
+                    currentQuestions.set(key, { section: section, question: q });
+                }
+            }
+            
+            for (const [key, data] of currentQuestions) {
+                if (!originalQuestions.has(key)) {
+                    changes.addedQuestions.push({
+                        sectionId: data.section.id,
+                        sectionTitle: data.section.title,
+                        questionId: data.question.id,
+                        questionText: data.question.text
+                    });
+                } else {
+                    const original = originalQuestions.get(key);
+                    if (original.question.text !== data.question.text) {
+                        changes.modifiedQuestions.push({
+                            sectionId: data.section.id,
+                            questionId: data.question.id,
+                            oldText: original.question.text,
+                            newText: data.question.text
+                        });
+                    }
+                }
+            }
+            
+            for (const [key, data] of originalQuestions) {
+                if (!currentQuestions.has(key)) {
+                    changes.deletedQuestions.push({
+                        sectionId: data.section.id,
+                        sectionTitle: data.section.title,
+                        questionId: data.question.id,
+                        questionText: data.question.text,
+                        deleteData: false  // Default: keep data in Excel
+                    });
+                }
+            }
+            return changes;
+        }
+
+        function showConfirmationModal(changes) {
+            const body = document.getElementById('confirmChangesBody');
+            let html = '';
+            
+            if (changes.addedQuestions.length === 0 && 
+                changes.deletedQuestions.length === 0 && 
+                changes.modifiedQuestions.length === 0) {
+                html = '<p>No changes detected. Form will be saved.</p>';
+            } else {
+                if (changes.addedQuestions.length > 0) {
+                    html += '<div style="margin-bottom: 15px;"><h4 style="color: #28a745;">➕ Questions to Add:</h4>';
+                    html += '<p style="color: #666; font-size: 12px;">New columns will be added to the Excel file.</p>';
+                    html += '<ul>';
+                    for (const q of changes.addedQuestions) {
+                        html += `<li><strong>${q.questionId}</strong> (Section ${q.sectionId}): ${q.questionText}</li>`;
+                    }
+                    html += '</ul></div>';
+                }
+                
+                if (changes.modifiedQuestions.length > 0) {
+                    html += '<div style="margin-bottom: 15px;"><h4 style="color: #ffc107;">✏️ Questions Modified:</h4>';
+                    html += '<p style="color: #666; font-size: 12px;">Excel column headers will be updated.</p>';
+                    html += '<ul>';
+                    for (const q of changes.modifiedQuestions) {
+                        html += `<li><strong>${q.questionId}</strong>: "${q.oldText}" → "${q.newText}"</li>`;
+                    }
+                    html += '</ul></div>';
+                }
+                
+                if (changes.deletedQuestions.length > 0) {
+                    html += '<div style="margin-bottom: 15px;"><h4 style="color: #dc3545;">🗑️ Questions to Delete:</h4>';
+                    html += '<p style="color: #666; font-size: 12px;">Choose whether to delete existing data for each question:</p>';
+                    for (let i = 0; i < changes.deletedQuestions.length; i++) {
+                        const q = changes.deletedQuestions[i];
+                        html += `
+                            <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 5px;">
+                                <strong>${q.questionId}</strong> (Section ${q.sectionId}): ${q.questionText}
+                                <div style="margin-top: 8px;">
+                                    <label style="margin-right: 15px;">
+                                        <input type="radio" name="deleteData_${i}" value="keep" checked 
+                                               onchange="pendingChanges.deletedQuestions[${i}].deleteData = false">
+                                        Keep existing data in Excel
+                                    </label>
+                                    <label style="color: #dc3545;">
+                                        <input type="radio" name="deleteData_${i}" value="delete"
+                                               onchange="pendingChanges.deletedQuestions[${i}].deleteData = true">
+                                        Delete column and data from Excel
+                                    </label>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    html += '</div>';
+                }
+            }
+            
+            body.innerHTML = html;
+            document.getElementById('confirmChangesModal').classList.add('show');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmChangesModal').classList.remove('show');
+            pendingChanges = null;
+        }
+
         async function saveForm() {
+            // Detect changes
+            pendingChanges = detectFormChanges();
+            showConfirmationModal(pendingChanges);
+        }
+
+        async function confirmAndSave() {
             try {
+                if (pendingChanges.addedQuestions.length > 0 || 
+                    pendingChanges.deletedQuestions.length > 0 ||
+                    pendingChanges.modifiedQuestions.length > 0) {
+                    
+                    const excelResponse = await fetch(`/api/forms/${currentFormId}/update-excel`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(pendingChanges)
+                    });
+                    
+                    if (!excelResponse.ok) {
+                        const error = await excelResponse.json();
+                        alert('Error updating Excel: ' + (error.error || 'Unknown error'));
+                        return;
+                    }
+                }
                 const response = await fetch(`/api/forms/${currentFormId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -808,12 +956,15 @@
                 });
                 
                 if (response.ok) {
-                    alert('Form saved successfully!');
+                    closeConfirmModal();
+                    originalFormData = JSON.parse(JSON.stringify(currentFormData));
+                    alert('Form and Excel updated successfully!');
                 } else {
                     alert('Error saving form');
                 }
             } catch (error) {
-                alert('Error saving form');
+                console.error('Error:', error);
+                alert('Error saving form: ' + error.message);
             }
         }
     </script>
