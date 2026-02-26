@@ -101,7 +101,9 @@ def init_excel(form_id):
             'COURSE NAME',
             'DATE',
             'CLASSROOM',
-            'INSTRUCTOR',
+            'INSTRUCTOR 1',
+            'INSTRUCTOR 2',
+            'INSTRUCTOR 3',
             'LANGUAGE'
         ]
         
@@ -188,13 +190,17 @@ def save_response(form_id, course_id, data):
     
     if form_id == 'form1':
         instructors = course.get('instructors', []) if course else []
-        instructor_name = instructors[0] if instructors else ''
+        instructor1_name = instructors[0] if len(instructors) > 0 else ''
+        instructor2_name = instructors[1] if len(instructors) > 1 else ''
+        instructor3_name = instructors[2] if len(instructors) > 2 else ''
         
         row = [
             course['course_title'] if course else '',
             course['course_date'] if course else '',
             course.get('classroom', '') if course else '',
-            instructor_name,
+            instructor1_name,
+            instructor2_name,
+            instructor3_name,
             ''
         ]
         
