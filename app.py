@@ -185,99 +185,64 @@ def save_response(form_id, course_id, data):
     # Save to Excel
     wb = load_workbook(excel_path)
     ws = wb.active
+    existing_headers = [cell.value for cell in ws[1]]
+    data_map = {}
     
     if form_id == 'form1':
         instructors = course.get('instructors', []) if course else []
-        instructor1_name = instructors[0] if len(instructors) > 0 else ''
-        instructor2_name = instructors[1] if len(instructors) > 1 else ''
-        instructor3_name = instructors[2] if len(instructors) > 2 else ''
-        
-        row = [
-            course['course_title'] if course else '',
-            course['course_date'] if course else '',
-            course.get('classroom', '') if course else '',
-            instructor1_name,
-            instructor2_name,
-            instructor3_name,
-            ''
-        ]
+        data_map['COURSE NAME'] = course['course_title'] if course else ''
+        data_map['DATE'] = course['course_date'] if course else ''
+        data_map['CLASSROOM'] = course.get('classroom', '') if course else ''
+        data_map['INSTRUCTOR 1'] = instructors[0] if len(instructors) > 0 else ''
+        data_map['INSTRUCTOR 2'] = instructors[1] if len(instructors) > 1 else ''
+        data_map['INSTRUCTOR 3'] = instructors[2] if len(instructors) > 2 else ''
+        data_map['LANGUAGE'] = ''
         
         for section in form['sections']:
             if section['type'] == 'rating':
                 for q in section['questions']:
-                    row.append(data.get(q['id'], ''))
+                    data_map[q['id']] = data.get(q['id'], '')
             elif section['type'] == 'instructor_rating':
                 for inst_num in range(1, 4):
                     for q in section['questions']:
-                        row.append(data.get(f'B{inst_num}_{q["id"]}', ''))
+                        key = f"B{inst_num}{q['id']}"
+                        data_map[key] = data.get(f'B{inst_num}_{q["id"]}', '')
             elif section['type'] == 'text_questions':
                 for q in section['questions']:
-                    row.append(data.get(q['id'], ''))
+                    data_map[q['id']] = data.get(q['id'], '')
+                    
     elif form_id == 'form2':
-        # Assessor Evaluation form
         assessors = course.get('assessors', []) if course else []
-        assessor1_name = assessors[0] if len(assessors) > 0 else ''
-        assessor2_name = assessors[1] if len(assessors) > 1 else ''
-        
-        row = [
-            course['course_title'] if course else '',
-            course['course_date'] if course else '',
-            course.get('classroom', '') if course else '',
-            assessor1_name,
-            assessor2_name,
-            '' 
-        ]
+        data_map['COURSE NAME'] = course['course_title'] if course else ''
+        data_map['DATE'] = course['course_date'] if course else ''
+        data_map['CLASSROOM'] = course.get('classroom', '') if course else ''
+        data_map['ASSESSOR 1'] = assessors[0] if len(assessors) > 0 else ''
+        data_map['ASSESSOR 2'] = assessors[1] if len(assessors) > 1 else ''
+        data_map['LANGUAGE'] = ''
         
         for section in form['sections']:
             if section['type'] == 'assessor_rating':
                 for i in range(1, 3):
                     for q in section['questions']:
-                        row.append(data.get(f'A{i}_{q["id"]}', ''))
+                        key = f"A{i}.{q['id']}"
+                        data_map[key] = data.get(f'A{i}_{q["id"]}', '')
             elif section['type'] == 'text_questions':
                 for q in section['questions']:
-                    row.append(data.get(q['id'], ''))
-    else:
-        row = [datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
-        row.append(course['course_title'] if course else '')
-        row.append(course['course_date'] if course else '')
-        row.append(course.get('classroom', '') if course else '')
-        row.append(data.get('name', ''))
-        row.append(data.get('position', ''))
-        
-        # Ratings
-        for section in form['sections']:
-            if section['type'] == 'rating':
-                for q in section['questions']:
-                    row.append(data.get(q['id'], ''))
-            elif section['type'] == 'instructor_rating':
-                num_instructors = course.get('num_instructors', 1) if course else 1
-                instructors = course.get('instructors', []) if course else []
-                
-                for i in range(1, 4):
-                    if i <= num_instructors and i <= len(instructors):
-                        row.append(instructors[i-1])
-                        for q in section['questions']:
-                            row.append(data.get(f'B{i}_{q["id"]}', ''))
-                    else:
-                        row.append('')  # Instructor name
-                        for q in section['questions']:
-                            row.append('')  # Empty rating
-            elif section['type'] == 'assessor_rating':
-                num_assessors = course.get('num_assessors', 1) if course else 1
-                assessors = course.get('assessors', []) if course else []
-                
-                for i in range(1, 3):
-                    if i <= num_assessors and i <= len(assessors):
-                        row.append(assessors[i-1])
-                        for q in section['questions']:
-                            row.append(data.get(f'A{i}_{q["id"]}', ''))
-                    else:
-                        row.append('')  # Assessor name
-                        for q in section['questions']:
-                            row.append('')  # Empty rating
-            elif section['type'] == 'text_questions':
-                for q in section['questions']:
-                    row.append(data.get(q['id'], ''))
+                    data_map[q['id']] = data.get(q['id'], '')
+    
+    row = []
+    for header in existing_headers:
+        if header is None or header.startswith('[REMOVED]'):
+            row.append('')
+        else:
+            if header in data_map:
+                row.append(data_map[header])
+            else:
+                header_id = header.split(' - ')[0].strip() if ' - ' in header else header
+                if header_id in data_map:
+                    row.append(data_map[header_id])
+                else:
+                    row.append('') 
     
     ws.append(row)
     wb.save(excel_path)
