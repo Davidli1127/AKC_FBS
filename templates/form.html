@@ -68,7 +68,11 @@
                         {% endif %}
                         {% for question in section.questions %}
                         <div class="question-row">
+                            {% if section.title %}
                             <span class="question-number">{{ loop.index }}</span>
+                            {% else %}
+                            <span class="question-number">{{ section.id }}</span>
+                            {% endif %}
                             <span class="question-text">{{ question.text }}</span>
                             <div class="rating-options">
                                 {% for i in range(1, 6) %}

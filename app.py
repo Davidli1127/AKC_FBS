@@ -112,6 +112,9 @@ def init_excel(form_id):
             elif section['type'] == 'instructor_rating':
                 for q in section['questions']:
                     headers.append(f"B1{q['id']} - {q['text']}")
+                for inst_num in range(2, 4):
+                    for q in section['questions']:
+                        headers.append(f"B{inst_num}{q['id']}")
             elif section['type'] == 'text_questions':
                 for q in section['questions']:
                     headers.append(f"{q['id']} - {q['text']}")
@@ -128,9 +131,10 @@ def init_excel(form_id):
         
         for section in form['sections']:
             if section['type'] == 'assessor_rating':
-                for i in range(1, 3):
-                    for q in section['questions']:
-                        headers.append(f"A{i}.{q['id']} - {q['text']}")
+                for q in section['questions']:
+                    headers.append(f"A1.{q['id']} - {q['text']}")
+                for q in section['questions']:
+                    headers.append(f"A2.{q['id']}")
             elif section['type'] == 'text_questions':
                 for q in section['questions']:
                     headers.append(f"{q['id']} - {q['text']}")
@@ -199,8 +203,9 @@ def save_response(form_id, course_id, data):
                 for q in section['questions']:
                     row.append(data.get(q['id'], ''))
             elif section['type'] == 'instructor_rating':
-                for q in section['questions']:
-                    row.append(data.get(f'B1_{q["id"]}', ''))
+                for inst_num in range(1, 4):
+                    for q in section['questions']:
+                        row.append(data.get(f'B{inst_num}_{q["id"]}', ''))
             elif section['type'] == 'text_questions':
                 for q in section['questions']:
                     row.append(data.get(q['id'], ''))
