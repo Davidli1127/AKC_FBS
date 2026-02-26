@@ -238,17 +238,16 @@ def create_feedback_tables():
         )
         """
         cursor.execute(form2_create)
-        
         conn.commit()
         conn.close()
         return True, "Tables created successfully"
     except Exception as e:
         return False, f"Error creating tables: {e}"
 
-
 def save_form1_to_db(course_id, course, data):
     """
     Save Form 1 (Trainer Evaluation) response to database.
+    Matches the actual form structure from config.json.
     """
     conn = get_connection()
     if not conn:
@@ -261,59 +260,52 @@ def save_form1_to_db(course_id, course, data):
         
         query = f"""
         INSERT INTO {FEEDBACK_FORM1_TABLE} (
-            course_id, course_title, course_date, classroom,
-            participant_name, position,
-            A1, A2, A3, A4, A5, A6, A7, A8, A9,
-            instructor1_name, B1_Q1, B1_Q2, B1_Q3, B1_Q4, B1_Q5, B1_Q6,
-            instructor2_name, B2_Q1, B2_Q2, B2_Q3, B2_Q4, B2_Q5, B2_Q6,
-            instructor3_name, B3_Q1, B3_Q2, B3_Q3, B3_Q4, B3_Q5, B3_Q6,
-            C1, C2
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            course_id, course_title, course_date, classroom, language,
+            instructor1_name, instructor2_name, instructor3_name,
+            A1, A2, A3, A4, A5,
+            B1_1, B1_2, B1_3, B1_4, B1_5, B1_6,
+            B2_1, B2_2, B2_3, B2_4, B2_5, B2_6,
+            B3_1, B3_2, B3_3, B3_4, B3_5, B3_6,
+            C1, C2, D, E,
+            E1, E2, F, G, H
+        ) VALUES (
+            ?, ?, ?, ?, ?,
+            ?, ?, ?,
+            ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?,
+            ?, ?, ?, ?, ?
+        )
         """
+        
+        instructor1_name = instructors[0] if len(instructors) > 0 else None
+        instructor2_name = instructors[1] if len(instructors) > 1 else None
+        instructor3_name = instructors[2] if len(instructors) > 2 else None
         
         values = [
             course_id,
             course.get('course_title', ''),
             course.get('course_date', ''),
             course.get('classroom', ''),
-            data.get('name', ''),
-            data.get('position', ''),
+            None, 
+            instructor1_name,
+            instructor2_name,
+            instructor3_name,
             data.get('A1'), data.get('A2'), data.get('A3'),
-            data.get('A4'), data.get('A5'), data.get('A6'),
-            data.get('A7'), data.get('A8'), data.get('A9'),
+            data.get('A4'), data.get('A5'),
+            data.get('B1_1'), data.get('B1_2'), data.get('B1_3'),
+            data.get('B1_4'), data.get('B1_5'), data.get('B1_6'),
+            data.get('B2_1'), data.get('B2_2'), data.get('B2_3'),
+            data.get('B2_4'), data.get('B2_5'), data.get('B2_6'),
+            data.get('B3_1'), data.get('B3_2'), data.get('B3_3'),
+            data.get('B3_4'), data.get('B3_5'), data.get('B3_6'),
+            data.get('C1'), data.get('C2'),
+            data.get('D'), data.get('E'),
+            data.get('E1'), data.get('E2'), data.get('F'),
+            data.get('G'), data.get('H')
         ]
-        
-        if num_instructors >= 1 and len(instructors) >= 1:
-            values.extend([
-                instructors[0],
-                data.get('B1_Q1'), data.get('B1_Q2'), data.get('B1_Q3'),
-                data.get('B1_Q4'), data.get('B1_Q5'), data.get('B1_Q6')
-            ])
-        else:
-            values.extend([None, None, None, None, None, None, None])
-        
-        if num_instructors >= 2 and len(instructors) >= 2:
-            values.extend([
-                instructors[1],
-                data.get('B2_Q1'), data.get('B2_Q2'), data.get('B2_Q3'),
-                data.get('B2_Q4'), data.get('B2_Q5'), data.get('B2_Q6')
-            ])
-        else:
-            values.extend([None, None, None, None, None, None, None])
-        
-        if num_instructors >= 3 and len(instructors) >= 3:
-            values.extend([
-                instructors[2],
-                data.get('B3_Q1'), data.get('B3_Q2'), data.get('B3_Q3'),
-                data.get('B3_Q4'), data.get('B3_Q5'), data.get('B3_Q6')
-            ])
-        else:
-            values.extend([None, None, None, None, None, None, None])
-        
-        values.extend([
-            data.get('C1', ''),
-            data.get('C2', '')
-        ])
         
         cursor.execute(query, values)
         conn.commit()
@@ -323,10 +315,10 @@ def save_form1_to_db(course_id, course, data):
         print(f"Error saving Form 1 to database: {e}")
         return False
 
-
 def save_form2_to_db(course_id, course, data):
     """
     Save Form 2 (Assessor Evaluation) response to database.
+    Matches the actual form structure from config.json.
     """
     conn = get_connection()
     if not conn:
@@ -335,52 +327,40 @@ def save_form2_to_db(course_id, course, data):
     try:
         cursor = conn.cursor()
         assessors = course.get('assessors', [])
-        num_assessors = course.get('num_assessors', 1)
         
         query = f"""
         INSERT INTO {FEEDBACK_FORM2_TABLE} (
-            course_id, course_title, course_date, assessment_location,
-            participant_name, position,
-            A1, A2, A3, A4, A5, A6, A7,
-            assessor1_name, A1_Q1, A1_Q2, A1_Q3, A1_Q4, A1_Q5, A1_Q6,
-            assessor2_name, A2_Q1, A2_Q2, A2_Q3, A2_Q4, A2_Q5, A2_Q6,
-            C1, C2
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            course_id, course_title, course_date, classroom, language,
+            assessor1_name, assessor2_name,
+            A1_1, A1_2, A1_3, A1_4, A1_5,
+            A2_1, A2_2, A2_3, A2_4, A2_5,
+            B
+        ) VALUES (
+            ?, ?, ?, ?, ?,
+            ?, ?,
+            ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?,
+            ?
+        )
         """
+        
+        assessor1_name = assessors[0] if len(assessors) > 0 else None
+        assessor2_name = assessors[1] if len(assessors) > 1 else None
         
         values = [
             course_id,
             course.get('course_title', ''),
             course.get('course_date', ''),
-            course.get('assessment_location', ''),
-            data.get('name', ''),
-            data.get('position', ''),
-            data.get('A1'), data.get('A2'), data.get('A3'),
-            data.get('A4'), data.get('A5'), data.get('A6'), data.get('A7'),
+            course.get('classroom', ''),
+            None,  
+            assessor1_name,
+            assessor2_name,
+            data.get('A1_1'), data.get('A1_2'), data.get('A1_3'),
+            data.get('A1_4'), data.get('A1_5'),
+            data.get('A2_1'), data.get('A2_2'), data.get('A2_3'),
+            data.get('A2_4'), data.get('A2_5'),
+            data.get('B')
         ]
-        
-        if num_assessors >= 1 and len(assessors) >= 1:
-            values.extend([
-                assessors[0],
-                data.get('A1_Q1'), data.get('A1_Q2'), data.get('A1_Q3'),
-                data.get('A1_Q4'), data.get('A1_Q5'), data.get('A1_Q6')
-            ])
-        else:
-            values.extend([None, None, None, None, None, None, None])
-        
-        if num_assessors >= 2 and len(assessors) >= 2:
-            values.extend([
-                assessors[1],
-                data.get('A2_Q1'), data.get('A2_Q2'), data.get('A2_Q3'),
-                data.get('A2_Q4'), data.get('A2_Q5'), data.get('A2_Q6')
-            ])
-        else:
-            values.extend([None, None, None, None, None, None, None])
-        
-        values.extend([
-            data.get('C1', ''),
-            data.get('C2', '')
-        ])
         
         cursor.execute(query, values)
         conn.commit()
