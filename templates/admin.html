@@ -35,21 +35,15 @@
                         </div>
                         
                         <div class="form-group">
-                            <label>Course Title:</label>
+                            <label>Class Code (Course Title):</label>
                             <div class="course-input-wrapper">
                                 <input type="text" id="courseTitle" name="course_title" required 
-                                       placeholder="Type to search or enter manually..." 
+                                       placeholder="Enter class code..." 
                                        autocomplete="off"
                                        oninput="searchCourses(this.value)">
                                 <div id="courseSuggestions" class="suggestions-dropdown" style="display: none;"></div>
                             </div>
-                            <small style="color: #666;">Type a course code/name from database or enter manually</small>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Course Code (Optional):</label>
-                            <input type="text" id="courseCode" name="course_code" 
-                                   placeholder="Auto-filled from selection or enter manually">
+                            <small style="color: #666;">Enter the class code (this will be used to find participants)</small>
                         </div>
                         
                         <div class="form-group">
@@ -121,18 +115,18 @@
 
         <div id="participants" class="tab-content">
             <div class="card">
-                <div class="card-header">View Participants by Course</div>
+                <div class="card-header">View Participants by Class</div>
                 <div class="card-body">
                     <div class="form-group">
-                        <label>Course Code:</label>
+                        <label>Class Code:</label>
                         <div class="course-input-wrapper">
                             <input type="text" id="participantCourseSearch" 
-                                   placeholder="Enter course code (e.g., ACMDSEN)..." 
+                                   placeholder="Enter class code (same as course title)..." 
                                    autocomplete="off"
                                    oninput="searchParticipantCourses(this.value)">
                             <div id="participantCourseSuggestions" class="suggestions-dropdown" style="display: none;"></div>
                         </div>
-                        <small style="color: #666;">Type course code from database or select from suggestions</small>
+                        <small style="color: #666;">Class code is the same as the course title</small>
                     </div>
                     
                     <button class="btn btn-primary" onclick="loadParticipants()" id="loadParticipantsBtn">
@@ -140,7 +134,7 @@
                     </button>
                     
                     <div id="participantsResult" style="margin-top: 20px;">
-                        <p style="color: #666;">Enter a course code and click Load Participants.</p>
+                        <p style="color: #666;">Enter a class code and click Load Participants.</p>
                     </div>
                 </div>
             </div>
@@ -275,8 +269,8 @@
         }
         
         function selectCourse(code, displayText) {
-            document.getElementById('courseTitle').value = displayText;
-            document.getElementById('courseCode').value = code;
+            // Use the code directly as the class code (course title)
+            document.getElementById('courseTitle').value = code;
             document.getElementById('courseSuggestions').style.display = 'none';
         }
         
@@ -367,7 +361,7 @@
                 
                 if (data.total > 0) {
                     let html = `<div class="participants-header">
-                        <h4>Showing ${allParticipants.length} of ${data.total} participants for course "${courseCode}"</h4>
+                        <h4>Showing ${allParticipants.length} of ${data.total} participants for class "${courseCode}"</h4>
                     </div>`;
                     
                     html += '<table class="participants-table"><thead><tr>';
@@ -402,7 +396,7 @@
                     
                     resultDiv.innerHTML = html;
                 } else {
-                    resultDiv.innerHTML = `<p style="color: #666;">No participants found for course "${courseCode}".</p>`;
+                    resultDiv.innerHTML = `<p style="color: #666;">No participants found for class "${courseCode}".</p>`;
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -429,7 +423,7 @@
                 currentOffset = allParticipants.length;
                 
                 let html = `<div class="participants-header">
-                    <h4>Showing all ${data.total} participants for course "${courseCode}"</h4>
+                    <h4>Showing all ${data.total} participants for class "${courseCode}"</h4>
                 </div>`;
                 
                 html += '<table class="participants-table"><thead><tr>';
