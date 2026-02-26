@@ -188,8 +188,7 @@ def save_response(form_id, course_id, data):
     
     ws.append(row)
     wb.save(excel_path)
-    
-    # Also save to database
+
     try:
         db.save_to_database(form_id, course_id, course, data)
     except Exception as e:
