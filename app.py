@@ -65,8 +65,6 @@ def clean_expired_courses():
     
     return removed_count
 
-
-# Mapping form_id to friendly file names
 FORM_FILE_NAMES = {
     'form1': 'Trainer_Evaluation',
     'form2': 'Assessor_Evaluation'

@@ -297,18 +297,5 @@
       ]
     }
   },
-  "courses": [
-    {
-      "id": "e5a6b23b",
-      "form_id": "form1",
-      "course_title": "ASFKISHWISK009",
-      "course_date": "2026-02-26",
-      "created_at": "2026-02-26 10:26:57",
-      "classroom": "Hillview",
-      "num_instructors": 1,
-      "instructors": [
-        "David"
-      ]
-    }
-  ]
+  "courses": [ ]
 }

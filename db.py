@@ -14,7 +14,6 @@ DB_SERVER = os.getenv('DB_SERVER', '10.64.2.18')
 DB_DATABASE = os.getenv('DB_DATABASE', 'AKC_NAV')
 DB_USERNAME = os.getenv('DB_USERNAME', 'moodleLMSAdmin')
 DB_PASSWORD = os.getenv('DB_PASSWORD', '')
-
 COURSE_TABLE = '[Absolute Kinetics Consultancy$Course]'
 PARTICIPANT_TABLE = '[Absolute Kinetics Consultancy$Course Participant]'
 FEEDBACK_FORM1_TABLE = 'Feedback_Form1'
