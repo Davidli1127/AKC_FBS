@@ -1,21 +1,45 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import json
 import os
 from datetime import datetime, timedelta
 from openpyxl import Workbook, load_workbook
 import uuid
+from functools import wraps
 from dotenv import load_dotenv
 load_dotenv()
 import db
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'akc-feedback-secret-key-2026')
+
+ADMIN_ACCOUNT = os.environ.get('ADMIN_ACCOUNT', 'admin')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'akc2026')
+
+def login_required(f):
+    """Decorator to require login for admin routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def api_login_required(f):
+    """Decorator to require login for API routes (returns JSON)"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return jsonify({'error': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, 'config.json')
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 
 # Course link expiration time
-COURSE_EXPIRY_HOURS = 24
+COURSE_EXPIRY_HOURS = 24 # Default 24 hours, can adjust if needed
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -149,13 +173,13 @@ def init_excel(form_id):
                 for q in section['questions']:
                     headers.append(q['id'])
             elif section['type'] == 'instructor_rating':
-                # Add columns for up to 3 instructors
+                # Up to 3 instructors
                 for i in range(1, 4):
                     headers.append(f'Instructor {i} Name')
                     for q in section['questions']:
                         headers.append(f'B{i}-{q["id"]}')
             elif section['type'] == 'assessor_rating':
-                # Add columns for up to 2 assessors
+                # Up to 2 assessors
                 for i in range(1, 3):
                     headers.append(f'Assessor {i} Name')
                     for q in section['questions']:
@@ -257,7 +281,36 @@ def index():
     return redirect(url_for('admin'))
 
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Admin login page"""
+    if session.get('logged_in'):
+        return redirect(url_for('admin'))
+    
+    error = None
+    if request.method == 'POST':
+        account = request.form.get('account', '')
+        password = request.form.get('password', '')
+        
+        if account == ADMIN_ACCOUNT and password == ADMIN_PASSWORD:
+            session['logged_in'] = True
+            session['admin_account'] = account
+            return redirect(url_for('admin'))
+        else:
+            error = 'Invalid account number or password'
+    
+    return render_template('login.html', error=error)
+
+
+@app.route('/logout')
+def logout():
+    """Admin logout"""
+    session.clear()
+    return redirect(url_for('login'))
+
+
 @app.route('/admin')
+@login_required
 def admin():
     """Admin dashboard"""
     clean_expired_courses()
@@ -266,6 +319,7 @@ def admin():
 
 
 @app.route('/admin/form/<form_id>')
+@login_required
 def admin_form(form_id):
     """Admin page for editing a specific form"""
     config = load_config()
@@ -276,6 +330,7 @@ def admin_form(form_id):
 
 
 @app.route('/api/forms/<form_id>', methods=['GET'])
+@api_login_required
 def get_form(form_id):
     """Get form configuration"""
     config = load_config()
@@ -286,6 +341,7 @@ def get_form(form_id):
 
 
 @app.route('/api/forms/<form_id>', methods=['PUT'])
+@api_login_required
 def update_form(form_id):
     """Update form configuration"""
     config = load_config()
@@ -299,6 +355,7 @@ def update_form(form_id):
 
 
 @app.route('/api/forms/<form_id>/sections', methods=['POST'])
+@api_login_required
 def add_section(form_id):
     """Add a new section to form"""
     config = load_config()
@@ -349,6 +406,7 @@ def delete_question(form_id, section_id, question_id):
 
 
 @app.route('/api/forms/<form_id>/update-excel', methods=['POST'])
+@api_login_required
 def update_excel_columns(form_id):
     """Update Excel columns based on form changes"""
     try:
@@ -413,6 +471,7 @@ def update_excel_columns(form_id):
 
 
 @app.route('/api/db/test', methods=['GET'])
+@api_login_required
 def test_db_connection():
     """Test database connection"""
     success, message = db.test_connection()
@@ -420,6 +479,7 @@ def test_db_connection():
 
 
 @app.route('/api/db/courses', methods=['GET'])
+@api_login_required
 def search_db_courses():
     """Search courses from database"""
     search_term = request.args.get('search', '')
@@ -429,6 +489,7 @@ def search_db_courses():
 
 
 @app.route('/api/db/participants', methods=['GET'])
+@api_login_required
 def get_participants():
     """Get participants for a class with pagination"""
     class_code = request.args.get('class_code', '')
@@ -443,6 +504,7 @@ def get_participants():
 
 
 @app.route('/api/db/update-survey-sent', methods=['POST'])
+@api_login_required
 def update_survey_sent():
     """Update Survey Sent flag for a participant"""
     data = request.json
@@ -457,6 +519,7 @@ def update_survey_sent():
 
 
 @app.route('/api/db/create-tables', methods=['POST'])
+@api_login_required
 def create_tables():
     """Create feedback tables in database"""
     success, message = db.create_feedback_tables()
@@ -464,6 +527,7 @@ def create_tables():
 
 
 @app.route('/api/courses', methods=['GET'])
+@api_login_required
 def get_courses():
     """Get all courses"""
     config = load_config()
@@ -471,6 +535,7 @@ def get_courses():
 
 
 @app.route('/api/courses', methods=['POST'])
+@api_login_required
 def create_course():
     """Create a new course instance"""
     config = load_config()
@@ -501,6 +566,7 @@ def create_course():
 
 
 @app.route('/api/courses/<course_id>', methods=['DELETE'])
+@api_login_required
 def delete_course(course_id):
     """Delete a course"""
     config = load_config()

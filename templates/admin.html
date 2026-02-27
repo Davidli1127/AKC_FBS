@@ -8,9 +8,12 @@
 </head>
 <body>
     <div class="admin-container">
-        <div class="admin-header">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="AKC Logo" class="logo" style="max-height: 50px; margin-right: 15px;">
-            <h1>AKC Feedback Management System</h1>
+        <div class="admin-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center;">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="AKC Logo" class="logo" style="max-height: 50px; margin-right: 15px;">
+                <h1>AKC Feedback Management System</h1>
+            </div>
+            <a href="{{ url_for('logout') }}" class="logout-btn" style="background: #dc3545; color: white; padding: 8px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; transition: background 0.3s;">Logout</a>
         </div>
 
         <div class="tabs">
