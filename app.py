@@ -15,7 +15,7 @@ CONFIG_PATH = os.path.join(BASE_DIR, 'config.json')
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 
 # Course link expiration time
-COURSE_EXPIRY_HOURS = 24
+COURSE_EXPIRY_HOURS = 1
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
