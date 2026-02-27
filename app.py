@@ -167,7 +167,6 @@ def init_excel(form_id):
     ws.append(headers)
     wb.save(excel_path)
 
-
 def save_response(form_id, course_id, data):
     """Save form response to Excel and database"""
     excel_path = get_excel_path(form_id)

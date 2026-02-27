@@ -1,74 +1,71 @@
 {
   "forms": {
     "form1": {
-      "id": "form1",
-      "title": "TRAINER EVALUATION FORM",
-      "formNumber": "R3530-01a (Rev 0)",
       "description": "Dear Participant,\nManagement of Absolute Kinetics Consultancy Pte Ltd would like to thank you for giving us the opportunity to serve you. Please complete this form, which would help us to assess and improve on the quality of the course continually.",
+      "formNumber": "R3530-01a (Rev 0)",
       "headerFields": [
         {
           "id": "course_title",
           "label": "Course Title",
-          "type": "text",
+          "prefilled": true,
           "required": true,
-          "prefilled": true
+          "type": "text"
         },
         {
           "id": "course_date",
           "label": "Course Date",
-          "type": "date",
+          "prefilled": true,
           "required": true,
-          "prefilled": true
+          "type": "date"
         },
         {
           "id": "classroom",
           "label": "Classroom",
-          "type": "text",
+          "prefilled": true,
           "required": true,
-          "prefilled": true
+          "type": "text"
         },
         {
           "id": "name",
           "label": "Name (Optional)",
-          "type": "text",
+          "prefilled": false,
           "required": false,
-          "prefilled": false
+          "type": "text"
         },
         {
           "id": "position",
           "label": "Position",
-          "type": "text",
+          "prefilled": false,
           "required": true,
-          "prefilled": false
+          "type": "text"
         }
       ],
+      "id": "form1",
       "ratingOptions": [
         {
-          "value": 1,
-          "label": "Poor"
+          "label": "Poor",
+          "value": 1
         },
         {
-          "value": 2,
-          "label": "Unsatisfactory"
+          "label": "Unsatisfactory",
+          "value": 2
         },
         {
-          "value": 3,
-          "label": "Satisfactory"
+          "label": "Satisfactory",
+          "value": 3
         },
         {
-          "value": 4,
-          "label": "Very Good"
+          "label": "Very Good",
+          "value": 4
         },
         {
-          "value": 5,
-          "label": "Excellent"
+          "label": "Excellent",
+          "value": 5
         }
       ],
       "sections": [
         {
           "id": "A",
-          "title": "Course Content:",
-          "type": "rating",
           "questions": [
             {
               "id": "A1",
@@ -90,12 +87,12 @@
               "id": "A5",
               "text": "The Course was useful to my job"
             }
-          ]
+          ],
+          "title": "Course Content:",
+          "type": "rating"
         },
         {
           "id": "B",
-          "title": "Instructors",
-          "type": "instructor_rating",
           "maxInstructors": 3,
           "questions": [
             {
@@ -122,12 +119,12 @@
               "id": "6",
               "text": "The Instructor was effective and had covered the subject well"
             }
-          ]
+          ],
+          "title": "Instructors",
+          "type": "instructor_rating"
         },
         {
           "id": "C",
-          "title": "Facilities:",
-          "type": "rating",
           "questions": [
             {
               "id": "C1",
@@ -137,34 +134,34 @@
               "id": "C2",
               "text": "The visual aids (projector, screen) is good"
             }
-          ]
+          ],
+          "title": "Facilities:",
+          "type": "rating"
         },
         {
           "id": "D",
-          "title": "",
-          "type": "rating",
           "questions": [
             {
               "id": "D",
               "text": "Overall, the course duration was just nice"
             }
-          ]
+          ],
+          "title": "",
+          "type": "rating"
         },
         {
           "id": "E",
-          "title": "",
-          "type": "rating",
           "questions": [
             {
               "id": "E",
               "text": "Overall, I would rate the course to be effective"
             }
-          ]
+          ],
+          "title": "",
+          "type": "rating"
         },
         {
           "id": "text_feedback",
-          "title": "Additional Feedback",
-          "type": "text_questions",
           "questions": [
             {
               "id": "E1",
@@ -186,9 +183,12 @@
               "id": "H",
               "text": "Any additional comments / suggestions for improvement / Other Feedback?"
             }
-          ]
+          ],
+          "title": "Additional Feedback",
+          "type": "text_questions"
         }
-      ]
+      ],
+      "title": "TRAINER EVALUATION FORM"
     },
     "form2": {
       "id": "form2",
@@ -297,5 +297,5 @@
       ]
     }
   },
-  "courses": [ ]
+  "courses": []
 }
