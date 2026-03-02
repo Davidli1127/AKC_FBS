@@ -17,15 +17,15 @@
         </div>
 
         <div class="tabs">
-            <button class="tab active" onclick="showTab('courses')">Create Course Link</button>
+            <button class="tab active" onclick="showTab('courses')">Generate QR Code</button>
             <button class="tab" onclick="showTab('participants')">View Participants</button>
             <button class="tab" onclick="showTab('forms')">Edit Form Questions</button>
-            <button class="tab" onclick="showTab('existing')">Existing Course Links</button>
+            <button class="tab" onclick="showTab('existing')">Generated QR Codes</button>
         </div>
 
         <div id="courses" class="tab-content active">
             <div class="card">
-                <div class="card-header">Create New Course Evaluation Link</div>
+                <div class="card-header">Generate Course Evaluation QR Code</div>
                 <div class="card-body">
                     <form id="createCourseForm">
                         <div class="form-group">
@@ -36,28 +36,30 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        
-                        <div class="form-group">
-                            <label>Course Title:</label>
-                            <input type="text" id="courseTitle" name="course_title" required 
-                                   placeholder="Enter course title...">
-                        </div>
-                        
+
                         <div class="form-group">
                             <label>Course Date:</label>
-                            <input type="date" id="courseDate" name="course_date" required>
+                            <input type="date" id="courseDate" name="course_date" required onchange="loadClassCodes()">
                         </div>
-                    
+
+                        <div class="form-group" id="classCodeGroup" style="display:none;">
+                            <label>Class Code (Course Title):</label>
+                            <select id="classCodeSelect" name="course_title" required>
+                                <option value="">-- Select Class Code --</option>
+                            </select>
+                            <div id="classCodeLoading" style="color:#666; font-size:13px; margin-top:5px; display:none;">Loading class codes...</div>
+                        </div>
+
                         <div class="form-group" id="classroomGroup">
                             <label>Classroom:</label>
                             <input type="text" id="classroom" name="classroom">
                         </div>
-                    
+
                         <div class="form-group" id="assessmentLocationGroup" style="display: none;">
                             <label>Assessment Location:</label>
                             <input type="text" id="assessmentLocation" name="assessment_location">
                         </div>
-                        
+
                         <div id="instructorSection">
                             <div class="form-group">
                                 <label>Number of Instructors:</label>
@@ -67,7 +69,6 @@
                                     <option value="3">3</option>
                                 </select>
                             </div>
-                            
                             <div class="instructor-fields" id="instructorFields">
                                 <div class="instructor-field">
                                     <label>Instructor 1:</label>
@@ -75,7 +76,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div id="assessorSection" style="display: none;">
                             <div class="form-group">
                                 <label>Number of Assessors:</label>
@@ -84,7 +85,6 @@
                                     <option value="2">2</option>
                                 </select>
                             </div>
-                            
                             <div class="instructor-fields" id="assessorFields">
                                 <div class="instructor-field">
                                     <label>Assessor 1:</label>
@@ -92,18 +92,21 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div style="text-align: center; margin-top: 20px;">
-                            <button type="submit" class="btn btn-primary">Generate Link</button>
+                            <button type="submit" class="btn btn-primary">Generate QR Code</button>
                         </div>
                     </form>
-                    
-                    <div id="generatedLink" style="display: none; margin-top: 20px;">
-                        <div class="alert alert-success">
-                            <strong>Course link generated successfully!</strong>
-                            <p>Share this link with participants:</p>
-                            <input type="text" id="linkInput" readonly style="width: 100%; margin-top: 10px;">
-                            <button class="btn btn-secondary btn-sm" onclick="copyLink()" style="margin-top: 10px;">Copy Link</button>
+
+                    <div id="generatedQR" style="display: none; margin-top: 30px; text-align: center;">
+                        <h3 style="margin-bottom: 15px; color: #333;">QR Code Generated!</h3>
+                        <div style="display: inline-block; padding: 20px; border: 2px solid #eee; border-radius: 12px; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            <img id="qrCodeImage" src="" alt="QR Code" style="width: 200px; height: 200px; display: block; margin: 0 auto;">
+                            <p id="qrCourseInfo" style="margin-top: 12px; font-weight: 600; color: #333;"></p>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <a id="qrDownloadBtn" href="#" download="QR_Code.png" class="btn btn-primary" style="margin-right: 10px;">⬇ Download QR Code</a>
+                            <button onclick="document.getElementById('generatedQR').style.display='none'; document.getElementById('createCourseForm').style.display='block'; document.getElementById('createCourseForm').reset(); document.getElementById('classCodeGroup').style.display='none';" class="btn btn-secondary">Generate Another</button>
                         </div>
                     </div>
                 </div>
@@ -166,7 +169,7 @@
 
         <div id="existing" class="tab-content">
             <div class="card">
-                <div class="card-header">Existing Course Evaluation Links</div>
+                <div class="card-header">Generated QR Codes</div>
                 <div class="card-body">
                     <ul class="course-list" id="courseList">
                         {% for course in config.courses %}
@@ -180,19 +183,36 @@
                                 <p>Date: {{ course.course_date }} | Classroom: {{ course.classroom }}</p>
                                 <p>Instructors: {{ course.instructors | join(', ') }}</p>
                                 {% endif %}
-                                <p class="course-link">{{ request.host_url }}form/{{ course.id }}</p>
                             </div>
                             <div class="course-actions">
-                                <button class="btn btn-secondary btn-sm" onclick="copyToClipboard('{{ request.host_url }}form/{{ course.id }}')">Copy Link</button>
+                                <button class="btn btn-primary btn-sm" onclick="showQRCode('{{ course.id }}', '{{ course.course_title }}', '{{ course.course_date }}')">Show QR Code</button>
+                                <a class="btn btn-secondary btn-sm" href="/api/courses/{{ course.id }}/qrcode" download>⬇ Download QR</a>
                                 <button class="btn btn-danger btn-sm" onclick="deleteCourse('{{ course.id }}')">Delete</button>
                             </div>
                         </li>
                         {% else %}
                         <li class="course-item" id="noCourses">
-                            <p>No courses created yet.</p>
+                            <p>No QR codes generated yet.</p>
                         </li>
                         {% endfor %}
                     </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- QR Code Modal -->
+        <div class="modal" id="qrModal">
+            <div class="modal-content" style="max-width: 380px; text-align: center;">
+                <div class="modal-header">
+                    <h2>QR Code</h2>
+                    <button class="modal-close" onclick="closeQRModal()">&times;</button>
+                </div>
+                <div style="padding: 20px;">
+                    <p id="qrModalTitle" style="font-weight: 600; margin-bottom: 15px;"></p>
+                    <img id="qrModalImage" src="" alt="QR Code" style="width: 220px; height: 220px; border: 1px solid #eee; border-radius: 8px;">
+                    <div style="margin-top: 15px;">
+                        <a id="qrModalDownload" href="#" download class="btn btn-primary">⬇ Download QR Code</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -244,48 +264,41 @@
         let pendingChanges = null; 
         let searchTimeout = null;
 
-        
-        async function searchCourses(term) {
-            if (searchTimeout) clearTimeout(searchTimeout);
-            
-            const suggestionsDiv = document.getElementById('courseSuggestions');
-            
-            if (term.length < 2) {
-                suggestionsDiv.style.display = 'none';
+        // Load class codes when date is selected
+        async function loadClassCodes() {
+            const date = document.getElementById('courseDate').value;
+            const group = document.getElementById('classCodeGroup');
+            const select = document.getElementById('classCodeSelect');
+            const loading = document.getElementById('classCodeLoading');
+
+            if (!date) {
+                group.style.display = 'none';
                 return;
             }
-            
-            searchTimeout = setTimeout(async () => {
-                try {
-                    const response = await fetch(`/api/db/courses?search=${encodeURIComponent(term)}&limit=10`);
-                    const courses = await response.json();
-                    
-                    if (courses.length > 0) {
-                        let html = '';
-                        for (const course of courses) {
-                            const displayText = course.description 
-                                ? `${course.code} - ${course.description}` 
-                                : course.code;
-                            html += `<div class="suggestion-item" onclick="selectCourse('${course.code}', '${displayText.replace(/'/g, "\\'")}')">
-                                ${displayText}
-                            </div>`;
-                        }
-                        suggestionsDiv.innerHTML = html;
-                        suggestionsDiv.style.display = 'block';
-                    } else {
-                        suggestionsDiv.style.display = 'none';
+
+            group.style.display = 'block';
+            loading.style.display = 'block';
+            select.innerHTML = '<option value="">-- Loading... --</option>';
+
+            try {
+                const response = await fetch(`/api/db/class-codes?date=${encodeURIComponent(date)}`);
+                const codes = await response.json();
+
+                loading.style.display = 'none';
+                if (codes.length > 0) {
+                    let html = '<option value="">-- Select Class Code --</option>';
+                    for (const code of codes) {
+                        html += `<option value="${code}">${code}</option>`;
                     }
-                } catch (error) {
-                    console.error('Error searching courses:', error);
-                    suggestionsDiv.style.display = 'none';
+                    select.innerHTML = html;
+                } else {
+                    select.innerHTML = '<option value="">-- No classes found for this date --</option>';
                 }
-            }, 300);
-        }
-        
-        function selectCourse(code, displayText) {
-            // Use the code directly as the class code (course title)
-            document.getElementById('courseTitle').value = code;
-            document.getElementById('courseSuggestions').style.display = 'none';
+            } catch (error) {
+                loading.style.display = 'none';
+                select.innerHTML = '<option value="">-- Error loading class codes --</option>';
+                console.error('Error loading class codes:', error);
+            }
         }
         
         async function searchParticipantCourses(term) {
@@ -571,10 +584,16 @@
             
             const formData = new FormData(this);
             const formType = formData.get('form_id');
+            const courseTitle = document.getElementById('classCodeSelect').value;
+
+            if (!courseTitle) {
+                alert('Please select a class code.');
+                return;
+            }
             
             let data = {
                 form_id: formType,
-                course_title: formData.get('course_title'),
+                course_title: courseTitle,
                 course_date: formData.get('course_date')
             };
             
@@ -608,9 +627,17 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    const link = window.location.origin + '/form/' + result.course.id;
-                    document.getElementById('linkInput').value = link;
-                    document.getElementById('generatedLink').style.display = 'block';
+                    if (result.qr_code) {
+                        const imgSrc = 'data:image/png;base64,' + result.qr_code;
+                        document.getElementById('qrCodeImage').src = imgSrc;
+                        document.getElementById('qrDownloadBtn').href = imgSrc;
+                        document.getElementById('qrDownloadBtn').download = `QR_${result.course.course_title}_${result.course.course_date}.png`;
+                        document.getElementById('qrCourseInfo').textContent = `${result.course.course_title} | ${result.course.course_date}`;
+                        document.getElementById('generatedQR').style.display = 'block';
+                        document.getElementById('createCourseForm').style.display = 'none';
+                    } else {
+                        alert('QR code generated but image could not be displayed. Please check the "Generated QR Codes" tab.');
+                    }
                     addCourseToList(result.course);
                 } else {
                     alert('Error: ' + result.error);
@@ -620,27 +647,18 @@
             }
         });
 
-        function copyLink() {
-            const linkInput = document.getElementById('linkInput');
-            linkInput.select();
-            document.execCommand('copy');
-            alert('Link copied to clipboard!');
+        function showQRCode(courseId, title, date) {
+            const qrUrl = `/api/courses/${courseId}/qrcode`;
+            document.getElementById('qrModalTitle').textContent = `${title} | ${date}`;
+            document.getElementById('qrModalImage').src = qrUrl;
+            document.getElementById('qrModalDownload').href = qrUrl;
+            document.getElementById('qrModalDownload').download = `QR_${title}_${date}.png`;
+            document.getElementById('qrModal').style.display = 'flex';
         }
 
-        function copyToClipboard(text) {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            textarea.style.position = 'fixed';
-            textarea.style.left = '-9999px';
-            document.body.appendChild(textarea);
-            textarea.select();
-            try {
-                document.execCommand('copy');
-                alert('Link copied to clipboard!');
-            } catch (err) {
-                alert('Failed to copy. Please copy manually: ' + text);
-            }
-            document.body.removeChild(textarea);
+        function closeQRModal() {
+            document.getElementById('qrModal').style.display = 'none';
+            document.getElementById('qrModalImage').src = '';
         }
 
         function addCourseToList(course) {
@@ -660,15 +678,18 @@
                 personnelInfo = `Instructors: ${course.instructors.join(', ')}`;
             }
             
+            const title = course.course_title.replace(/'/g, "\\'");
+            const date = course.course_date;
+            
             li.innerHTML = `
                 <div class="course-info">
                     <h4>${course.course_title} <span style="font-size: 12px; color: #666;">(${course.form_id === 'form1' ? 'Trainer Evaluation' : course.form_id === 'form2' ? 'Assessor Evaluation' : course.form_id})</span></h4>
                     <p>${locationInfo}</p>
                     <p>${personnelInfo}</p>
-                    <p class="course-link">${window.location.origin}/form/${course.id}</p>
                 </div>
                 <div class="course-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="copyToClipboard('${window.location.origin}/form/${course.id}')">Copy Link</button>
+                    <button class="btn btn-secondary btn-sm" onclick="showQRCode('${course.id}', '${title}', '${date}')">Show QR Code</button>
+                    <a class="btn btn-secondary btn-sm" href="/api/courses/${course.id}/qrcode" download="QR_${course.course_title}_${date}.png">Download QR</a>
                     <button class="btn btn-danger btn-sm" onclick="deleteCourse('${course.id}')">Delete</button>
                 </div>
             `;

@@ -91,6 +91,65 @@ def get_courses_from_db(search_term=None, limit=50):
         return []
 
 
+def get_course_dates():
+    """
+    Fetch all distinct Registration Dates from the Course Participant table.
+    Returns a list of date strings (YYYY-MM-DD).
+    """
+    conn = get_connection()
+    if not conn:
+        return []
+
+    try:
+        cursor = conn.cursor()
+        query = f"""
+            SELECT DISTINCT CAST([Registration Date] AS DATE)
+            FROM {PARTICIPANT_TABLE}
+            WHERE [Registration Date] IS NOT NULL
+            ORDER BY CAST([Registration Date] AS DATE) DESC
+        """
+        cursor.execute(query)
+        dates = []
+        for row in cursor.fetchall():
+            if row[0]:
+                dates.append(str(row[0]))
+        conn.close()
+        return dates
+    except Exception as e:
+        print(f"Error fetching course dates: {e}")
+        return []
+
+
+def get_class_codes_by_date(registration_date):
+    """
+    Fetch all distinct Class Codes for a specific Registration Date.
+    Returns a list of class code strings.
+    """
+    conn = get_connection()
+    if not conn:
+        return []
+
+    try:
+        cursor = conn.cursor()
+        query = f"""
+            SELECT DISTINCT [Class Code]
+            FROM {PARTICIPANT_TABLE}
+            WHERE CAST([Registration Date] AS DATE) = ?
+            AND [Class Code] IS NOT NULL AND [Class Code] != ''
+            ORDER BY [Class Code]
+        """
+        cursor.execute(query, (registration_date,))
+        codes = []
+        for row in cursor.fetchall():
+            if row[0]:
+                codes.append(str(row[0]).strip())
+        conn.close()
+        return codes
+    except Exception as e:
+        print(f"Error fetching class codes by date: {e}")
+        return []
+
+
 def get_participants_by_class(class_code, offset=0, limit=20):
     """
     Fetch participants for a specific class with pagination.

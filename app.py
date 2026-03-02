@@ -1,6 +1,8 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_file
 import json
 import os
+import io
+import base64
 from datetime import datetime, timedelta
 from openpyxl import Workbook, load_workbook
 import uuid
@@ -8,6 +10,13 @@ from functools import wraps
 from dotenv import load_dotenv
 load_dotenv()
 import db
+try:
+    import qrcode
+    from qrcode.image.pil import PilImage
+    QR_AVAILABLE = True
+except ImportError:
+    QR_AVAILABLE = False
+    print('Warning: qrcode library not installed. Run: pip install qrcode[pil]')
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'akc-feedback-secret-key-2026')
@@ -526,6 +535,25 @@ def create_tables():
     return jsonify({'success': success, 'message': message})
 
 
+@app.route('/api/db/course-dates', methods=['GET'])
+@api_login_required
+def get_course_dates():
+    """Get all available registration dates from database"""
+    dates = db.get_course_dates()
+    return jsonify(dates)
+
+
+@app.route('/api/db/class-codes', methods=['GET'])
+@api_login_required
+def get_class_codes():
+    """Get class codes for a specific registration date"""
+    date = request.args.get('date', '')
+    if not date:
+        return jsonify({'error': 'Date required'}), 400
+    codes = db.get_class_codes_by_date(date)
+    return jsonify(codes)
+
+
 @app.route('/api/courses', methods=['GET'])
 @api_login_required
 def get_courses():
@@ -537,10 +565,10 @@ def get_courses():
 @app.route('/api/courses', methods=['POST'])
 @api_login_required
 def create_course():
-    """Create a new course instance"""
+    """Create a new course and generate QR code"""
     config = load_config()
     data = request.json
-    
+
     course = {
         'id': str(uuid.uuid4())[:8],
         'form_id': data['form_id'],
@@ -548,7 +576,7 @@ def create_course():
         'course_date': data['course_date'],
         'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
-    
+
     # Form-specific fields
     if data['form_id'] == 'form2':
         course['assessment_location'] = data.get('assessment_location', '')
@@ -558,11 +586,24 @@ def create_course():
         course['classroom'] = data.get('classroom', '')
         course['num_instructors'] = data.get('num_instructors', 1)
         course['instructors'] = data.get('instructors', [])
-    
+
     config['courses'].append(course)
     save_config(config)
-    
-    return jsonify({'success': True, 'course': course})
+
+    # Generate QR code
+    qr_data = None
+    if QR_AVAILABLE:
+        form_url = request.host_url.rstrip('/') + f'/form/{course["id"]}'
+        qr = qrcode.QRCode(version=1, box_size=10, border=4)
+        qr.add_data(form_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color='black', back_color='white')
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        buf.seek(0)
+        qr_data = base64.b64encode(buf.read()).decode('utf-8')
+
+    return jsonify({'success': True, 'course': course, 'qr_code': qr_data})
 
 
 @app.route('/api/courses/<course_id>', methods=['DELETE'])
@@ -573,6 +614,30 @@ def delete_course(course_id):
     config['courses'] = [c for c in config['courses'] if c['id'] != course_id]
     save_config(config)
     return jsonify({'success': True})
+
+
+@app.route('/api/courses/<course_id>/qrcode', methods=['GET'])
+@api_login_required
+def get_course_qrcode(course_id):
+    """Get QR code image for a course"""
+    config = load_config()
+    course = next((c for c in config['courses'] if c['id'] == course_id), None)
+    if not course:
+        return jsonify({'error': 'Course not found'}), 404
+
+    if not QR_AVAILABLE:
+        return jsonify({'error': 'QR code library not installed'}), 500
+
+    form_url = request.host_url.rstrip('/') + f'/form/{course_id}'
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(form_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color='black', back_color='white')
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    return send_file(buf, mimetype='image/png', as_attachment=True,
+                     download_name=f'QR_{course["course_title"]}_{course["course_date"]}.png')
 
 
 @app.route('/form/<course_id>')
