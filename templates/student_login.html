@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Login - AKC Feedback</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0d2d6b 0%, #1a56db 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            padding: 40px 36px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 100px;
+            height: auto;
+            margin-bottom: 18px;
+        }
+
+        h1 {
+            color: #0d2d6b;
+            font-size: 22px;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        .course-badge {
+            background: #f0f4ff;
+            border: 1px solid #c7d7ff;
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 28px;
+            text-align: left;
+        }
+
+        .course-badge .label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .course-badge .class-code {
+            font-size: 17px;
+            font-weight: 700;
+            color: #0d2d6b;
+        }
+
+        .course-badge .class-date {
+            font-size: 13px;
+            color: #555;
+            margin-top: 4px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 7px;
+            color: #444;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.2s;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: #1a56db;
+        }
+
+        .form-group .hint {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .error-box {
+            background: #fff5f5;
+            border: 1px solid #feb2b2;
+            color: #c53030;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: #0d2d6b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            margin-top: 6px;
+        }
+
+        .btn-submit:hover {
+            background: #1a56db;
+        }
+
+        .btn-submit:active {
+            transform: scale(0.98);
+        }
+
+        .btn-submit:disabled {
+            background: #aaa;
+            cursor: not-allowed;
+        }
+
+        .footer-note {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="AKC Logo" class="logo">
+        <h1>Course Feedback</h1>
+        <p class="subtitle">Please verify your identity to proceed</p>
+
+        <div class="course-badge">
+            <div class="label">Class</div>
+            <div class="class-code">{{ course.course_title }}</div>
+            <div class="class-date">{{ course.course_date }}
+                {% if course.form_id == 'form1' %}
+                &nbsp;&middot;&nbsp; Trainer Evaluation
+                {% elif course.form_id == 'form2' %}
+                &nbsp;&middot;&nbsp; Assessor Evaluation
+                {% endif %}
+            </div>
+        </div>
+
+        {% if error %}
+        <div class="error-box">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" id="loginForm">
+            <div class="form-group">
+                <label for="participant_name">Full Name</label>
+                <input type="text" id="participant_name" name="participant_name"
+                       placeholder="Enter your full name as registered"
+                       value="{{ request.form.get('participant_name', '') }}"
+                       autocomplete="name" required>
+                <div class="hint">Exactly as it appears on your registration (case-insensitive)</div>
+            </div>
+
+            <div class="form-group">
+                <label for="ic_number">Identification Number</label>
+                <input type="text" id="ic_number" name="ic_number"
+                       placeholder="e.g. S1234567A"
+                       value="{{ request.form.get('ic_number', '') }}"
+                       autocomplete="off" required>
+                <div class="hint">NRIC / FIN / Passport Number</div>
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitBtn">
+                Proceed to Feedback Form
+            </button>
+        </form>
+
+        <p class="footer-note">Your feedback is anonymous. Only your name and ID are used for verification.</p>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function() {
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
+        });
+    </script>
+</body>
+</html>
