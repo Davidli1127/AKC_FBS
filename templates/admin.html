@@ -200,7 +200,6 @@
             </div>
         </div>
 
-        <!-- QR Code Modal -->
         <div class="modal" id="qrModal">
             <div class="modal-content" style="max-width: 380px; text-align: center;">
                 <div class="modal-header">
@@ -343,17 +342,14 @@
             document.getElementById('participantCourseSuggestions').style.display = 'none';
         }
         
-        // Pagination state
         let currentClassCode = '';
         let currentOffset = 0;
         let currentLimit = 20;
         let allParticipants = [];
         
         async function loadParticipants(loadMore = false) {
-            // Get class code from input - either typed manually or selected
             let classCode = document.getElementById('participantCourseSearch').value.trim();
             
-            // If it contains " - ", extract just the code part
             if (classCode.includes(' - ')) {
                 classCode = classCode.split(' - ')[0].trim();
             }
@@ -365,7 +361,6 @@
             
             const resultDiv = document.getElementById('participantsResult');
             
-            // Reset if new search
             if (!loadMore || classCode !== currentClassCode) {
                 currentClassCode = classCode;
                 currentOffset = 0;
@@ -382,7 +377,6 @@
                     return;
                 }
                 
-                // Add new participants to our list
                 allParticipants = allParticipants.concat(data.participants);
                 currentOffset = allParticipants.length;
                 
@@ -408,7 +402,6 @@
                     
                     html += '</tbody></table>';
                     
-                    // Show "Load More" button if there are more participants
                     if (data.has_more) {
                         const remaining = data.total - allParticipants.length;
                         html += `<div style="text-align: center; margin-top: 15px;">
@@ -437,7 +430,6 @@
             resultDiv.innerHTML = '<p>Loading all participants... This may take a moment.</p>';
             
             try {
-                // Load with a very high limit to get all
                 const response = await fetch(`/api/db/participants?class_code=${encodeURIComponent(classCode)}&offset=0&limit=50000`);
                 const data = await response.json();
                 
@@ -784,7 +776,6 @@
             }
         }
 
-        // Delete question
         function deleteQuestion(sectionId, questionId) {
             if (!confirm('Mark this question for deletion? Click "Save All Changes" to apply.')) return;
             for (const section of currentFormData.sections) {
@@ -877,7 +868,7 @@
                         sectionTitle: data.section.title,
                         questionId: data.question.id,
                         questionText: data.question.text,
-                        deleteData: false  // Default: keep data in Excel
+                        deleteData: false  
                     });
                 }
             }
@@ -950,7 +941,6 @@
         }
 
         async function saveForm() {
-            // Detect changes
             pendingChanges = detectFormChanges();
             showConfirmationModal(pendingChanges);
         }

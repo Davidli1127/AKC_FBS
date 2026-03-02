@@ -47,7 +47,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, 'config.json')
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 
-# Course link expiration time
+# QR code expiration time
 COURSE_EXPIRY_HOURS = 24 # Default 24 hours, can adjust if needed
 
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -167,7 +167,6 @@ def init_excel(form_id):
     ws.title = "Responses"
     
     if form_id == 'form1':
-        # Trainer Evaluation form 
         headers = [
             'COURSE NAME',
             'DATE',
@@ -192,7 +191,6 @@ def init_excel(form_id):
                 for q in section['questions']:
                     headers.append(f"{q['id']} - {q['text']}")
     elif form_id == 'form2':
-        # Assessor Evaluation form
         headers = [
             'COURSE NAME',
             'DATE',
@@ -617,7 +615,6 @@ def create_course():
         'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
 
-    # Form-specific fields
     if data['form_id'] == 'form2':
         course['assessment_location'] = data.get('assessment_location', '')
         course['num_assessors'] = data.get('num_assessors', 1)
@@ -646,7 +643,6 @@ def create_course():
 
     return jsonify({'success': True, 'course': course, 'qr_code': qr_data})
 
-
 @app.route('/api/courses/<course_id>', methods=['DELETE'])
 @api_login_required
 def delete_course(course_id):
@@ -665,10 +661,8 @@ def get_course_qrcode(course_id):
     course = next((c for c in config['courses'] if c['id'] == course_id), None)
     if not course:
         return jsonify({'error': 'Course not found'}), 404
-
     if not QR_AVAILABLE:
         return jsonify({'error': 'QR code library not installed'}), 500
-
     public_base = os.environ.get('PUBLIC_URL', '').rstrip('/') or request.host_url.rstrip('/')
     form_url = public_base + f'/student-login/{course_id}'
     qr = qrcode.QRCode(version=1, box_size=10, border=4)
@@ -681,7 +675,6 @@ def get_course_qrcode(course_id):
     return send_file(buf, mimetype='image/png', as_attachment=True,
                      download_name=f'QR_{course["course_title"]}_{course["course_date"]}.png')
 
-
 @app.route('/student-login/<course_id>', methods=['GET', 'POST'])
 def student_login(course_id):
     """Student login page - verifies the student is a registered participant"""
@@ -693,7 +686,6 @@ def student_login(course_id):
     error = None
     if request.method == 'POST':
         participant_name = request.form.get('participant_name', '').strip()
-
         if not participant_name:
             error = 'Please enter your full name.'
         elif has_submitted(course_id, participant_name):
@@ -708,7 +700,6 @@ def student_login(course_id):
                 return redirect(url_for('form_page', course_id=course_id))
             else:
                 error = 'Your name was not found in the participant list for this class. Please check your spelling and try again.'
-
     return render_template('student_login.html', course=course, error=error)
 
 
@@ -740,18 +731,15 @@ def form_page(course_id):
 @app.route('/api/submit/<course_id>', methods=['POST'])
 def submit_form(course_id):
     """Submit form response"""
-    # Must be logged in as a verified student for this course
     if session.get('student_course_id') != course_id:
         return jsonify({'error': 'Unauthorized. Please scan the QR code and log in first.'}), 401
 
     student_name = session.get('student_name', '')
 
-    # Double-check for duplicate submission
     if has_submitted(course_id, student_name):
         return jsonify({'error': 'You have already submitted feedback for this class.'}), 400
 
     config = load_config()
-    
     course = None
     for c in config['courses']:
         if c['id'] == course_id:

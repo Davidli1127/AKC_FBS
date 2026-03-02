@@ -268,7 +268,6 @@ def update_survey_sent(course_code, participant_name, sent=True):
         print(f"Error updating survey sent: {e}")
         return False
 
-
 def create_feedback_tables():
     """
     Create the feedback tables in the database if they don't exist.
