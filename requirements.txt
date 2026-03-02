@@ -3,3 +3,4 @@ openpyxl==3.1.2
 Werkzeug==3.0.1
 pyodbc==5.1.0
 python-dotenv==1.0.0
+qrcode[pil]>=8.0

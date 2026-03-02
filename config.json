@@ -297,5 +297,18 @@
       ]
     }
   },
-  "courses": []
+  "courses": [
+    {
+      "id": "f7f4caee",
+      "form_id": "form1",
+      "course_title": "HT26CSCPMEN03",
+      "course_date": "2026-03-02",
+      "created_at": "2026-03-02 10:53:06",
+      "classroom": "Hillview",
+      "num_instructors": 1,
+      "instructors": [
+        "David"
+      ]
+    }
+  ]
 }
