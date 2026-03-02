@@ -27,7 +27,7 @@
         },
         {
           "id": "name",
-          "label": "Name (Optional)",
+          "label": "Name",
           "prefilled": false,
           "required": false,
           "type": "text"
@@ -219,7 +219,7 @@
         },
         {
           "id": "name",
-          "label": "Name (Optional)",
+          "label": "Name",
           "type": "text",
           "required": false,
           "prefilled": false
@@ -299,11 +299,11 @@
   },
   "courses": [
     {
-      "id": "f7f4caee",
+      "id": "df20a98e",
       "form_id": "form1",
-      "course_title": "HT26CSCPMEN03",
+      "course_title": "MP26SIPFDBU137",
       "course_date": "2026-03-02",
-      "created_at": "2026-03-02 10:53:06",
+      "created_at": "2026-03-02 15:45:00",
       "classroom": "Hillview",
       "num_instructors": 1,
       "instructors": [

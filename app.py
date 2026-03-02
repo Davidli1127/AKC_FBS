@@ -69,20 +69,24 @@ def save_submissions_data(submissions):
         json.dump(submissions, f, indent=2, ensure_ascii=False)
 
 
-def has_submitted(course_id, ic_number):
-    """Check if a student (by IC) has already submitted for this course"""
+def _norm_name(name):
+    """Normalize a name for comparison: collapse whitespace, uppercase"""
+    return ' '.join(name.strip().split()).upper()
+
+
+def has_submitted(course_id, participant_name):
+    """Check if a student (by name) has already submitted for this course"""
     submissions = load_submissions()
-    ic_norm = ic_number.strip().upper()
-    return any(s['ic'] == ic_norm for s in submissions.get(course_id, []))
+    name_norm = _norm_name(participant_name)
+    return any(_norm_name(s.get('name', '')) == name_norm for s in submissions.get(course_id, []))
 
 
-def record_submission(course_id, ic_number, participant_name):
+def record_submission(course_id, participant_name):
     """Record a student submission to prevent duplicates"""
     submissions = load_submissions()
     if course_id not in submissions:
         submissions[course_id] = []
     submissions[course_id].append({
-        'ic': ic_number.strip().upper(),
         'name': ' '.join(participant_name.strip().split()),
         'submitted_at': datetime.now().isoformat()
     })
@@ -629,7 +633,8 @@ def create_course():
     # Generate QR code
     qr_data = None
     if QR_AVAILABLE:
-        form_url = request.host_url.rstrip('/') + f'/student-login/{course["id"]}'
+        public_base = os.environ.get('PUBLIC_URL', '').rstrip('/') or request.host_url.rstrip('/')
+        form_url = public_base + f'/student-login/{course["id"]}'
         qr = qrcode.QRCode(version=1, box_size=10, border=4)
         qr.add_data(form_url)
         qr.make(fit=True)
@@ -664,7 +669,8 @@ def get_course_qrcode(course_id):
     if not QR_AVAILABLE:
         return jsonify({'error': 'QR code library not installed'}), 500
 
-    form_url = request.host_url.rstrip('/') + f'/student-login/{course_id}'
+    public_base = os.environ.get('PUBLIC_URL', '').rstrip('/') or request.host_url.rstrip('/')
+    form_url = public_base + f'/student-login/{course_id}'
     qr = qrcode.QRCode(version=1, box_size=10, border=4)
     qr.add_data(form_url)
     qr.make(fit=True)
@@ -687,23 +693,21 @@ def student_login(course_id):
     error = None
     if request.method == 'POST':
         participant_name = request.form.get('participant_name', '').strip()
-        ic_number = request.form.get('ic_number', '').strip()
 
-        if not participant_name or not ic_number:
-            error = 'Please enter both your name and identification number.'
-        elif has_submitted(course_id, ic_number):
+        if not participant_name:
+            error = 'Please enter your full name.'
+        elif has_submitted(course_id, participant_name):
             error = 'You have already submitted feedback for this class. Thank you!'
         else:
             is_valid = db.verify_student_participant(
-                course['course_title'], participant_name, ic_number
+                course['course_title'], participant_name
             )
             if is_valid:
                 session['student_name'] = participant_name
-                session['student_ic'] = ic_number
                 session['student_course_id'] = course_id
                 return redirect(url_for('form_page', course_id=course_id))
             else:
-                error = 'Your name or identification number does not match our records for this class. Please check and try again.'
+                error = 'Your name was not found in the participant list for this class. Please check your spelling and try again.'
 
     return render_template('student_login.html', course=course, error=error)
 
@@ -741,10 +745,9 @@ def submit_form(course_id):
         return jsonify({'error': 'Unauthorized. Please scan the QR code and log in first.'}), 401
 
     student_name = session.get('student_name', '')
-    student_ic = session.get('student_ic', '')
 
     # Double-check for duplicate submission
-    if has_submitted(course_id, student_ic):
+    if has_submitted(course_id, student_name):
         return jsonify({'error': 'You have already submitted feedback for this class.'}), 400
 
     config = load_config()
@@ -760,9 +763,8 @@ def submit_form(course_id):
     
     data = request.json
     save_response(course['form_id'], course_id, data)
-    record_submission(course_id, student_ic, student_name)
+    record_submission(course_id, student_name)
     session.pop('student_name', None)
-    session.pop('student_ic', None)
     session.pop('student_course_id', None)
     
     return jsonify({'success': True, 'message': 'Thank you for your feedback!'})

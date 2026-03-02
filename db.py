@@ -150,11 +150,10 @@ def get_class_codes_by_date(registration_date):
         return []
 
 
-def verify_student_participant(class_code, participant_name, ic_number):
+def verify_student_participant(class_code, participant_name):
     """
     Verify if a student is a registered participant of the given class.
-    - Name matching is case-insensitive and whitespace-normalized.
-    - IC number matching is case-insensitive and trimmed.
+    Name matching is case-insensitive and whitespace-normalized.
     Returns True if found, False otherwise.
     """
     conn = get_connection()
@@ -164,7 +163,7 @@ def verify_student_participant(class_code, participant_name, ic_number):
     try:
         cursor = conn.cursor()
         query = f"""
-            SELECT [Participant Name], [Identification Number]
+            SELECT [Participant Name]
             FROM {PARTICIPANT_TABLE}
             WHERE [Class Code] = ?
         """
@@ -174,12 +173,10 @@ def verify_student_participant(class_code, participant_name, ic_number):
 
         # Normalize input: collapse whitespace, uppercase
         name_input = ' '.join(participant_name.strip().split()).upper()
-        ic_input = ic_number.strip().upper()
 
         for row in rows:
             db_name = ' '.join((row[0] or '').strip().split()).upper()
-            db_ic = (row[1] or '').strip().upper()
-            if db_name == name_input and db_ic == ic_input:
+            if db_name == name_input:
                 return True
 
         return False
