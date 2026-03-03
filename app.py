@@ -366,7 +366,20 @@ def save_response(form_id, course_id, data):
             elif section['type'] == 'text_questions':
                 for q in section['questions']:
                     data_map[q['id']] = data.get(q['id'], '')
-    
+    else:
+        # Generic custom form
+        data_map['Submission Time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        for field in form.get('headerFields', []):
+            label = field['label'].replace(' (Optional)', '')
+            if field.get('prefilled') and course:
+                data_map[label] = course.get(field['id'], '')
+            else:
+                data_map[label] = data.get(field['id'], '')
+        for section in form.get('sections', []):
+            if section['type'] in ('rating', 'text_questions'):
+                for q in section['questions']:
+                    data_map[q['id']] = data.get(q['id'], '')
+
     row = []
     for header in existing_headers:
         if header is None or header.startswith('[REMOVED]'):

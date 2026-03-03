@@ -151,51 +151,63 @@
         </div>
 
         <div id="forms" class="tab-content">
-            <!-- ── Create New Form ── -->
             <div class="card">
                 <div class="card-header" style="cursor:pointer;" onclick="toggleCreateForm()">
                     + Create New Form <span id="createFormToggleIcon" style="float:right; font-size:13px; color:#666;">Expand</span>
                 </div>
                 <div id="createFormBody" style="display:none;">
                     <div class="card-body">
-                        <form id="newFormForm">
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 24px; flex-wrap:wrap;">
-                                <div class="form-group">
-                                    <label>Form ID <small style="color:#888;">(alphanumeric, e.g. "form3")</small></label>
-                                    <input type="text" id="newFormId" pattern="[a-zA-Z0-9_]+" required placeholder="form3">
-                                </div>
-                                <div class="form-group">
-                                    <label>Form Title</label>
-                                    <input type="text" id="newFormTitle" required placeholder="My Custom Evaluation Form">
-                                </div>
-                                <div class="form-group">
-                                    <label>Form Number <small style="color:#888;">(optional)</small></label>
-                                    <input type="text" id="newFormNumber" placeholder="R3530-05a (Rev 0)">
-                                </div>
-                                <div class="form-group">
-                                    <label>Copy structure from</label>
-                                    <select id="newFormCopyFrom">
-                                        <option value="">Start from scratch (no questions)</option>
-                                        {% for form_id, form in config.forms.items() %}
-                                        <option value="{{ form_id }}">{{ form.title }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
+
+                        <!-- Basic Info -->
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 24px;">
+                            <div class="form-group">
+                                <label>Form ID <small style="color:#888;">(alphanumeric, e.g. "form3")</small></label>
+                                <input type="text" id="newFormId" pattern="[a-zA-Z0-9_]+" placeholder="form3">
                             </div>
                             <div class="form-group">
-                                <label>Description</label>
-                                <textarea id="newFormDescription" rows="3" placeholder="Dear Participant, ..."></textarea>
+                                <label>Form Title</label>
+                                <input type="text" id="newFormTitle" placeholder="My Custom Evaluation Form">
                             </div>
-                            <div style="text-align:right; margin-top:10px;">
-                                <button type="submit" class="btn btn-primary">Create Form</button>
+                            <div class="form-group">
+                                <label>Form Number <small style="color:#888;">(optional)</small></label>
+                                <input type="text" id="newFormNumber" placeholder="R3530-05a (Rev 0)">
                             </div>
-                        </form>
+                            <div class="form-group">
+                                <label>Copy structure from</label>
+                                <select id="newFormCopyFrom" onchange="onCopyFromChange()">
+                                    <option value="">Start from scratch</option>
+                                    {% for form_id, form in config.forms.items() %}
+                                    <option value="{{ form_id }}">{{ form.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="newFormDescription" rows="3" placeholder="Dear Participant, ..."></textarea>
+                        </div>
+
+                        <!-- Section Builder (shown when starting from scratch) -->
+                        <div id="sectionBuilder" style="border-top:2px solid #e0e0e0; padding-top:18px; margin-top:6px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                <strong style="color:#003366; font-size:15px;">Form Sections &amp; Questions</strong>
+                                <button type="button" class="btn btn-success btn-sm" onclick="builderAddSection()">+ Add Section</button>
+                            </div>
+                            <div id="newFormSectionsContainer">
+                                <p id="noSectionsMsg" style="color:#aaa; font-size:13px; text-align:center; padding:16px 0;">No sections yet. Click &ldquo;+ Add Section&rdquo; to begin.</p>
+                            </div>
+                        </div>
+
+                        <div style="text-align:right; margin-top:20px; display:flex; gap:10px; justify-content:flex-end;">
+                            <button type="button" class="btn btn-secondary" onclick="toggleCreateForm()">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="submitNewForm()">Create Form</button>
+                        </div>
                         <div id="createFormResult" style="margin-top:10px;"></div>
+
                     </div>
                 </div>
             </div>
 
-            <!-- ── Edit Existing Form ── -->
             <div class="card" style="margin-top:18px;">
                 <div class="card-header">Edit Form Questions</div>
                 <div class="card-body">
@@ -212,7 +224,6 @@
                             <button class="btn btn-danger btn-sm" onclick="deleteSelectedForm()" id="deleteFormBtn" title="Delete this custom form">Delete Form</button>
                         </div>
                     </div>
-                    
                     <div id="formEditor"></div>
                 </div>
             </div>
@@ -251,7 +262,6 @@
             </div>
         </div>
 
-        <!-- ──────── LOW FEEDBACK ALERTS TAB ──────── -->
         <div id="alerts" class="tab-content">
             <div class="card">
                 <div class="card-header">Low Feedback Alerts (Rating ≤ 2)</div>
@@ -260,11 +270,7 @@
                         Alerts are created automatically when a participant rates any question as <strong>Poor (1)</strong> or <strong>Unsatisfactory (2)</strong>.
                         Review each alert, add action notes, and update the status to track your response.
                     </p>
-
-                    <!-- Summary pills -->
                     <div class="alert-summary-bar" id="alertsSummary"></div>
-
-                    <!-- Filter bar -->
                     <div style="display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap;">
                         <label style="font-weight:500;">Filter by status:</label>
                         <select id="alertStatusFilter" onchange="loadAlerts()" style="padding:6px 10px; border:1px solid #ddd; border-radius:6px;">
@@ -350,10 +356,8 @@
         let pendingChanges = null;
         let searchTimeout = null;
 
-        // Map form_id → personnel type ('assessor' | 'instructor')
         const FORM_PERSONNEL = JSON.parse(_appData.formPersonnel);
 
-        // Load class codes when date is selected
         async function loadClassCodes() {
             const date = document.getElementById('courseDate').value;
             const group = document.getElementById('classCodeGroup');
@@ -1073,7 +1077,10 @@
             }
         }
 
-        // ─────────────── CREATE NEW FORM ───────────────
+        // ─────────────── CREATE NEW FORM BUILDER ───────────────
+        let newFormSections = [];
+        let builderSectionCounter = 0;
+
         function toggleCreateForm() {
             const body = document.getElementById('createFormBody');
             const icon = document.getElementById('createFormToggleIcon');
@@ -1086,48 +1093,185 @@
             }
         }
 
-        document.getElementById('newFormForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        function onCopyFromChange() {
+            const val = document.getElementById('newFormCopyFrom').value;
+            document.getElementById('sectionBuilder').style.display = val ? 'none' : 'block';
+        }
+
+        function builderAddSection() {
+            builderSectionCounter++;
+            const defaultId = String.fromCharCode(64 + builderSectionCounter); // A, B, C ...
+            newFormSections.push({ id: defaultId, title: '', type: 'rating', questions: [] });
+            builderRender();
+        }
+
+        function builderRemoveSection(idx) {
+            newFormSections.splice(idx, 1);
+            builderRender();
+        }
+
+        function builderAddQuestion(secIdx) {
+            const sec = newFormSections[secIdx];
+            const qNum = sec.questions.length + 1;
+            sec.questions.push({ id: sec.id + qNum, text: '' });
+            builderRender();
+        }
+
+        function builderRemoveQuestion(secIdx, qIdx) {
+            newFormSections[secIdx].questions.splice(qIdx, 1);
+            // Re-number auto-generated IDs
+            newFormSections[secIdx].questions.forEach((q, i) => {
+                if (/^[A-Za-z]+\d+$/.test(q.id)) q.id = newFormSections[secIdx].id + (i + 1);
+            });
+            builderRender();
+        }
+
+        function builderSecIdChange(idx, val) {
+            newFormSections[idx].id = val;
+            // Re-number questions to match new section ID
+            newFormSections[idx].questions.forEach((q, i) => { q.id = val + (i + 1); });
+            // Update question ID inputs without full re-render
+            const secEl = document.querySelector('[data-sec-idx="' + idx + '"]');
+            if (secEl) {
+                secEl.querySelectorAll('.b-qid').forEach((el, i) => { el.value = val + (i + 1); });
+            }
+        }
+
+        function builderRender() {
+            const container = document.getElementById('newFormSectionsContainer');
+            if (newFormSections.length === 0) {
+                container.innerHTML = '<p id="noSectionsMsg" style="color:#aaa;font-size:13px;text-align:center;padding:16px 0;">No sections yet. Click &ldquo;+ Add Section&rdquo; to begin.</p>';
+                return;
+            }
+            let html = '';
+            newFormSections.forEach((sec, idx) => {
+                html += `
+                <div class="card" style="margin-bottom:12px;border:1px solid #c8d8f0;" data-sec-idx="${idx}">
+                    <div style="background:#dce8f8;padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-radius:6px 6px 0 0;">
+                        <div style="display:flex;align-items:center;gap:5px;">
+                            <label style="font-size:12px;font-weight:600;margin:0;color:#003366;">ID:</label>
+                            <input type="text" class="b-secid" value="${bEsc(sec.id)}"
+                                   style="width:55px;padding:3px 6px;border:1px solid #99b;border-radius:4px;font-size:13px;"
+                                   oninput="builderSecIdChange(${idx},this.value);newFormSections[${idx}].id=this.value;">
+                        </div>
+                        <div style="display:flex;align-items:center;gap:5px;flex:1;min-width:180px;">
+                            <label style="font-size:12px;font-weight:600;margin:0;color:#003366;white-space:nowrap;">Title:</label>
+                            <input type="text" class="b-sectitle" value="${bEsc(sec.title)}"
+                                   placeholder="e.g. Course Content"
+                                   style="flex:1;padding:3px 8px;border:1px solid #99b;border-radius:4px;font-size:13px;"
+                                   oninput="newFormSections[${idx}].title=this.value;">
+                        </div>
+                        <div style="display:flex;align-items:center;gap:5px;">
+                            <label style="font-size:12px;font-weight:600;margin:0;color:#003366;">Type:</label>
+                            <select class="b-sectype" style="padding:3px 6px;border:1px solid #99b;border-radius:4px;font-size:13px;"
+                                    onchange="newFormSections[${idx}].type=this.value;">
+                                <option value="rating" ${sec.type==='rating'?'selected':''}>&#9733; 1–5 Rating Scale</option>
+                                <option value="text_questions" ${sec.type==='text_questions'?'selected':''}>&#9998; Short Answer / Text</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="builderRemoveSection(${idx})" style="margin-left:auto;">Remove</button>
+                    </div>
+                    <div style="padding:10px 14px;">
+`;
+                if (sec.questions.length === 0) {
+                    html += `<p style="color:#aaa;font-size:12px;margin:4px 0 8px;">No questions yet.</p>`;
+                } else {
+                    sec.questions.forEach((q, qi) => {
+                        html += `
+                        <div style="display:flex;gap:8px;align-items:center;margin-bottom:7px;">
+                            <span style="font-size:11px;color:#888;white-space:nowrap;">Q ID:</span>
+                            <input type="text" class="b-qid" value="${bEsc(q.id)}"
+                                   style="width:65px;padding:3px 6px;border:1px solid #ddd;border-radius:4px;font-size:12px;"
+                                   oninput="newFormSections[${idx}].questions[${qi}].id=this.value;">
+                            <input type="text" class="b-qtext" value="${bEsc(q.text)}"
+                                   placeholder="Question text..."
+                                   style="flex:1;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:13px;"
+                                   oninput="newFormSections[${idx}].questions[${qi}].text=this.value;">
+                            <button type="button" class="btn btn-danger btn-sm" onclick="builderRemoveQuestion(${idx},${qi})"
+                                    style="padding:3px 8px;">✕</button>
+                        </div>`;
+                    });
+                }
+                html += `
+                        <button type="button" class="btn btn-success btn-sm" style="margin-top:6px;"
+                                onclick="builderAddQuestion(${idx})">+ Add Question</button>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function bEsc(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
+        async function submitNewForm() {
             const resultDiv = document.getElementById('createFormResult');
-            const formId = document.getElementById('newFormId').value.trim();
-            const title = document.getElementById('newFormTitle').value.trim();
+            const formId   = document.getElementById('newFormId').value.trim();
+            const title    = document.getElementById('newFormTitle').value.trim();
             const formNumber = document.getElementById('newFormNumber').value.trim();
             const description = document.getElementById('newFormDescription').value.trim();
             const copyFrom = document.getElementById('newFormCopyFrom').value;
 
-            resultDiv.innerHTML = '<span style="color:#666;">Creating form...</span>';
+            if (!formId) { alert('Please enter a Form ID.'); return; }
+            if (!title)  { alert('Please enter a Form Title.'); return; }
 
+            // Validate scratch sections
+            if (!copyFrom) {
+                for (const sec of newFormSections) {
+                    if (!sec.id.trim()) { alert('Each section needs an ID.'); return; }
+                    for (const q of sec.questions) {
+                        if (!q.id.trim() || !q.text.trim()) {
+                            alert(`Section "${sec.id}": every question needs an ID and text.`); return;
+                        }
+                    }
+                }
+            }
+
+            const sections = copyFrom ? [] : newFormSections.map(s => ({
+                id: s.id, title: s.title, type: s.type,
+                questions: s.questions.map(q => ({ id: q.id, text: q.text }))
+            }));
+
+            resultDiv.innerHTML = '<span style="color:#666;">Creating form...</span>';
             try {
                 const response = await fetch('/api/forms', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ form_id: formId, title, formNumber, description, copy_from: copyFrom })
+                    body: JSON.stringify({ form_id: formId, title, formNumber, description, copy_from: copyFrom, sections })
                 });
                 const result = await response.json();
                 if (result.success) {
-                    resultDiv.innerHTML = `<span style="color:green;">✓ Form "<strong>${result.form.title}</strong>" created! Refreshing...</span>`;
-                    // Add to both dropdowns
+                    resultDiv.innerHTML = `<span style="color:green;">✓ Form "<strong>${result.form.title}</strong>" created!</span>`;
                     const opt1 = new Option(result.form.title, result.form.id);
                     const opt2 = new Option(result.form.title, result.form.id);
                     document.getElementById('editFormSelect').add(opt1);
                     document.getElementById('formSelect').add(opt2);
-                    // Update FORM_PERSONNEL map
                     const isAssessor = result.form.sections && result.form.sections.some(s => s.type === 'assessor_rating');
                     FORM_PERSONNEL[result.form.id] = isAssessor ? 'assessor' : 'instructor';
-                    // Auto-select new form in editor
                     document.getElementById('editFormSelect').value = result.form.id;
                     loadFormForEdit();
-                    this.reset();
+                    // Reset builder state
+                    document.getElementById('newFormId').value = '';
+                    document.getElementById('newFormTitle').value = '';
+                    document.getElementById('newFormNumber').value = '';
+                    document.getElementById('newFormDescription').value = '';
+                    document.getElementById('newFormCopyFrom').value = '';
+                    newFormSections = [];
+                    builderSectionCounter = 0;
+                    builderRender();
+                    document.getElementById('sectionBuilder').style.display = 'block';
                     document.getElementById('createFormBody').style.display = 'none';
                     document.getElementById('createFormToggleIcon').textContent = 'Expand';
-                    setTimeout(() => { resultDiv.innerHTML = ''; }, 4000);
+                    setTimeout(() => { resultDiv.innerHTML = ''; }, 5000);
                 } else {
                     resultDiv.innerHTML = `<span style="color:red;">Error: ${result.error}</span>`;
                 }
             } catch (err) {
                 resultDiv.innerHTML = `<span style="color:red;">Error: ${err.message}</span>`;
             }
-        });
+        }
 
         async function deleteSelectedForm() {
             const formId = document.getElementById('editFormSelect').value;
