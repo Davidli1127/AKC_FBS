@@ -241,7 +241,8 @@ def get_participants_by_class(class_code, offset=0, limit=20):
                 [Participant Name],
                 [Email Address],
                 [Trainee Designation],
-                [Survey Sent]
+                [Survey Sent],
+                [Identification Number]
             FROM {PARTICIPANT_TABLE}
             WHERE [Class Code] LIKE ?
             ORDER BY [Participant Name]
@@ -258,7 +259,8 @@ def get_participants_by_class(class_code, offset=0, limit=20):
                 'name': row[1] if row[1] else '',
                 'email': row[2] if row[2] else '',
                 'designation': row[3] if row[3] else '',
-                'survey_sent': bool(row[4]) if row[4] else False
+                'survey_sent': bool(row[4]) if row[4] else False,
+                'id_number': str(row[5]).strip() if row[5] else ''
             })
         
         conn.close()
