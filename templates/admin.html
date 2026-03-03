@@ -21,6 +21,7 @@
             <button class="tab" onclick="showTab('participants')">View Participants</button>
             <button class="tab" onclick="showTab('forms')">Edit Form Questions</button>
             <button class="tab" onclick="showTab('existing')">Generated QR Codes</button>
+            <button class="tab" onclick="showTab('alerts')" id="alertsTab">&#9888; Low Feedback Alerts <span id="alertsBadge" style="display:none; background:#dc3545; color:white; border-radius:10px; padding:1px 7px; font-size:11px; margin-left:4px; font-weight:700;"></span></button>
         </div>
 
         <div id="courses" class="tab-content active">
@@ -150,16 +151,66 @@
         </div>
 
         <div id="forms" class="tab-content">
+            <!-- ── Create New Form ── -->
             <div class="card">
+                <div class="card-header" style="cursor:pointer;" onclick="toggleCreateForm()">
+                    + Create New Form <span id="createFormToggleIcon" style="float:right; font-size:13px; color:#666;">Expand</span>
+                </div>
+                <div id="createFormBody" style="display:none;">
+                    <div class="card-body">
+                        <form id="newFormForm">
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 24px; flex-wrap:wrap;">
+                                <div class="form-group">
+                                    <label>Form ID <small style="color:#888;">(alphanumeric, e.g. "form3")</small></label>
+                                    <input type="text" id="newFormId" pattern="[a-zA-Z0-9_]+" required placeholder="form3">
+                                </div>
+                                <div class="form-group">
+                                    <label>Form Title</label>
+                                    <input type="text" id="newFormTitle" required placeholder="My Custom Evaluation Form">
+                                </div>
+                                <div class="form-group">
+                                    <label>Form Number <small style="color:#888;">(optional)</small></label>
+                                    <input type="text" id="newFormNumber" placeholder="R3530-05a (Rev 0)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Copy structure from</label>
+                                    <select id="newFormCopyFrom">
+                                        <option value="">Start from scratch (no questions)</option>
+                                        {% for form_id, form in config.forms.items() %}
+                                        <option value="{{ form_id }}">{{ form.title }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Description</label>
+                                <textarea id="newFormDescription" rows="3" placeholder="Dear Participant, ..."></textarea>
+                            </div>
+                            <div style="text-align:right; margin-top:10px;">
+                                <button type="submit" class="btn btn-primary">Create Form</button>
+                            </div>
+                        </form>
+                        <div id="createFormResult" style="margin-top:10px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Edit Existing Form ── -->
+            <div class="card" style="margin-top:18px;">
                 <div class="card-header">Edit Form Questions</div>
                 <div class="card-body">
-                    <div class="form-group">
-                        <label>Select Form to Edit:</label>
-                        <select id="editFormSelect" onchange="loadFormForEdit()">
-                            {% for form_id, form in config.forms.items() %}
-                            <option value="{{ form_id }}">{{ form.title }}</option>
-                            {% endfor %}
-                        </select>
+                    <div class="form-group" style="display:flex; gap:10px; align-items:center;">
+                        <div style="flex:1;">
+                            <label>Select Form to Edit:</label>
+                            <select id="editFormSelect" onchange="loadFormForEdit()">
+                                {% for form_id, form in config.forms.items() %}
+                                <option value="{{ form_id }}">{{ form.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div style="display:flex; gap:8px; padding-top:22px;">
+                            <button class="btn btn-danger btn-sm" onclick="deleteSelectedForm()" id="deleteFormBtn" title="Delete this custom form">Delete Form</button>
+                        </div>
                     </div>
                     
                     <div id="formEditor"></div>
@@ -196,6 +247,37 @@
                         </li>
                         {% endfor %}
                     </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ──────── LOW FEEDBACK ALERTS TAB ──────── -->
+        <div id="alerts" class="tab-content">
+            <div class="card">
+                <div class="card-header">Low Feedback Alerts (Rating ≤ 2)</div>
+                <div class="card-body">
+                    <p style="color:#555; font-size:13px; margin-bottom:16px;">
+                        Alerts are created automatically when a participant rates any question as <strong>Poor (1)</strong> or <strong>Unsatisfactory (2)</strong>.
+                        Review each alert, add action notes, and update the status to track your response.
+                    </p>
+
+                    <!-- Summary pills -->
+                    <div class="alert-summary-bar" id="alertsSummary"></div>
+
+                    <!-- Filter bar -->
+                    <div style="display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap;">
+                        <label style="font-weight:500;">Filter by status:</label>
+                        <select id="alertStatusFilter" onchange="loadAlerts()" style="padding:6px 10px; border:1px solid #ddd; border-radius:6px;">
+                            <option value="">All</option>
+                            <option value="new">New</option>
+                            <option value="acknowledged">Acknowledged</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                        </select>
+                        <button class="btn btn-secondary btn-sm" onclick="loadAlerts()">&#8635; Refresh</button>
+                    </div>
+
+                    <div id="alertsList"><p style="color:#888;">Loading alerts...</p></div>
                 </div>
             </div>
         </div>
@@ -256,12 +338,20 @@
         </div>
     </div>
 
+    <div id="appData" style="display:none"
+         data-form-personnel='{{ form_personnel | tojson }}'></div>
+
     <script>
+        const _appData = document.getElementById('appData').dataset;
+
         let currentFormId = 'form1';
         let currentFormData = null;
-        let originalFormData = null; 
-        let pendingChanges = null; 
+        let originalFormData = null;
+        let pendingChanges = null;
         let searchTimeout = null;
+
+        // Map form_id → personnel type ('assessor' | 'instructor')
+        const FORM_PERSONNEL = JSON.parse(_appData.formPersonnel);
 
         // Load class codes when date is selected
         async function loadClassCodes() {
@@ -506,7 +596,8 @@
         
         document.addEventListener('click', function(e) {
             if (!e.target.matches('#courseTitle') && !e.target.matches('.suggestion-item')) {
-                document.getElementById('courseSuggestions').style.display = 'none';
+                const csElem = document.getElementById('courseSuggestions');
+                if (csElem) csElem.style.display = 'none';
             }
             if (!e.target.matches('#participantCourseSearch') && !e.target.matches('.suggestion-item')) {
                 const elem = document.getElementById('participantCourseSuggestions');
@@ -520,15 +611,15 @@
             document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
             document.getElementById(tabId).classList.add('active');
             
-            if (tabId === 'forms') {
-                loadFormForEdit();
-            }
+            if (tabId === 'forms') loadFormForEdit();
+            if (tabId === 'alerts') loadAlerts();
         }
 
         function updateFormFields() {
             const formType = document.getElementById('formSelect').value;
+            const isAssessor = FORM_PERSONNEL[formType] === 'assessor';
             
-            if (formType === 'form2') {
+            if (isAssessor) {
                 document.getElementById('classroomGroup').style.display = 'none';
                 document.getElementById('assessmentLocationGroup').style.display = 'block';
                 document.getElementById('instructorSection').style.display = 'none';
@@ -589,7 +680,7 @@
                 course_date: formData.get('course_date')
             };
             
-            if (formType === 'form2') {
+            if (FORM_PERSONNEL[formType] === 'assessor') {
                 const numAssessors = parseInt(formData.get('num_assessors'));
                 const assessors = [];
                 for (let i = 1; i <= numAssessors; i++) {
@@ -662,7 +753,7 @@
             li.id = `course-${course.id}`;
             
             let locationInfo, personnelInfo;
-            if (course.form_id === 'form2') {
+            if (FORM_PERSONNEL[course.form_id] === 'assessor') {
                 locationInfo = `Date: ${course.course_date} | Location: ${course.assessment_location}`;
                 personnelInfo = `Assessors: ${course.assessors.join(', ')}`;
             } else {
@@ -981,6 +1072,231 @@
                 alert('Error saving form: ' + error.message);
             }
         }
+
+        // ─────────────── CREATE NEW FORM ───────────────
+        function toggleCreateForm() {
+            const body = document.getElementById('createFormBody');
+            const icon = document.getElementById('createFormToggleIcon');
+            if (body.style.display === 'none') {
+                body.style.display = 'block';
+                icon.textContent = 'Collapse';
+            } else {
+                body.style.display = 'none';
+                icon.textContent = 'Expand';
+            }
+        }
+
+        document.getElementById('newFormForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const resultDiv = document.getElementById('createFormResult');
+            const formId = document.getElementById('newFormId').value.trim();
+            const title = document.getElementById('newFormTitle').value.trim();
+            const formNumber = document.getElementById('newFormNumber').value.trim();
+            const description = document.getElementById('newFormDescription').value.trim();
+            const copyFrom = document.getElementById('newFormCopyFrom').value;
+
+            resultDiv.innerHTML = '<span style="color:#666;">Creating form...</span>';
+
+            try {
+                const response = await fetch('/api/forms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ form_id: formId, title, formNumber, description, copy_from: copyFrom })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    resultDiv.innerHTML = `<span style="color:green;">✓ Form "<strong>${result.form.title}</strong>" created! Refreshing...</span>`;
+                    // Add to both dropdowns
+                    const opt1 = new Option(result.form.title, result.form.id);
+                    const opt2 = new Option(result.form.title, result.form.id);
+                    document.getElementById('editFormSelect').add(opt1);
+                    document.getElementById('formSelect').add(opt2);
+                    // Update FORM_PERSONNEL map
+                    const isAssessor = result.form.sections && result.form.sections.some(s => s.type === 'assessor_rating');
+                    FORM_PERSONNEL[result.form.id] = isAssessor ? 'assessor' : 'instructor';
+                    // Auto-select new form in editor
+                    document.getElementById('editFormSelect').value = result.form.id;
+                    loadFormForEdit();
+                    this.reset();
+                    document.getElementById('createFormBody').style.display = 'none';
+                    document.getElementById('createFormToggleIcon').textContent = 'Expand';
+                    setTimeout(() => { resultDiv.innerHTML = ''; }, 4000);
+                } else {
+                    resultDiv.innerHTML = `<span style="color:red;">Error: ${result.error}</span>`;
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<span style="color:red;">Error: ${err.message}</span>`;
+            }
+        });
+
+        async function deleteSelectedForm() {
+            const formId = document.getElementById('editFormSelect').value;
+            if (!formId) return;
+            if (formId === 'form1' || formId === 'form2') {
+                alert('Built-in forms (form1, form2) cannot be deleted.');
+                return;
+            }
+            const formTitle = document.getElementById('editFormSelect').options[document.getElementById('editFormSelect').selectedIndex].text;
+            if (!confirm(`Delete form "${formTitle}"? This cannot be undone.`)) return;
+            try {
+                const resp = await fetch(`/api/forms/${formId}`, { method: 'DELETE' });
+                const result = await resp.json();
+                if (result.success) {
+                    // Remove from both dropdowns
+                    ['editFormSelect', 'formSelect'].forEach(id => {
+                        const sel = document.getElementById(id);
+                        for (let i = sel.options.length - 1; i >= 0; i--) {
+                            if (sel.options[i].value === formId) sel.remove(i);
+                        }
+                        if (sel.options.length > 0) sel.selectedIndex = 0;
+                    });
+                    loadFormForEdit();
+                    alert('Form deleted.');
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        // ─────────────── LOW FEEDBACK ALERTS ───────────────
+        const STATUS_COLORS = {
+            new: '#dc3545',
+            acknowledged: '#fd7e14',
+            in_progress: '#0d6efd',
+            resolved: '#28a745'
+        };
+        const STATUS_LABELS = {
+            new: 'New',
+            acknowledged: 'Acknowledged',
+            in_progress: 'In Progress',
+            resolved: 'Resolved'
+        };
+
+        async function loadAlerts() {
+            const status = document.getElementById('alertStatusFilter').value;
+            const url = '/api/alerts' + (status ? '?status=' + status : '');
+            try {
+                const [alertsRes, summaryRes] = await Promise.all([
+                    fetch(url),
+                    fetch('/api/alerts/summary')
+                ]);
+                const alerts = await alertsRes.json();
+                const summary = await summaryRes.json();
+
+                // Update tab badge
+                const unresolved = (summary.new || 0) + (summary.acknowledged || 0) + (summary.in_progress || 0);
+                const badge = document.getElementById('alertsBadge');
+                if (unresolved > 0) {
+                    badge.textContent = unresolved;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+
+                // Summary pills
+                const summaryDiv = document.getElementById('alertsSummary');
+                summaryDiv.innerHTML = [
+                    ['new', summary.new || 0],
+                    ['acknowledged', summary.acknowledged || 0],
+                    ['in_progress', summary.in_progress || 0],
+                    ['resolved', summary.resolved || 0]
+                ].map(([s, n]) => `
+                    <span class="alert-summary-pill" style="background:${STATUS_COLORS[s]};"
+                          onclick="document.getElementById('alertStatusFilter').value='${s}'; loadAlerts();"
+                          title="Click to filter">
+                        ${STATUS_LABELS[s]}: ${n}
+                    </span>
+                `).join('') + `<span style="color:#888; font-size:13px; align-self:center;">Total: ${summary.total || 0}</span>`;
+
+                // Alerts list
+                const listDiv = document.getElementById('alertsList');
+                if (!alerts.length) {
+                    listDiv.innerHTML = '<p style="color:#888; text-align:center; padding:20px;">No alerts found.</p>';
+                    return;
+                }
+
+                listDiv.innerHTML = alerts.map(a => {
+                    const col = STATUS_COLORS[a.status] || '#888';
+                    return `
+                    <div class="alert-card" id="alertCard_${a.id}" style="border-left:4px solid ${col};">
+                        <div class="alert-card-header">
+                            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                                <span class="alert-status-badge" style="background:${col};">${STATUS_LABELS[a.status] || a.status}</span>
+                                <strong>${escHtml(a.course_title)}</strong>
+                                <span style="color:#777;font-size:12px;">${escHtml(a.course_date)}</span>
+                                <span style="color:#aaa;font-size:11px;">${escHtml(a.form_id)}</span>
+                            </div>
+                            <span style="color:#aaa;font-size:12px;">${escHtml(a.submitted_at)}</span>
+                        </div>
+                        <div class="alert-card-body">
+                            <p><strong>Question:</strong> [${escHtml(a.question_id)}] ${escHtml(a.question_text)}</p>
+                            <p><strong>Rating:</strong> <span style="color:${col};font-weight:700;">${a.rating} — ${escHtml(a.rating_label)}</span></p>
+                            ${a.comment ? `<p><strong>Participant comment:</strong> <em>"${escHtml(a.comment)}"</em></p>` : '<p style="color:#aaa;font-size:12px;">No comment from participant.</p>'}
+                            ${a.participant_name ? `<p style="color:#999;font-size:12px;">Participant: ${escHtml(a.participant_name)}</p>` : ''}
+                            ${a.action_notes ? `<p style="color:#555;font-size:12px;border-top:1px dashed #ddd;margin-top:6px;padding-top:6px;">Previous notes: ${escHtml(a.action_notes)}</p>` : ''}
+                        </div>
+                        <div class="alert-card-actions">
+                            <select id="alertStatus_${a.id}">
+                                <option value="new" ${a.status==='new'?'selected':''}>New</option>
+                                <option value="acknowledged" ${a.status==='acknowledged'?'selected':''}>Acknowledged</option>
+                                <option value="in_progress" ${a.status==='in_progress'?'selected':''}>In Progress</option>
+                                <option value="resolved" ${a.status==='resolved'?'selected':''}>Resolved</option>
+                            </select>
+                            <textarea id="alertNotes_${a.id}" rows="2" placeholder="Action taken / follow-up notes...">${escHtml(a.action_notes || '')}</textarea>
+                            <button class="btn btn-primary btn-sm" onclick="updateAlert('${a.id}')">Save</button>
+                        </div>
+                    </div>`;
+                }).join('');
+
+            } catch (err) {
+                document.getElementById('alertsList').innerHTML = `<p style="color:red;">Error loading alerts: ${err.message}</p>`;
+            }
+        }
+
+        async function updateAlert(alertId) {
+            const status = document.getElementById(`alertStatus_${alertId}`).value;
+            const actionNotes = document.getElementById(`alertNotes_${alertId}`).value;
+            try {
+                const response = await fetch(`/api/alerts/${alertId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status, action_notes: actionNotes })
+                });
+                if (response.ok) {
+                    loadAlerts();
+                } else {
+                    alert('Error updating alert');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        function escHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g,'&amp;')
+                .replace(/</g,'&lt;')
+                .replace(/>/g,'&gt;')
+                .replace(/"/g,'&quot;');
+        }
+
+        // Load alert badge count on page load
+        (async function initAlertBadge() {
+            try {
+                const res = await fetch('/api/alerts/summary');
+                const s = await res.json();
+                const unresolved = (s.new||0) + (s.acknowledged||0) + (s.in_progress||0);
+                if (unresolved > 0) {
+                    const b = document.getElementById('alertsBadge');
+                    b.textContent = unresolved;
+                    b.style.display = 'inline';
+                }
+            } catch(e) {}
+        })();
     </script>
 </body>
 </html>
+

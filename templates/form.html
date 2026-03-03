@@ -67,20 +67,26 @@
                         <div class="section-title">{{ section.id }} &nbsp;&nbsp; {{ section.title }}</div>
                         {% endif %}
                         {% for question in section.questions %}
-                        <div class="question-row">
-                            {% if section.title %}
-                            <span class="question-number">{{ loop.index }}</span>
-                            {% else %}
-                            <span class="question-number">{{ section.id }}</span>
-                            {% endif %}
-                            <span class="question-text">{{ question.text }}</span>
-                            <div class="rating-options">
-                                {% for i in range(1, 6) %}
-                                <div class="rating-option">
-                                    <input type="radio" name="{{ question.id }}" id="{{ question.id }}_{{ i }}" value="{{ i }}" required>
-                                    <label for="{{ question.id }}_{{ i }}">{{ i }}</label>
+                        <div class="question-block">
+                            <div class="question-row">
+                                {% if section.title %}
+                                <span class="question-number">{{ loop.index }}</span>
+                                {% else %}
+                                <span class="question-number">{{ section.id }}</span>
+                                {% endif %}
+                                <span class="question-text">{{ question.text }}</span>
+                                <div class="rating-options">
+                                    {% for i in range(1, 6) %}
+                                    <div class="rating-option">
+                                        <input type="radio" name="{{ question.id }}" id="{{ question.id }}_{{ i }}" value="{{ i }}" required>
+                                        <label for="{{ question.id }}_{{ i }}">{{ i }}</label>
+                                    </div>
+                                    {% endfor %}
                                 </div>
-                                {% endfor %}
+                            </div>
+                            <div class="low-rating-comment" id="lrc_{{ question.id }}" style="display:none;">
+                                <span class="low-rating-label">&#9888; Low rating — please share more (optional):</span>
+                                <textarea name="{{ question.id }}_comment" placeholder="What can we improve?" rows="2"></textarea>
                             </div>
                         </div>
                         {% endfor %}
@@ -93,16 +99,22 @@
                             B{{ inst_num }} &nbsp;&nbsp; Instructor {{ inst_num }}: {{ course.instructors[inst_num - 1] if course.instructors|length >= inst_num else '' }}
                         </div>
                         {% for question in section.questions %}
-                        <div class="question-row">
-                            <span class="question-number">{{ question.id }}</span>
-                            <span class="question-text">{{ question.text }}</span>
-                            <div class="rating-options">
-                                {% for i in range(1, 6) %}
-                                <div class="rating-option">
-                                    <input type="radio" name="B{{ inst_num }}_{{ question.id }}" id="B{{ inst_num }}_{{ question.id }}_{{ i }}" value="{{ i }}" required>
-                                    <label for="B{{ inst_num }}_{{ question.id }}_{{ i }}">{{ i }}</label>
+                        <div class="question-block">
+                            <div class="question-row">
+                                <span class="question-number">{{ question.id }}</span>
+                                <span class="question-text">{{ question.text }}</span>
+                                <div class="rating-options">
+                                    {% for i in range(1, 6) %}
+                                    <div class="rating-option">
+                                        <input type="radio" name="B{{ inst_num }}_{{ question.id }}" id="B{{ inst_num }}_{{ question.id }}_{{ i }}" value="{{ i }}" required>
+                                        <label for="B{{ inst_num }}_{{ question.id }}_{{ i }}">{{ i }}</label>
+                                    </div>
+                                    {% endfor %}
                                 </div>
-                                {% endfor %}
+                            </div>
+                            <div class="low-rating-comment" id="lrc_B{{ inst_num }}_{{ question.id }}" style="display:none;">
+                                <span class="low-rating-label">&#9888; Low rating — please share more (optional):</span>
+                                <textarea name="B{{ inst_num }}_{{ question.id }}_comment" placeholder="What can we improve?" rows="2"></textarea>
                             </div>
                         </div>
                         {% endfor %}
@@ -116,16 +128,22 @@
                             A{{ assess_num }} &nbsp;&nbsp; Assessor {{ assess_num }}: {{ course.assessors[assess_num - 1] if course.assessors|length >= assess_num else '' }}
                         </div>
                         {% for question in section.questions %}
-                        <div class="question-row">
-                            <span class="question-number">{{ question.id }}</span>
-                            <span class="question-text">{{ question.text }}</span>
-                            <div class="rating-options">
-                                {% for i in range(1, 6) %}
-                                <div class="rating-option">
-                                    <input type="radio" name="A{{ assess_num }}_{{ question.id }}" id="A{{ assess_num }}_{{ question.id }}_{{ i }}" value="{{ i }}" required>
-                                    <label for="A{{ assess_num }}_{{ question.id }}_{{ i }}">{{ i }}</label>
+                        <div class="question-block">
+                            <div class="question-row">
+                                <span class="question-number">{{ question.id }}</span>
+                                <span class="question-text">{{ question.text }}</span>
+                                <div class="rating-options">
+                                    {% for i in range(1, 6) %}
+                                    <div class="rating-option">
+                                        <input type="radio" name="A{{ assess_num }}_{{ question.id }}" id="A{{ assess_num }}_{{ question.id }}_{{ i }}" value="{{ i }}" required>
+                                        <label for="A{{ assess_num }}_{{ question.id }}_{{ i }}">{{ i }}</label>
+                                    </div>
+                                    {% endfor %}
                                 </div>
-                                {% endfor %}
+                            </div>
+                            <div class="low-rating-comment" id="lrc_A{{ assess_num }}_{{ question.id }}" style="display:none;">
+                                <span class="low-rating-label">&#9888; Low rating — please share more (optional):</span>
+                                <textarea name="A{{ assess_num }}_{{ question.id }}_comment" placeholder="What can we improve?" rows="2"></textarea>
                             </div>
                         </div>
                         {% endfor %}
@@ -160,6 +178,24 @@
     </div>
 
     <script>
+        // Show optional comment box when participant rates 1 or 2
+        document.querySelectorAll('input[type="radio"]').forEach(function(radio) {
+            radio.addEventListener('change', function() {
+                const name = this.name;
+                const value = parseInt(this.value);
+                const commentDiv = document.getElementById('lrc_' + name);
+                if (commentDiv) {
+                    if (value <= 2) {
+                        commentDiv.style.display = 'block';
+                    } else {
+                        commentDiv.style.display = 'none';
+                        const ta = commentDiv.querySelector('textarea');
+                        if (ta) ta.value = '';
+                    }
+                }
+            });
+        });
+
         document.getElementById('evaluationForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             

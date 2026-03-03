@@ -150,6 +150,14 @@ body {
     background: #fafafa;
 }
 
+.question-block:nth-child(even) .question-row {
+    background: #fafafa;
+}
+
+.question-block:nth-child(even) > .low-rating-comment {
+    background: #fff3cd;
+}
+
 .question-row:hover {
     background: #f0f7ff;
 }
@@ -715,4 +723,125 @@ body {
     .rating-legend span {
         margin: 5px 10px;
     }
+}
+
+/* ─── Low-rating comment ─── */
+.question-block {
+    border-bottom: 1px solid #eee;
+}
+
+.question-block .question-row {
+    border-bottom: none;
+}
+
+.low-rating-comment {
+    padding: 8px 15px 12px 55px;
+    background: #fff8e1;
+    border-top: 1px dashed #ffc107;
+    animation: fadeIn 0.2s ease;
+}
+
+.low-rating-comment .low-rating-label {
+    display: block;
+    font-size: 12px;
+    color: #856404;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.low-rating-comment textarea {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid #ffc107;
+    border-radius: 6px;
+    font-size: 13px;
+    resize: vertical;
+    background: #fffdf0;
+    box-sizing: border-box;
+}
+
+.low-rating-comment textarea:focus {
+    outline: none;
+    border-color: #e0a800;
+    box-shadow: 0 0 0 2px rgba(255,193,7,0.25);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Alert cards (admin) ─── */
+.alert-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    padding: 16px 18px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.alert-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.alert-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.alert-card-body {
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
+
+.alert-card-body p { margin: 3px 0; }
+
+.alert-card-actions {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.alert-card-actions select,
+.alert-card-actions textarea {
+    padding: 6px 8px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.alert-card-actions textarea {
+    flex: 1;
+    min-width: 200px;
+    resize: vertical;
+}
+
+.alert-summary-bar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.alert-summary-pill {
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
 }

@@ -3,6 +3,7 @@ import json
 import os
 import io
 import base64
+import copy
 from datetime import datetime, timedelta
 from openpyxl import Workbook, load_workbook
 import uuid
@@ -53,6 +54,72 @@ COURSE_EXPIRY_HOURS = 24 # Default 24 hours, can adjust if needed
 os.makedirs(DATA_DIR, exist_ok=True)
 
 SUBMISSIONS_FILE = os.path.join(DATA_DIR, 'submissions.json')
+ALERTS_FILE = os.path.join(DATA_DIR, 'low_feedback_alerts.json')
+
+
+def load_alerts():
+    """Load low feedback alerts from JSON file"""
+    if os.path.exists(ALERTS_FILE):
+        with open(ALERTS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
+
+
+def save_alerts_data(alerts):
+    """Save low feedback alerts to JSON file"""
+    with open(ALERTS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(alerts, f, indent=2, ensure_ascii=False)
+
+
+def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
+    """Detect ratings of 1 or 2 and create alert records"""
+    alerts = load_alerts()
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    rating_labels = {1: 'Poor', 2: 'Unsatisfactory'}
+
+    # Build a flat map of question_id -> question_text across all sections
+    q_texts = {}
+    for section in form_config.get('sections', []):
+        for q in section.get('questions', []):
+            # For instructor/assessor sections the question IDs are like "1","2"...
+            # but the submitted keys are like "B1_1", "A1_2", so we store both
+            q_texts[q['id']] = q['text']
+
+    for key, value in data.items():
+        if key.endswith('_comment'):
+            continue
+        try:
+            rating = int(value)
+        except (ValueError, TypeError):
+            continue
+        if rating <= 2:
+            # Try to find question text
+            q_text = q_texts.get(key, '')
+            if not q_text:
+                # For keys like "B1_1" try the numeric part after last "_"
+                short_id = key.split('_')[-1]
+                q_text = q_texts.get(short_id, key)
+            comment = data.get(f'{key}_comment', '')
+            alert = {
+                'id': str(uuid.uuid4())[:12],
+                'course_id': course_id,
+                'course_title': course.get('course_title', ''),
+                'course_date': course.get('course_date', ''),
+                'form_id': form_id,
+                'participant_name': data.get('name', 'Anonymous'),
+                'question_id': key,
+                'question_text': q_text,
+                'rating': rating,
+                'rating_label': rating_labels.get(rating, str(rating)),
+                'comment': comment,
+                'status': 'new',
+                'action_notes': '',
+                'submitted_at': now,
+                'updated_at': ''
+            }
+            alerts.append(alert)
+
+    save_alerts_data(alerts)
 
 
 def load_submissions():
@@ -362,7 +429,12 @@ def admin():
     """Admin dashboard"""
     clean_expired_courses()
     config = load_config()
-    return render_template('admin.html', config=config)
+    # Build form → personnel-type map so JS can use it without Jinja2 block tags in <script>
+    form_personnel = {
+        fid: ('assessor' if any(s.get('type') == 'assessor_rating' for s in f.get('sections', [])) else 'instructor')
+        for fid, f in config['forms'].items()
+    }
+    return render_template('admin.html', config=config, form_personnel=form_personnel)
 
 
 @app.route('/admin/form/<form_id>')
@@ -752,10 +824,129 @@ def submit_form(course_id):
     data = request.json
     save_response(course['form_id'], course_id, data)
     record_submission(course_id, student_name)
+
+    # Detect and save any low-rating alerts (rating <= 2)
+    form_config = config['forms'].get(course['form_id'], {})
+    try:
+        save_low_feedback_alerts(course['form_id'], course_id, course, data, form_config)
+    except Exception as e:
+        print(f"Warning: Could not save low feedback alerts: {e}")
+
     session.pop('student_name', None)
     session.pop('student_course_id', None)
-    
+
     return jsonify({'success': True, 'message': 'Thank you for your feedback!'})
+
+
+# ─────────────────────────────── ALERT ENDPOINTS ───────────────────────────────
+
+@app.route('/api/alerts', methods=['GET'])
+@api_login_required
+def get_alerts():
+    """Get low feedback alerts, optionally filtered by status"""
+    alerts = load_alerts()
+    status_filter = request.args.get('status', '')
+    if status_filter:
+        alerts = [a for a in alerts if a.get('status') == status_filter]
+    alerts.sort(key=lambda a: a.get('submitted_at', ''), reverse=True)
+    return jsonify(alerts)
+
+
+@app.route('/api/alerts/summary', methods=['GET'])
+@api_login_required
+def get_alerts_summary():
+    """Get alert counts grouped by status"""
+    alerts = load_alerts()
+    summary = {'new': 0, 'acknowledged': 0, 'in_progress': 0, 'resolved': 0, 'total': len(alerts)}
+    for a in alerts:
+        status = a.get('status', 'new')
+        if status in summary:
+            summary[status] += 1
+    return jsonify(summary)
+
+
+@app.route('/api/alerts/<alert_id>', methods=['PUT'])
+@api_login_required
+def update_alert(alert_id):
+    """Update alert status and/or action notes"""
+    alerts = load_alerts()
+    data = request.json
+    for alert in alerts:
+        if alert['id'] == alert_id:
+            if 'status' in data:
+                alert['status'] = data['status']
+            if 'action_notes' in data:
+                alert['action_notes'] = data['action_notes']
+            alert['updated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            break
+    else:
+        return jsonify({'error': 'Alert not found'}), 404
+    save_alerts_data(alerts)
+    return jsonify({'success': True})
+
+
+# ─────────────────────────────── FORM MANAGEMENT ───────────────────────────────
+
+@app.route('/api/forms', methods=['POST'])
+@api_login_required
+def create_form():
+    """Create a new custom form"""
+    config = load_config()
+    data = request.json
+
+    form_id = data.get('form_id', '').strip().lower().replace(' ', '_')
+    if not form_id:
+        return jsonify({'error': 'Form ID is required'}), 400
+    if form_id in config['forms']:
+        return jsonify({'error': f'Form ID "{form_id}" already exists'}), 400
+
+    template_id = data.get('copy_from', '')
+    if template_id and template_id in config['forms']:
+        new_form = copy.deepcopy(config['forms'][template_id])
+        new_form['id'] = form_id
+        new_form['title'] = data.get('title', new_form['title'])
+        new_form['formNumber'] = data.get('formNumber', new_form.get('formNumber', ''))
+        new_form['description'] = data.get('description', new_form.get('description', ''))
+    else:
+        new_form = {
+            'id': form_id,
+            'title': data.get('title', 'New Form'),
+            'formNumber': data.get('formNumber', ''),
+            'description': data.get('description', ''),
+            'headerFields': [
+                {'id': 'course_title', 'label': 'Course Title', 'type': 'text', 'required': True, 'prefilled': True},
+                {'id': 'course_date', 'label': 'Course Date', 'type': 'date', 'required': True, 'prefilled': True},
+                {'id': 'classroom', 'label': 'Classroom', 'type': 'text', 'required': True, 'prefilled': True},
+                {'id': 'name', 'label': 'Name', 'type': 'text', 'required': False, 'prefilled': False},
+                {'id': 'position', 'label': 'Position', 'type': 'text', 'required': True, 'prefilled': False},
+            ],
+            'ratingOptions': [
+                {'value': 1, 'label': 'Poor'},
+                {'value': 2, 'label': 'Unsatisfactory'},
+                {'value': 3, 'label': 'Satisfactory'},
+                {'value': 4, 'label': 'Very Good'},
+                {'value': 5, 'label': 'Excellent'},
+            ],
+            'sections': data.get('sections', [])
+        }
+
+    config['forms'][form_id] = new_form
+    save_config(config)
+    return jsonify({'success': True, 'form': new_form})
+
+
+@app.route('/api/forms/<form_id>', methods=['DELETE'])
+@api_login_required
+def delete_form(form_id):
+    """Delete a custom form (built-in form1/form2 are protected)"""
+    if form_id in ('form1', 'form2'):
+        return jsonify({'error': 'Cannot delete built-in forms'}), 400
+    config = load_config()
+    if form_id not in config['forms']:
+        return jsonify({'error': 'Form not found'}), 404
+    del config['forms'][form_id]
+    save_config(config)
+    return jsonify({'success': True})
 
 
 if __name__ == '__main__':
