@@ -107,7 +107,6 @@
         .btn-submit:active { transform: scale(0.98); }
         .btn-submit:disabled { background: #aaa; cursor: not-allowed; }
 
-        /* Multi-session picker */
         .options-title {
             font-size: 15px;
             font-weight: 600;
@@ -178,7 +177,6 @@
 
         <div id="errorBox" class="error-box" style="display:none;"></div>
 
-        <!-- Step 1: Input form -->
         <div id="inputSection">
             <div class="form-group">
                 <label for="classCodeField">Class Code</label>
@@ -195,7 +193,6 @@
             </button>
         </div>
 
-        <!-- Step 2: Multiple sessions picker (shown only when needed) -->
         <div id="optionsSection" style="display:none;">
             <p class="options-title" id="optionsTitle"></p>
             <div id="optionsList"></div>
@@ -208,7 +205,7 @@
     </div>
 
     <script>
-        // Allow pressing Enter in either field to submit
+
         document.getElementById('classCodeField').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') document.getElementById('idNumberField').focus();
         });
@@ -267,13 +264,11 @@
                 }
 
                 if (result.redirect) {
-                    // Single session — go straight to the form
                     window.location.href = result.redirect;
                     return;
                 }
 
                 if (result.options) {
-                    // Multiple sessions — let the user pick
                     _pendingName = result.participant_name;
                     _pendingId   = result.id_number;
                     showOptions(result.options, result.participant_name);

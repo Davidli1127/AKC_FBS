@@ -432,12 +432,10 @@ def scan_lookup():
     if not class_code or not id_number:
         return jsonify({'error': 'Class code and identification number are required.'}), 400
 
-    # Look up participant name in DB (validates the ID number)
     participant_name = db.get_participant_name_by_id(class_code, id_number)
     if not participant_name:
         return jsonify({'error': 'Identification number not found for that class code. Please check and try again.'}), 404
 
-    # Find active course session(s) whose course_title matches the class code
     config = load_config()
     matches = [c for c in config['courses'] if c['course_title'] == class_code]
 
@@ -448,13 +446,11 @@ def scan_lookup():
         course = matches[0]
         if has_submitted(course['id'], id_number):
             return jsonify({'error': 'You have already submitted feedback for this class. Thank you!'}), 400
-        # Pre-set the session so they bypass the student-login page
         session['student_name'] = participant_name
         session['student_id_number'] = id_number.upper()
         session['student_course_id'] = course['id']
         return jsonify({'redirect': url_for('form_page', course_id=course['id'])})
 
-    # Multiple sessions — let the user pick
     options = []
     for c in matches:
         form_label = {

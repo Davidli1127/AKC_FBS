@@ -53,7 +53,6 @@
                                        onfocus="if(this.value.length>=1) searchClassCodes(this.value)">
                                 <div id="classCodeSuggestions" class="suggestions-dropdown" style="display:none;"></div>
                             </div>
-                            <!-- hidden field that holds the confirmed selection for form submission -->
                             <input type="hidden" id="classCodeSelect" name="course_title">
                             <div id="classCodeLoading" style="color:#666; font-size:13px; margin-top:5px; display:none;">Loading class codes...</div>
                         </div>
@@ -120,7 +119,6 @@
                 </div>
             </div>
 
-            <!-- Universal (Fixed) QR Code -->
             <div class="card" style="margin-top:20px;">
                 <div class="card-header">Universal QR Code <span style="font-size:12px; font-weight:400; color:#888; margin-left:8px;">— one fixed QR for all classes</span></div>
                 <div class="card-body" style="display:flex; gap:32px; align-items:flex-start; flex-wrap:wrap;">
@@ -190,7 +188,6 @@
                 <div id="createFormBody" style="display:none;">
                     <div class="card-body">
 
-                        <!-- Basic Info -->
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 24px;">
                             <div class="form-group">
                                 <label>Form ID <small style="color:#888;">(alphanumeric, e.g. "form3")</small></label>
@@ -401,15 +398,12 @@
 
             group.style.display = 'block';
             loading.style.display = 'block';
-
-            // Clear previous selection
             document.getElementById('classCodeInput').value = '';
             document.getElementById('classCodeSelect').value = '';
             document.getElementById('classCodeSuggestions').style.display = 'none';
 
             try {
                 const response = await fetch(`/api/db/class-codes?date=${encodeURIComponent(date)}`);
-                // Store the codes array on the input element for fast client-side filtering
                 const codes = await response.json();
                 document.getElementById('classCodeInput')._allCodes = codes || [];
                 loading.style.display = 'none';
@@ -424,8 +418,6 @@
             if (classCodeSearchTimeout) clearTimeout(classCodeSearchTimeout);
             const sugDiv = document.getElementById('classCodeSuggestions');
             const hidden = document.getElementById('classCodeSelect');
-
-            // Clear confirmed selection when user types
             hidden.value = '';
 
             if (!term || term.length < 1) {
@@ -458,7 +450,6 @@
             document.getElementById('classCodeSuggestions').style.display = 'none';
         }
 
-        // Hide class-code suggestions when clicking outside
         document.addEventListener('click', function(e) {
             const wrapper = document.querySelector('#classCodeGroup .course-input-wrapper');
             if (wrapper && !wrapper.contains(e.target)) {
