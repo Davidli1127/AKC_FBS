@@ -346,7 +346,7 @@ def login():
         else:
             error = 'Invalid account number or password'
     
-    return render_template('login.html', error=error)
+    return render_template('admin_login.html', error=error)
 
 
 @app.route('/logout')
