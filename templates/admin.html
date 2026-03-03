@@ -45,9 +45,16 @@
 
                         <div class="form-group" id="classCodeGroup" style="display:none;">
                             <label>Class Code (Course Title):</label>
-                            <select id="classCodeSelect" name="course_title" required>
-                                <option value="">-- Select Class Code --</option>
-                            </select>
+                            <div class="course-input-wrapper">
+                                <input type="text" id="classCodeInput"
+                                       placeholder="Type to search class code..."
+                                       autocomplete="off"
+                                       oninput="searchClassCodes(this.value)"
+                                       onfocus="if(this.value.length>=1) searchClassCodes(this.value)">
+                                <div id="classCodeSuggestions" class="suggestions-dropdown" style="display:none;"></div>
+                            </div>
+                            <!-- hidden field that holds the confirmed selection for form submission -->
+                            <input type="hidden" id="classCodeSelect" name="course_title">
                             <div id="classCodeLoading" style="color:#666; font-size:13px; margin-top:5px; display:none;">Loading class codes...</div>
                         </div>
 
@@ -107,8 +114,33 @@
                         </div>
                         <div style="margin-top: 15px;">
                             <a id="qrDownloadBtn" href="#" download="QR_Code.png" class="btn btn-primary" style="margin-right: 10px;">⬇ Download QR Code</a>
-                            <button onclick="document.getElementById('generatedQR').style.display='none'; document.getElementById('createCourseForm').style.display='block'; document.getElementById('createCourseForm').reset(); document.getElementById('classCodeGroup').style.display='none';" class="btn btn-secondary">Generate Another</button>
+                            <button onclick="document.getElementById('generatedQR').style.display='none'; document.getElementById('createCourseForm').style.display='block'; document.getElementById('createCourseForm').reset(); document.getElementById('classCodeGroup').style.display='none'; document.getElementById('classCodeInput').value=''; document.getElementById('classCodeSelect').value='';" class="btn btn-secondary">Generate Another</button>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Universal (Fixed) QR Code -->
+            <div class="card" style="margin-top:20px;">
+                <div class="card-header">Universal QR Code <span style="font-size:12px; font-weight:400; color:#888; margin-left:8px;">— one fixed QR for all classes</span></div>
+                <div class="card-body" style="display:flex; gap:32px; align-items:flex-start; flex-wrap:wrap;">
+                    <div>
+                        <p style="color:#555; font-size:14px; margin-bottom:14px; max-width:480px;">
+                            Print and display this QR code in your training room. Participants scan it once and then type their
+                            <strong>Class Code</strong> and <strong>Identification Number</strong>.
+                            The system automatically routes them to the correct form.
+                            <br><br>
+                            <em>You still need to create a per-class QR session first (above) before participants can use this.</em>
+                        </p>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <a href="/api/scan/qrcode" download="AKC_Universal_QR.png" class="btn btn-primary">⬇ Download Universal QR</a>
+                            <button class="btn btn-secondary" onclick="showUniversalQR()">Preview</button>
+                        </div>
+                    </div>
+                    <div id="universalQRPreview" style="display:none; text-align:center;">
+                        <img src="/api/scan/qrcode" alt="Universal QR Code"
+                             style="width:180px; height:180px; border:2px solid #eee; border-radius:10px; display:block;">
+                        <p style="font-size:12px; color:#888; margin-top:6px;">/scan</p>
                     </div>
                 </div>
             </div>
@@ -360,7 +392,6 @@
         async function loadClassCodes() {
             const date = document.getElementById('courseDate').value;
             const group = document.getElementById('classCodeGroup');
-            const select = document.getElementById('classCodeSelect');
             const loading = document.getElementById('classCodeLoading');
 
             if (!date) {
@@ -370,27 +401,74 @@
 
             group.style.display = 'block';
             loading.style.display = 'block';
-            select.innerHTML = '<option value="">-- Loading... --</option>';
+
+            // Clear previous selection
+            document.getElementById('classCodeInput').value = '';
+            document.getElementById('classCodeSelect').value = '';
+            document.getElementById('classCodeSuggestions').style.display = 'none';
 
             try {
                 const response = await fetch(`/api/db/class-codes?date=${encodeURIComponent(date)}`);
+                // Store the codes array on the input element for fast client-side filtering
                 const codes = await response.json();
-
+                document.getElementById('classCodeInput')._allCodes = codes || [];
                 loading.style.display = 'none';
-                if (codes.length > 0) {
-                    let html = '<option value="">-- Select Class Code --</option>';
-                    for (const code of codes) {
-                        html += `<option value="${code}">${code}</option>`;
-                    }
-                    select.innerHTML = html;
-                } else {
-                    select.innerHTML = '<option value="">-- No classes found for this date --</option>';
-                }
             } catch (error) {
                 loading.style.display = 'none';
-                select.innerHTML = '<option value="">-- Error loading class codes --</option>';
                 console.error('Error loading class codes:', error);
             }
+        }
+
+        let classCodeSearchTimeout = null;
+        function searchClassCodes(term) {
+            if (classCodeSearchTimeout) clearTimeout(classCodeSearchTimeout);
+            const sugDiv = document.getElementById('classCodeSuggestions');
+            const hidden = document.getElementById('classCodeSelect');
+
+            // Clear confirmed selection when user types
+            hidden.value = '';
+
+            if (!term || term.length < 1) {
+                sugDiv.style.display = 'none';
+                return;
+            }
+
+            classCodeSearchTimeout = setTimeout(() => {
+                const allCodes = document.getElementById('classCodeInput')._allCodes || [];
+                const termU = term.toUpperCase();
+                const filtered = allCodes.filter(c => c.toUpperCase().includes(termU)).slice(0, 20);
+
+                if (filtered.length > 0) {
+                    sugDiv.innerHTML = filtered.map(c =>
+                        `<div class="suggestion-item" onclick="selectClassCode('${c.replace(/'/g,"\\'")}')">
+                            ${c}
+                        </div>`
+                    ).join('');
+                    sugDiv.style.display = 'block';
+                } else {
+                    sugDiv.innerHTML = '<div class="suggestion-item" style="color:#aaa; cursor:default;">No matching class codes</div>';
+                    sugDiv.style.display = 'block';
+                }
+            }, 150);
+        }
+
+        function selectClassCode(code) {
+            document.getElementById('classCodeInput').value = code;
+            document.getElementById('classCodeSelect').value = code;
+            document.getElementById('classCodeSuggestions').style.display = 'none';
+        }
+
+        // Hide class-code suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            const wrapper = document.querySelector('#classCodeGroup .course-input-wrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                document.getElementById('classCodeSuggestions').style.display = 'none';
+            }
+        });
+
+        function showUniversalQR() {
+            const preview = document.getElementById('universalQRPreview');
+            preview.style.display = preview.style.display === 'none' ? 'block' : 'none';
         }
         
         async function searchParticipantCourses(term) {
@@ -670,10 +748,11 @@
             
             const formData = new FormData(this);
             const formType = formData.get('form_id');
-            const courseTitle = document.getElementById('classCodeSelect').value;
+            const courseTitle = document.getElementById('classCodeSelect').value
+                             || document.getElementById('classCodeInput').value.trim();
 
             if (!courseTitle) {
-                alert('Please select a class code.');
+                alert('Please select or type a class code.');
                 return;
             }
             

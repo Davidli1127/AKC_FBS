@@ -297,5 +297,18 @@
       ]
     }
   },
-  "courses": []
+  "courses": [
+    {
+      "id": "35586f44",
+      "form_id": "form1",
+      "course_title": "HT26AWSCSMN054",
+      "course_date": "2026-03-03",
+      "created_at": "2026-03-03 14:42:44",
+      "classroom": "Hillview",
+      "num_instructors": 1,
+      "instructors": [
+        "David"
+      ]
+    }
+  ]
 }

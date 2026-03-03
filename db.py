@@ -185,6 +185,36 @@ def verify_student_participant(class_code, participant_name):
         return False
 
 
+def get_participant_name_by_id(class_code, identification_number):
+    """
+    Look up a participant's name by class code and identification number.
+    Returns the participant's full name string, or None if not found.
+    Matching is case-insensitive and whitespace-trimmed on the ID number.
+    """
+    conn = get_connection()
+    if not conn:
+        return None
+
+    try:
+        cursor = conn.cursor()
+        query = f"""
+            SELECT [Participant Name]
+            FROM {PARTICIPANT_TABLE}
+            WHERE [Class Code] = ?
+            AND LTRIM(RTRIM(UPPER([Identification Number]))) = ?
+        """
+        id_norm = identification_number.strip().upper()
+        cursor.execute(query, (class_code, id_norm))
+        row = cursor.fetchone()
+        conn.close()
+        if row and row[0]:
+            return str(row[0]).strip()
+        return None
+    except Exception as e:
+        print(f"Error looking up participant by ID number: {e}")
+        return None
+
+
 def get_participants_by_class(class_code, offset=0, limit=20):
     """
     Fetch participants for a specific class with pagination.

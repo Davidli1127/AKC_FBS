@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AKC Feedback — Scan &amp; Enter</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0d2d6b 0%, #1a56db 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 40px 36px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 440px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 90px;
+            height: auto;
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            color: #0d2d6b;
+            font-size: 22px;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 7px;
+            color: #444;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.2s;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: #1a56db;
+        }
+
+        .form-group .hint {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .error-box {
+            background: #fff5f5;
+            border: 1px solid #feb2b2;
+            color: #c53030;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: #0d2d6b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            margin-top: 6px;
+        }
+
+        .btn-submit:hover { background: #1a56db; }
+        .btn-submit:active { transform: scale(0.98); }
+        .btn-submit:disabled { background: #aaa; cursor: not-allowed; }
+
+        /* Multi-session picker */
+        .options-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #0d2d6b;
+            margin-bottom: 14px;
+            text-align: left;
+        }
+
+        .session-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            text-align: left;
+        }
+
+        .session-option:hover:not(.disabled) {
+            border-color: #1a56db;
+            background: #f0f4ff;
+        }
+
+        .session-option.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .session-label {
+            font-size: 15px;
+            font-weight: 600;
+            color: #0d2d6b;
+        }
+
+        .session-meta {
+            font-size: 12px;
+            color: #777;
+            margin-top: 2px;
+        }
+
+        .session-badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+
+        .badge-done {
+            background: #e2e8f0;
+            color: #666;
+        }
+
+        .footer-note {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <img src="/static/logo.png" alt="AKC Logo" class="logo">
+        <h1>AKC Course Feedback</h1>
+        <p class="subtitle">Enter your class code and identification number to begin</p>
+
+        <div id="errorBox" class="error-box" style="display:none;"></div>
+
+        <!-- Step 1: Input form -->
+        <div id="inputSection">
+            <div class="form-group">
+                <label for="classCodeField">Class Code</label>
+                <input type="text" id="classCodeField" placeholder="e.g. HT26OLCEIKF10" autocomplete="off" autocapitalize="characters">
+                <div class="hint">Printed on your registration or course sheet</div>
+            </div>
+            <div class="form-group">
+                <label for="idNumberField">Identification Number</label>
+                <input type="text" id="idNumberField" placeholder="e.g. S7803076C" autocomplete="off" autocapitalize="characters">
+                <div class="hint">Your NRIC / Passport / Work Permit number</div>
+            </div>
+            <button class="btn-submit" id="submitBtn" onclick="lookupSession()">
+                Find My Form
+            </button>
+        </div>
+
+        <!-- Step 2: Multiple sessions picker (shown only when needed) -->
+        <div id="optionsSection" style="display:none;">
+            <p class="options-title" id="optionsTitle"></p>
+            <div id="optionsList"></div>
+            <button class="btn-submit" style="background:#888; margin-top:8px;" onclick="resetForm()">
+                ← Go Back
+            </button>
+        </div>
+
+        <p class="footer-note">Your identification number is used only to verify your registration and retrieve your name.</p>
+    </div>
+
+    <script>
+        // Allow pressing Enter in either field to submit
+        document.getElementById('classCodeField').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') document.getElementById('idNumberField').focus();
+        });
+        document.getElementById('idNumberField').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') lookupSession();
+        });
+
+        let _pendingName = '';
+        let _pendingId = '';
+
+        function showError(msg) {
+            const box = document.getElementById('errorBox');
+            box.textContent = msg;
+            box.style.display = 'block';
+        }
+
+        function clearError() {
+            document.getElementById('errorBox').style.display = 'none';
+        }
+
+        function resetForm() {
+            document.getElementById('inputSection').style.display = 'block';
+            document.getElementById('optionsSection').style.display = 'none';
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').textContent = 'Find My Form';
+            clearError();
+        }
+
+        async function lookupSession() {
+            clearError();
+            const classCode = document.getElementById('classCodeField').value.trim();
+            const idNumber  = document.getElementById('idNumberField').value.trim();
+
+            if (!classCode || !idNumber) {
+                showError('Please enter both your Class Code and Identification Number.');
+                return;
+            }
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.textContent = 'Looking up...';
+
+            try {
+                const resp = await fetch('/api/scan/lookup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ class_code: classCode, id_number: idNumber })
+                });
+                const result = await resp.json();
+
+                if (!resp.ok) {
+                    showError(result.error || 'An error occurred. Please try again.');
+                    btn.disabled = false;
+                    btn.textContent = 'Find My Form';
+                    return;
+                }
+
+                if (result.redirect) {
+                    // Single session — go straight to the form
+                    window.location.href = result.redirect;
+                    return;
+                }
+
+                if (result.options) {
+                    // Multiple sessions — let the user pick
+                    _pendingName = result.participant_name;
+                    _pendingId   = result.id_number;
+                    showOptions(result.options, result.participant_name);
+                    btn.disabled = false;
+                    btn.textContent = 'Find My Form';
+                }
+            } catch (err) {
+                showError('Network error. Please check your connection and try again.');
+                btn.disabled = false;
+                btn.textContent = 'Find My Form';
+            }
+        }
+
+        function showOptions(options, name) {
+            document.getElementById('inputSection').style.display = 'none';
+            document.getElementById('optionsSection').style.display = 'block';
+            document.getElementById('optionsTitle').textContent =
+                `Welcome, ${name}! Multiple evaluation forms are open for this class — please choose one:`;
+
+            const list = document.getElementById('optionsList');
+            list.innerHTML = options.map(opt => {
+                const done = opt.already_submitted;
+                return `<div class="session-option ${done ? 'disabled' : ''}"
+                             onclick="${done ? '' : `selectSession('${opt.course_id}')`}">
+                    <div>
+                        <div class="session-label">${opt.form_label}</div>
+                        <div class="session-meta">${opt.course_date}</div>
+                    </div>
+                    ${done ? '<span class="session-badge badge-done">Already submitted</span>' : ''}
+                </div>`;
+            }).join('');
+        }
+
+        async function selectSession(courseId) {
+            clearError();
+            try {
+                const resp = await fetch('/api/scan/select', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        course_id: courseId,
+                        id_number: _pendingId,
+                        participant_name: _pendingName
+                    })
+                });
+                const result = await resp.json();
+                if (!resp.ok) {
+                    showError(result.error || 'An error occurred.');
+                    return;
+                }
+                if (result.redirect) {
+                    window.location.href = result.redirect;
+                }
+            } catch (err) {
+                showError('Network error. Please try again.');
+            }
+        }
+    </script>
+</body>
+</html>

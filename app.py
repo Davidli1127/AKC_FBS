@@ -135,20 +135,27 @@ def _norm_name(name):
     return ' '.join(name.strip().split()).upper()
 
 
-def has_submitted(course_id, participant_name):
-    """Check if a student (by name) has already submitted for this course"""
+def _norm_id(id_number):
+    """Normalize an identification number for comparison: strip, uppercase"""
+    return id_number.strip().upper()
+
+
+def has_submitted(course_id, identifier):
+    """Check if a student (by ID number) has already submitted for this course"""
     submissions = load_submissions()
-    name_norm = _norm_name(participant_name)
-    return any(_norm_name(s.get('name', '')) == name_norm for s in submissions.get(course_id, []))
+    id_norm = _norm_id(identifier)
+    return any(_norm_id(s.get('id_number', s.get('name', ''))) == id_norm
+               for s in submissions.get(course_id, []))
 
 
-def record_submission(course_id, participant_name):
+def record_submission(course_id, participant_name, id_number=''):
     """Record a student submission to prevent duplicates"""
     submissions = load_submissions()
     if course_id not in submissions:
         submissions[course_id] = []
     submissions[course_id].append({
         'name': ' '.join(participant_name.strip().split()),
+        'id_number': id_number.strip().upper(),
         'submitted_at': datetime.now().isoformat()
     })
     save_submissions_data(submissions)
@@ -399,6 +406,95 @@ def save_response(form_id, course_id, data):
 def index():
     """Redirect to admin page"""
     return redirect(url_for('admin'))
+
+
+@app.route('/scan')
+def scan_page():
+    """Universal scan / walk-in entry page.
+    Participant enters their Class Code and ID number; the server looks up the
+    matching active course session and redirects them to the right form.
+    """
+    return render_template('scan.html')
+
+
+@app.route('/api/scan/lookup', methods=['POST'])
+def scan_lookup():
+    """API used by the scan page.
+    Accepts { class_code, id_number }.
+    Returns the matching course session URL so the client can redirect.
+    If the class code matches multiple active sessions (e.g. Form1 + Form2)
+    all options are returned and the user can choose.
+    """
+    data = request.json or {}
+    class_code = (data.get('class_code') or '').strip()
+    id_number  = (data.get('id_number')  or '').strip()
+
+    if not class_code or not id_number:
+        return jsonify({'error': 'Class code and identification number are required.'}), 400
+
+    # Look up participant name in DB (validates the ID number)
+    participant_name = db.get_participant_name_by_id(class_code, id_number)
+    if not participant_name:
+        return jsonify({'error': 'Identification number not found for that class code. Please check and try again.'}), 404
+
+    # Find active course session(s) whose course_title matches the class code
+    config = load_config()
+    matches = [c for c in config['courses'] if c['course_title'] == class_code]
+
+    if not matches:
+        return jsonify({'error': 'No active QR session found for that class code. Please ask your instructor.'}), 404
+
+    if len(matches) == 1:
+        course = matches[0]
+        if has_submitted(course['id'], id_number):
+            return jsonify({'error': 'You have already submitted feedback for this class. Thank you!'}), 400
+        # Pre-set the session so they bypass the student-login page
+        session['student_name'] = participant_name
+        session['student_id_number'] = id_number.upper()
+        session['student_course_id'] = course['id']
+        return jsonify({'redirect': url_for('form_page', course_id=course['id'])})
+
+    # Multiple sessions — let the user pick
+    options = []
+    for c in matches:
+        form_label = {
+            'form1': 'Trainer Evaluation',
+            'form2': 'Assessor Evaluation'
+        }.get(c['form_id'], c['form_id'])
+        already = has_submitted(c['id'], id_number)
+        options.append({
+            'course_id': c['id'],
+            'form_label': form_label,
+            'course_date': c.get('course_date', ''),
+            'already_submitted': already
+        })
+    return jsonify({'options': options, 'participant_name': participant_name,
+                    'class_code': class_code, 'id_number': id_number.upper()})
+
+
+@app.route('/api/scan/select', methods=['POST'])
+def scan_select():
+    """After user picks one option from multiple sessions."""
+    data = request.json or {}
+    course_id   = (data.get('course_id')   or '').strip()
+    id_number   = (data.get('id_number')   or '').strip()
+    participant_name = (data.get('participant_name') or '').strip()
+
+    if not course_id or not id_number:
+        return jsonify({'error': 'Missing parameters.'}), 400
+
+    config = load_config()
+    course = next((c for c in config['courses'] if c['id'] == course_id), None)
+    if not course:
+        return jsonify({'error': 'Session not found.'}), 404
+
+    if has_submitted(course_id, id_number):
+        return jsonify({'error': 'You have already submitted feedback for this session. Thank you!'}), 400
+
+    session['student_name'] = participant_name
+    session['student_id_number'] = id_number.upper()
+    session['student_course_id'] = course_id
+    return jsonify({'redirect': url_for('form_page', course_id=course_id)})
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -733,9 +829,32 @@ def get_course_qrcode(course_id):
     return send_file(buf, mimetype='image/png', as_attachment=True,
                      download_name=f'QR_{course["course_title"]}_{course["course_date"]}.png')
 
+
+@app.route('/api/scan/qrcode', methods=['GET'])
+@api_login_required
+def get_universal_qrcode():
+    """Return the universal (fixed) QR code that points to /scan.
+    This QR code never changes — participants scan it and then type their
+    class code + ID number on the /scan page.
+    """
+    if not QR_AVAILABLE:
+        return jsonify({'error': 'QR code library not installed'}), 500
+    public_base = os.environ.get('PUBLIC_URL', '').rstrip('/') or request.host_url.rstrip('/')
+    scan_url = public_base + '/scan'
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(scan_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color='black', back_color='white')
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    return send_file(buf, mimetype='image/png', as_attachment=True,
+                     download_name='AKC_Universal_QR.png')
+
+
 @app.route('/student-login/<course_id>', methods=['GET', 'POST'])
 def student_login(course_id):
-    """Student login page - verifies the student is a registered participant"""
+    """Student login page - verifies the student by identification number"""
     config = load_config()
     course = next((c for c in config['courses'] if c['id'] == course_id), None)
     if not course:
@@ -743,21 +862,22 @@ def student_login(course_id):
 
     error = None
     if request.method == 'POST':
-        participant_name = request.form.get('participant_name', '').strip()
-        if not participant_name:
-            error = 'Please enter your full name.'
-        elif has_submitted(course_id, participant_name):
+        id_number = request.form.get('id_number', '').strip()
+        if not id_number:
+            error = 'Please enter your Identification Number.'
+        elif has_submitted(course_id, id_number):
             error = 'You have already submitted feedback for this class. Thank you!'
         else:
-            is_valid = db.verify_student_participant(
-                course['course_title'], participant_name
+            participant_name = db.get_participant_name_by_id(
+                course['course_title'], id_number
             )
-            if is_valid:
+            if participant_name:
                 session['student_name'] = participant_name
+                session['student_id_number'] = id_number.upper()
                 session['student_course_id'] = course_id
                 return redirect(url_for('form_page', course_id=course_id))
             else:
-                error = 'Your name was not found in the participant list for this class. Please check your spelling and try again.'
+                error = 'Your Identification Number was not found in the participant list for this class. Please check and try again.'
     return render_template('student_login.html', course=course, error=error)
 
 @app.route('/form/<course_id>')
@@ -791,8 +911,9 @@ def submit_form(course_id):
         return jsonify({'error': 'Unauthorized. Please scan the QR code and log in first.'}), 401
 
     student_name = session.get('student_name', '')
+    student_id = session.get('student_id_number', '')
 
-    if has_submitted(course_id, student_name):
+    if has_submitted(course_id, student_id or student_name):
         return jsonify({'error': 'You have already submitted feedback for this class.'}), 400
 
     config = load_config()
@@ -807,7 +928,7 @@ def submit_form(course_id):
     
     data = request.json
     save_response(course['form_id'], course_id, data)
-    record_submission(course_id, student_name)
+    record_submission(course_id, student_name, student_id)
     form_config = config['forms'].get(course['form_id'], {})
     try:
         save_low_feedback_alerts(course['form_id'], course_id, course, data, form_config)
@@ -815,6 +936,7 @@ def submit_form(course_id):
         print(f"Warning: Could not save low feedback alerts: {e}")
 
     session.pop('student_name', None)
+    session.pop('student_id_number', None)
     session.pop('student_course_id', None)
 
     return jsonify({'success': True, 'message': 'Thank you for your feedback!'})

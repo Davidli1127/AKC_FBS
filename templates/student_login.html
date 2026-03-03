@@ -180,12 +180,12 @@
 
         <form method="POST" id="loginForm">
             <div class="form-group">
-                <label for="participant_name">Full Name</label>
-                <input type="text" id="participant_name" name="participant_name"
-                       placeholder="Enter your full name as registered"
-                       value="{{ request.form.get('participant_name', '') }}"
-                       autocomplete="name" required>
-                <div class="hint">As registered (case-insensitive, extra spaces ignored)</div>
+                <label for="id_number">Identification Number</label>
+                <input type="text" id="id_number" name="id_number"
+                       placeholder="Enter your Identification Number"
+                       value="{{ request.form.get('id_number', '') }}"
+                       autocomplete="off" required>
+                <div class="hint">As shown on your registration document (case-insensitive)</div>
             </div>
 
             <button type="submit" class="btn-submit" id="submitBtn">
@@ -193,7 +193,7 @@
             </button>
         </form>
 
-        <p class="footer-note">Your name is used only to verify your registration. Feedback is anonymous.</p>
+        <p class="footer-note">Your ID is used only to verify your registration and retrieve your name. Your feedback is confidential.</p>
     </div>
 
     <script>
