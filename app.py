@@ -76,13 +76,9 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
     alerts = load_alerts()
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     rating_labels = {1: 'Poor', 2: 'Unsatisfactory'}
-
-    # Build a flat map of question_id -> question_text across all sections
     q_texts = {}
     for section in form_config.get('sections', []):
         for q in section.get('questions', []):
-            # For instructor/assessor sections the question IDs are like "1","2"...
-            # but the submitted keys are like "B1_1", "A1_2", so we store both
             q_texts[q['id']] = q['text']
 
     for key, value in data.items():
@@ -93,10 +89,8 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
         except (ValueError, TypeError):
             continue
         if rating <= 2:
-            # Try to find question text
             q_text = q_texts.get(key, '')
             if not q_text:
-                # For keys like "B1_1" try the numeric part after last "_"
                 short_id = key.split('_')[-1]
                 q_text = q_texts.get(short_id, key)
             comment = data.get(f'{key}_comment', '')
@@ -367,7 +361,6 @@ def save_response(form_id, course_id, data):
                 for q in section['questions']:
                     data_map[q['id']] = data.get(q['id'], '')
     else:
-        # Generic custom form
         data_map['Submission Time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         for field in form.get('headerFields', []):
             label = field['label'].replace(' (Optional)', '')
@@ -442,13 +435,11 @@ def admin():
     """Admin dashboard"""
     clean_expired_courses()
     config = load_config()
-    # Build form → personnel-type map so JS can use it without Jinja2 block tags in <script>
     form_personnel = {
         fid: ('assessor' if any(s.get('type') == 'assessor_rating' for s in f.get('sections', [])) else 'instructor')
         for fid, f in config['forms'].items()
     }
     return render_template('admin.html', config=config, form_personnel=form_personnel)
-
 
 @app.route('/admin/form/<form_id>')
 @login_required
@@ -460,7 +451,6 @@ def admin_form(form_id):
         return "Form not found", 404
     return render_template('admin_form.html', form=form, config=config)
 
-
 @app.route('/api/forms/<form_id>', methods=['GET'])
 @api_login_required
 def get_form(form_id):
@@ -470,7 +460,6 @@ def get_form(form_id):
     if not form:
         return jsonify({'error': 'Form not found'}), 404
     return jsonify(form)
-
 
 @app.route('/api/forms/<form_id>', methods=['PUT'])
 @api_login_required
@@ -485,7 +474,6 @@ def update_form(form_id):
     save_config(config)
     return jsonify({'success': True})
 
-
 @app.route('/api/forms/<form_id>/sections', methods=['POST'])
 @api_login_required
 def add_section(form_id):
@@ -498,7 +486,6 @@ def add_section(form_id):
     config['forms'][form_id]['sections'].append(data)
     save_config(config)
     return jsonify({'success': True})
-
 
 @app.route('/api/forms/<form_id>/sections/<section_id>/questions', methods=['POST'])
 def add_question(form_id, section_id):
@@ -518,7 +505,6 @@ def add_question(form_id, section_id):
     save_config(config)
     return jsonify({'success': True})
 
-
 @app.route('/api/forms/<form_id>/sections/<section_id>/questions/<question_id>', methods=['DELETE'])
 def delete_question(form_id, section_id, question_id):
     """Delete a question from a section"""
@@ -536,7 +522,6 @@ def delete_question(form_id, section_id, question_id):
     save_config(config)
     return jsonify({'success': True})
 
-
 @app.route('/api/forms/<form_id>/update-excel', methods=['POST'])
 @api_login_required
 def update_excel_columns(form_id):
@@ -551,7 +536,6 @@ def update_excel_columns(form_id):
         added_questions = changes.get('addedQuestions', [])
         deleted_questions = changes.get('deletedQuestions', [])
         modified_questions = changes.get('modifiedQuestions', [])
-        
         wb = load_workbook(excel_path)
         ws = wb.active
         headers = [cell.value for cell in ws[1]]
@@ -601,14 +585,12 @@ def update_excel_columns(form_id):
         print(f"Error updating Excel: {e}")
         return jsonify({'error': str(e)}), 500
 
-
 @app.route('/api/db/test', methods=['GET'])
 @api_login_required
 def test_db_connection():
     """Test database connection"""
     success, message = db.test_connection()
     return jsonify({'success': success, 'message': message})
-
 
 @app.route('/api/db/courses', methods=['GET'])
 @api_login_required
@@ -618,7 +600,6 @@ def search_db_courses():
     limit = request.args.get('limit', 50, type=int)
     courses = db.get_courses_from_db(search_term, limit)
     return jsonify(courses)
-
 
 @app.route('/api/db/participants', methods=['GET'])
 @api_login_required
@@ -634,7 +615,6 @@ def get_participants():
     result = db.get_participants_by_class(class_code, offset, limit)
     return jsonify(result)
 
-
 @app.route('/api/db/update-survey-sent', methods=['POST'])
 @api_login_required
 def update_survey_sent():
@@ -649,7 +629,6 @@ def update_survey_sent():
     success = db.update_survey_sent(course_code, participant_name, True)
     return jsonify({'success': success})
 
-
 @app.route('/api/db/create-tables', methods=['POST'])
 @api_login_required
 def create_tables():
@@ -657,14 +636,12 @@ def create_tables():
     success, message = db.create_feedback_tables()
     return jsonify({'success': success, 'message': message})
 
-
 @app.route('/api/db/course-dates', methods=['GET'])
 @api_login_required
 def get_course_dates():
     """Get all available registration dates from database"""
     dates = db.get_course_dates()
     return jsonify(dates)
-
 
 @app.route('/api/db/class-codes', methods=['GET'])
 @api_login_required
@@ -676,7 +653,6 @@ def get_class_codes():
     codes = db.get_class_codes_by_date(date)
     return jsonify(codes)
 
-
 @app.route('/api/courses', methods=['GET'])
 @api_login_required
 def get_courses():
@@ -684,14 +660,12 @@ def get_courses():
     config = load_config()
     return jsonify(config['courses'])
 
-
 @app.route('/api/courses', methods=['POST'])
 @api_login_required
 def create_course():
     """Create a new course and generate QR code"""
     config = load_config()
     data = request.json
-
     course = {
         'id': str(uuid.uuid4())[:8],
         'form_id': data['form_id'],
@@ -736,7 +710,6 @@ def delete_course(course_id):
     config['courses'] = [c for c in config['courses'] if c['id'] != course_id]
     save_config(config)
     return jsonify({'success': True})
-
 
 @app.route('/api/courses/<course_id>/qrcode', methods=['GET'])
 @api_login_required
@@ -787,7 +760,6 @@ def student_login(course_id):
                 error = 'Your name was not found in the participant list for this class. Please check your spelling and try again.'
     return render_template('student_login.html', course=course, error=error)
 
-
 @app.route('/form/<course_id>')
 def form_page(course_id):
     """Public form page for participants to fill"""
@@ -811,7 +783,6 @@ def form_page(course_id):
     
     student_name = session.get('student_name', '')
     return render_template('form.html', form=form, course=course, student_name=student_name)
-
 
 @app.route('/api/submit/<course_id>', methods=['POST'])
 def submit_form(course_id):
@@ -837,8 +808,6 @@ def submit_form(course_id):
     data = request.json
     save_response(course['form_id'], course_id, data)
     record_submission(course_id, student_name)
-
-    # Detect and save any low-rating alerts (rating <= 2)
     form_config = config['forms'].get(course['form_id'], {})
     try:
         save_low_feedback_alerts(course['form_id'], course_id, course, data, form_config)
@@ -849,9 +818,6 @@ def submit_form(course_id):
     session.pop('student_course_id', None)
 
     return jsonify({'success': True, 'message': 'Thank you for your feedback!'})
-
-
-# ─────────────────────────────── ALERT ENDPOINTS ───────────────────────────────
 
 @app.route('/api/alerts', methods=['GET'])
 @api_login_required
@@ -864,7 +830,6 @@ def get_alerts():
     alerts.sort(key=lambda a: a.get('submitted_at', ''), reverse=True)
     return jsonify(alerts)
 
-
 @app.route('/api/alerts/summary', methods=['GET'])
 @api_login_required
 def get_alerts_summary():
@@ -876,7 +841,6 @@ def get_alerts_summary():
         if status in summary:
             summary[status] += 1
     return jsonify(summary)
-
 
 @app.route('/api/alerts/<alert_id>', methods=['PUT'])
 @api_login_required
@@ -896,9 +860,6 @@ def update_alert(alert_id):
         return jsonify({'error': 'Alert not found'}), 404
     save_alerts_data(alerts)
     return jsonify({'success': True})
-
-
-# ─────────────────────────────── FORM MANAGEMENT ───────────────────────────────
 
 @app.route('/api/forms', methods=['POST'])
 @api_login_required
@@ -947,7 +908,6 @@ def create_form():
     save_config(config)
     return jsonify({'success': True, 'form': new_form})
 
-
 @app.route('/api/forms/<form_id>', methods=['DELETE'])
 @api_login_required
 def delete_form(form_id):
@@ -960,7 +920,6 @@ def delete_form(form_id):
     del config['forms'][form_id]
     save_config(config)
     return jsonify({'success': True})
-
 
 if __name__ == '__main__':
     print("Checking for expired course links...")

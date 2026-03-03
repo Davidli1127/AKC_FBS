@@ -187,7 +187,6 @@
                             <textarea id="newFormDescription" rows="3" placeholder="Dear Participant, ..."></textarea>
                         </div>
 
-                        <!-- Section Builder (shown when starting from scratch) -->
                         <div id="sectionBuilder" style="border-top:2px solid #e0e0e0; padding-top:18px; margin-top:6px;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                                 <strong style="color:#003366; font-size:15px;">Form Sections &amp; Questions</strong>
@@ -900,7 +899,6 @@
             const questionId = document.getElementById('newQuestionId').value;
             const questionText = document.getElementById('newQuestionText').value;
             
-
             for (const section of currentFormData.sections) {
                 if (section.id === sectionId) {
                     section.questions.push({ id: questionId, text: questionText });
@@ -1077,7 +1075,6 @@
             }
         }
 
-        // ─────────────── CREATE NEW FORM BUILDER ───────────────
         let newFormSections = [];
         let builderSectionCounter = 0;
 
@@ -1100,7 +1097,7 @@
 
         function builderAddSection() {
             builderSectionCounter++;
-            const defaultId = String.fromCharCode(64 + builderSectionCounter); // A, B, C ...
+            const defaultId = String.fromCharCode(64 + builderSectionCounter); 
             newFormSections.push({ id: defaultId, title: '', type: 'rating', questions: [] });
             builderRender();
         }
@@ -1119,7 +1116,6 @@
 
         function builderRemoveQuestion(secIdx, qIdx) {
             newFormSections[secIdx].questions.splice(qIdx, 1);
-            // Re-number auto-generated IDs
             newFormSections[secIdx].questions.forEach((q, i) => {
                 if (/^[A-Za-z]+\d+$/.test(q.id)) q.id = newFormSections[secIdx].id + (i + 1);
             });
@@ -1128,9 +1124,7 @@
 
         function builderSecIdChange(idx, val) {
             newFormSections[idx].id = val;
-            // Re-number questions to match new section ID
             newFormSections[idx].questions.forEach((q, i) => { q.id = val + (i + 1); });
-            // Update question ID inputs without full re-render
             const secEl = document.querySelector('[data-sec-idx="' + idx + '"]');
             if (secEl) {
                 secEl.querySelectorAll('.b-qid').forEach((el, i) => { el.value = val + (i + 1); });
@@ -1216,8 +1210,6 @@
 
             if (!formId) { alert('Please enter a Form ID.'); return; }
             if (!title)  { alert('Please enter a Form Title.'); return; }
-
-            // Validate scratch sections
             if (!copyFrom) {
                 for (const sec of newFormSections) {
                     if (!sec.id.trim()) { alert('Each section needs an ID.'); return; }
@@ -1252,7 +1244,6 @@
                     FORM_PERSONNEL[result.form.id] = isAssessor ? 'assessor' : 'instructor';
                     document.getElementById('editFormSelect').value = result.form.id;
                     loadFormForEdit();
-                    // Reset builder state
                     document.getElementById('newFormId').value = '';
                     document.getElementById('newFormTitle').value = '';
                     document.getElementById('newFormNumber').value = '';
@@ -1286,7 +1277,6 @@
                 const resp = await fetch(`/api/forms/${formId}`, { method: 'DELETE' });
                 const result = await resp.json();
                 if (result.success) {
-                    // Remove from both dropdowns
                     ['editFormSelect', 'formSelect'].forEach(id => {
                         const sel = document.getElementById(id);
                         for (let i = sel.options.length - 1; i >= 0; i--) {
@@ -1304,7 +1294,6 @@
             }
         }
 
-        // ─────────────── LOW FEEDBACK ALERTS ───────────────
         const STATUS_COLORS = {
             new: '#dc3545',
             acknowledged: '#fd7e14',
@@ -1328,8 +1317,6 @@
                 ]);
                 const alerts = await alertsRes.json();
                 const summary = await summaryRes.json();
-
-                // Update tab badge
                 const unresolved = (summary.new || 0) + (summary.acknowledged || 0) + (summary.in_progress || 0);
                 const badge = document.getElementById('alertsBadge');
                 if (unresolved > 0) {
@@ -1339,7 +1326,6 @@
                     badge.style.display = 'none';
                 }
 
-                // Summary pills
                 const summaryDiv = document.getElementById('alertsSummary');
                 summaryDiv.innerHTML = [
                     ['new', summary.new || 0],
@@ -1354,7 +1340,6 @@
                     </span>
                 `).join('') + `<span style="color:#888; font-size:13px; align-self:center;">Total: ${summary.total || 0}</span>`;
 
-                // Alerts list
                 const listDiv = document.getElementById('alertsList');
                 if (!alerts.length) {
                     listDiv.innerHTML = '<p style="color:#888; text-align:center; padding:20px;">No alerts found.</p>';
@@ -1427,7 +1412,6 @@
                 .replace(/"/g,'&quot;');
         }
 
-        // Load alert badge count on page load
         (async function initAlertBadge() {
             try {
                 const res = await fetch('/api/alerts/summary');

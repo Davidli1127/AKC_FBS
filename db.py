@@ -171,7 +171,7 @@ def verify_student_participant(class_code, participant_name):
         rows = cursor.fetchall()
         conn.close()
 
-        # Normalize input: collapse whitespace, uppercase
+        # Normalize input
         name_input = ' '.join(participant_name.strip().split()).upper()
 
         for row in rows:
@@ -242,7 +242,6 @@ def get_participants_by_class(class_code, offset=0, limit=20):
     except Exception as e:
         print(f"Error fetching participants: {e}")
         return {'error': str(e)}
-
 
 def update_survey_sent(course_code, participant_name, sent=True):
     """
@@ -420,7 +419,6 @@ def save_form2_to_db(course_id, course, data):
     try:
         cursor = conn.cursor()
         assessors = course.get('assessors', [])
-        
         query = f"""
         INSERT INTO {FEEDBACK_FORM2_TABLE} (
             course_id, course_title, course_date, classroom, language,
