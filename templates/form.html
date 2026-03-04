@@ -85,8 +85,8 @@
                                 </div>
                             </div>
                             <div class="low-rating-comment" id="lrc_{{ question.id }}" style="display:none;">
-                                <span class="low-rating-label">&#9888; Low rating — please share more (optional):</span>
-                                <textarea name="{{ question.id }}_comment" placeholder="What can we improve?" rows="2"></textarea>
+                                <span class="low-rating-label">Any suggestions for us? (optional)</span>
+                                <textarea name="{{ question.id }}_comment" placeholder="Share your thoughts..." rows="2"></textarea>
                             </div>
                         </div>
                         {% endfor %}
@@ -113,8 +113,8 @@
                                 </div>
                             </div>
                             <div class="low-rating-comment" id="lrc_B{{ inst_num }}_{{ question.id }}" style="display:none;">
-                                <span class="low-rating-label">&#9888; Low rating — please share more (optional):</span>
-                                <textarea name="B{{ inst_num }}_{{ question.id }}_comment" placeholder="What can we improve?" rows="2"></textarea>
+                                <span class="low-rating-label">Any suggestions for us? (optional)</span>
+                                <textarea name="B{{ inst_num }}_{{ question.id }}_comment" placeholder="Share your thoughts..." rows="2"></textarea>
                             </div>
                         </div>
                         {% endfor %}
@@ -142,8 +142,8 @@
                                 </div>
                             </div>
                             <div class="low-rating-comment" id="lrc_A{{ assess_num }}_{{ question.id }}" style="display:none;">
-                                <span class="low-rating-label">&#9888; Low rating — please share more (optional):</span>
-                                <textarea name="A{{ assess_num }}_{{ question.id }}_comment" placeholder="What can we improve?" rows="2"></textarea>
+                                <span class="low-rating-label">Any suggestions for us? (optional)</span>
+                                <textarea name="A{{ assess_num }}_{{ question.id }}_comment" placeholder="Share your thoughts..." rows="2"></textarea>
                             </div>
                         </div>
                         {% endfor %}
@@ -185,7 +185,7 @@
                 const value = parseInt(this.value);
                 const commentDiv = document.getElementById('lrc_' + name);
                 if (commentDiv) {
-                    if (value <= 2) {
+                    if (value <= 3) {
                         commentDiv.style.display = 'block';
                     } else {
                         commentDiv.style.display = 'none';

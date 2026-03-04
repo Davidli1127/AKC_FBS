@@ -4,6 +4,7 @@ import os
 import io
 import base64
 import copy
+from collections import defaultdict
 from datetime import datetime, timedelta
 from openpyxl import Workbook, load_workbook
 import uuid
@@ -527,8 +528,15 @@ def admin():
     """Admin dashboard"""
     clean_expired_courses()
     config = load_config()
+    def _detect_personnel(sections):
+        types = {s.get('type') for s in sections}
+        if 'assessor_rating' in types:
+            return 'assessor'
+        if 'instructor_rating' in types:
+            return 'instructor'
+        return 'none'
     form_personnel = {
-        fid: ('assessor' if any(s.get('type') == 'assessor_rating' for s in f.get('sections', [])) else 'instructor')
+        fid: _detect_personnel(f.get('sections', []))
         for fid, f in config['forms'].items()
     }
     return render_template('admin.html', config=config, form_personnel=form_personnel)
@@ -766,14 +774,21 @@ def create_course():
         'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
 
-    if data['form_id'] == 'form2':
+    _form_sections = config['forms'].get(data['form_id'], {}).get('sections', [])
+    _section_types = {s.get('type') for s in _form_sections}
+    if 'assessor_rating' in _section_types:
         course['assessment_location'] = data.get('assessment_location', '')
         course['num_assessors'] = data.get('num_assessors', 1)
         course['assessors'] = data.get('assessors', [])
-    else:
+    elif 'instructor_rating' in _section_types:
         course['classroom'] = data.get('classroom', '')
         course['num_instructors'] = data.get('num_instructors', 1)
         course['instructors'] = data.get('instructors', [])
+    else:
+        # Custom form with no personnel sections
+        course['classroom'] = data.get('classroom', '')
+        course['num_instructors'] = 0
+        course['instructors'] = []
 
     config['courses'].append(course)
     save_config(config)
@@ -978,6 +993,126 @@ def update_alert(alert_id):
         return jsonify({'error': 'Alert not found'}), 404
     save_alerts_data(alerts)
     return jsonify({'success': True})
+
+
+@app.route('/api/alerts/analysis', methods=['GET'])
+@api_login_required
+def get_alerts_analysis():
+    """Group unresolved alerts by question and return priority-ranked hotspots."""
+    alerts = load_alerts()
+    active = [a for a in alerts if a.get('status') != 'resolved']
+
+    groups = defaultdict(lambda: {
+        'question_id': '', 'question_text': '', 'forms': set(),
+        'ratings': [], 'comments': [], 'alert_ids': [], 'count': 0
+    })
+    for a in active:
+        qid = a.get('question_id', '')
+        g = groups[qid]
+        g['question_id'] = qid
+        g['question_text'] = g['question_text'] or a.get('question_text', qid)
+        g['forms'].add(a.get('form_id', ''))
+        g['ratings'].append(a.get('rating', 0))
+        if a.get('comment'):
+            g['comments'].append(a['comment'])
+        g['alert_ids'].append(a.get('id'))
+        g['count'] += 1
+
+    result = []
+    for qid, g in groups.items():
+        ratings = g['ratings']
+        avg = sum(ratings) / len(ratings) if ratings else 0
+        # Priority: frequency * inverse of avg rating (lower rating = higher urgency)
+        priority = round(g['count'] * (3 - avg), 2)
+        result.append({
+            'question_id': g['question_id'],
+            'question_text': g['question_text'],
+            'forms': list(g['forms']),
+            'count': g['count'],
+            'avg_rating': round(avg, 2),
+            'priority_score': priority,
+            'alert_ids': g['alert_ids'],
+            'comments': g['comments'][:5]
+        })
+    result.sort(key=lambda x: x['priority_score'], reverse=True)
+    return jsonify(result)
+
+
+@app.route('/api/alerts/batch', methods=['PUT'])
+@api_login_required
+def batch_update_alerts():
+    """Update multiple alerts at once by their IDs."""
+    data = request.json
+    ids = set(data.get('ids', []))
+    new_status = data.get('status', '')
+    action_notes = data.get('action_notes', '')
+    if not ids or not new_status:
+        return jsonify({'error': 'ids and status are required'}), 400
+    alerts = load_alerts()
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    updated = 0
+    for a in alerts:
+        if a.get('id') in ids:
+            a['status'] = new_status
+            if action_notes:
+                a['action_notes'] = action_notes
+            a['updated_at'] = now
+            updated += 1
+    save_alerts_data(alerts)
+    return jsonify({'success': True, 'updated': updated})
+
+
+@app.route('/api/alerts/ai-summary', methods=['GET'])
+@api_login_required
+def get_alerts_ai_summary():
+    """Generate an AI summary of top flagged questions using Google Gemini (free tier).
+    Requires: pip install google-generativeai  and  GEMINI_API_KEY in .env
+    """
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        return jsonify({'error': 'Package not installed. Run: pip install google-generativeai'}), 501
+    api_key = os.environ.get('GEMINI_API_KEY', '')
+    if not api_key:
+        return jsonify({'error': 'No GEMINI_API_KEY found in .env file. Add it to enable this feature.'}), 501
+
+    alerts = load_alerts()
+    active = [a for a in alerts if a.get('status') != 'resolved']
+    if not active:
+        return jsonify({'summary': 'No unresolved alerts to analyze. All clear!'})
+
+    groups = defaultdict(lambda: {'count': 0, 'ratings': [], 'comments': [], 'question_text': ''})
+    for a in active:
+        qid = a.get('question_id', '')
+        groups[qid]['count'] += 1
+        groups[qid]['ratings'].append(a.get('rating', 0))
+        groups[qid]['question_text'] = groups[qid]['question_text'] or a.get('question_text', qid)
+        if a.get('comment'):
+            groups[qid]['comments'].append(a['comment'])
+
+    top = sorted(groups.items(), key=lambda x: x[1]['count'], reverse=True)[:10]
+    lines = []
+    for qid, g in top:
+        avg = sum(g['ratings']) / len(g['ratings']) if g['ratings'] else 0
+        lines.append(f"- Question [{qid}]: \"{g['question_text']}\" — flagged {g['count']} times, avg rating {avg:.1f}")
+        for c in g['comments'][:3]:
+            lines.append(f'  Comment: "{c}"')
+
+    prompt = (
+        "You are an analyst for a professional training company. "
+        "Below are the most-flagged evaluation questions from participant feedback surveys, "
+        "along with participant comments. Provide a concise, actionable summary in 3-5 bullet points "
+        "highlighting the main concerns and specific recommendations for improvement. "
+        "Be constructive and professional.\n\n" + "\n".join(lines)
+    )
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(prompt)
+        return jsonify({'summary': response.text})
+    except Exception as e:
+        return jsonify({'error': f'Gemini API error: {str(e)}'}), 500
+
 
 @app.route('/api/forms', methods=['POST'])
 @api_login_required

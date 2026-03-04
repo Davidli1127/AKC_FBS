@@ -736,15 +736,15 @@ body {
 
 .low-rating-comment {
     padding: 8px 15px 12px 55px;
-    background: #fff8e1;
-    border-top: 1px dashed #ffc107;
+    background: #f0f5ff;
+    border-top: 1px dashed #c7d7ff;
     animation: fadeIn 0.2s ease;
 }
 
 .low-rating-comment .low-rating-label {
     display: block;
     font-size: 12px;
-    color: #856404;
+    color: #4a5568;
     margin-bottom: 6px;
     font-weight: 500;
 }
@@ -752,18 +752,18 @@ body {
 .low-rating-comment textarea {
     width: 100%;
     padding: 7px 10px;
-    border: 1px solid #ffc107;
+    border: 1px solid #c7d7ff;
     border-radius: 6px;
     font-size: 13px;
     resize: vertical;
-    background: #fffdf0;
+    background: #f7f9ff;
     box-sizing: border-box;
 }
 
 .low-rating-comment textarea:focus {
     outline: none;
-    border-color: #e0a800;
-    box-shadow: 0 0 0 2px rgba(255,193,7,0.25);
+    border-color: #1a56db;
+    box-shadow: 0 0 0 2px rgba(26,86,219,0.15);
 }
 
 @keyframes fadeIn {

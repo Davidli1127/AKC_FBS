@@ -292,26 +292,56 @@
 
         <div id="alerts" class="tab-content">
             <div class="card">
-                <div class="card-header">Low Feedback Alerts (Rating ≤ 2)</div>
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <span>Low Feedback Alerts</span>
+                    <div style="display:flex; gap:6px;">
+                        <button id="alertViewAnalysisBtn" class="btn btn-primary btn-sm" onclick="showAlertView('analysis')">&#128202; Hotspot Analysis</button>
+                        <button id="alertViewListBtn" class="btn btn-secondary btn-sm" onclick="showAlertView('list')">&#128203; All Alerts</button>
+                    </div>
+                </div>
                 <div class="card-body">
-                    <p style="color:#555; font-size:13px; margin-bottom:16px;">
-                        Alerts are created automatically when a participant rates any question as <strong>Poor (1)</strong> or <strong>Unsatisfactory (2)</strong>.
-                        Review each alert, add action notes, and update the status to track your response.
-                    </p>
                     <div class="alert-summary-bar" id="alertsSummary"></div>
-                    <div style="display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap;">
-                        <label style="font-weight:500;">Filter by status:</label>
-                        <select id="alertStatusFilter" onchange="loadAlerts()" style="padding:6px 10px; border:1px solid #ddd; border-radius:6px;">
-                            <option value="">All</option>
-                            <option value="new">New</option>
-                            <option value="acknowledged">Acknowledged</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="resolved">Resolved</option>
-                        </select>
-                        <button class="btn btn-secondary btn-sm" onclick="loadAlerts()">&#8635; Refresh</button>
+
+                    <!-- Analysis View -->
+                    <div id="alertAnalysisView">
+                        <p style="color:#555; font-size:13px; margin-bottom:14px;">
+                            Questions are grouped and ranked by <strong>priority score</strong> (frequency &times; urgency).
+                            Resolve all alerts for a question in one click, or use <strong>AI Insight</strong> for actionable recommendations.
+                        </p>
+                        <div id="alertAnalysisContent"><p style="color:#888;">Loading analysis...</p></div>
                     </div>
 
-                    <div id="alertsList"><p style="color:#888;">Loading alerts...</p></div>
+                    <!-- List View -->
+                    <div id="alertListView" style="display:none;">
+                        <!-- Batch action bar (hidden until checkboxes ticked) -->
+                        <div id="batchActionBar" style="display:none; align-items:center; gap:10px; flex-wrap:wrap; background:#f0f5ff; border:1px solid #c7d7ff; border-radius:8px; padding:10px 14px; margin-bottom:14px;">
+                            <span id="batchSelectedCount" style="font-weight:600; color:#003366;">0 selected</span>
+                            <select id="batchStatusSelect" style="padding:5px 10px; border:1px solid #c7d7ff; border-radius:6px;">
+                                <option value="">-- Mark as --</option>
+                                <option value="acknowledged">Acknowledged</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="new">New</option>
+                            </select>
+                            <input type="text" id="batchNotesInput" placeholder="Notes (optional)" style="padding:5px 10px; border:1px solid #c7d7ff; border-radius:6px; width:200px;">
+                            <button class="btn btn-primary btn-sm" onclick="batchUpdateAlerts()">Apply to Selected</button>
+                            <button class="btn btn-secondary btn-sm" onclick="selectAllAlerts(false)">Clear Selection</button>
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
+                            <label style="font-weight:500;">Filter by status:</label>
+                            <select id="alertStatusFilter" onchange="loadAlerts()" style="padding:6px 10px; border:1px solid #ddd; border-radius:6px;">
+                                <option value="">All</option>
+                                <option value="new">New</option>
+                                <option value="acknowledged">Acknowledged</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="resolved">Resolved</option>
+                            </select>
+                            <button class="btn btn-secondary btn-sm" onclick="loadAlerts()">&#8635; Refresh</button>
+                            <button class="btn btn-secondary btn-sm" onclick="selectAllAlerts(true)">&#9745; Select All</button>
+                            <button class="btn btn-secondary btn-sm" onclick="selectAllAlerts(false)">&#9744; Deselect All</button>
+                        </div>
+                        <div id="alertsList"><p style="color:#888;">Loading alerts...</p></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -383,6 +413,7 @@
         let originalFormData = null;
         let pendingChanges = null;
         let searchTimeout = null;
+        let currentAlertView = 'analysis';
 
         const FORM_PERSONNEL = JSON.parse(_appData.formPersonnel);
 
@@ -686,18 +717,23 @@
             document.getElementById(tabId).classList.add('active');
             
             if (tabId === 'forms') loadFormForEdit();
-            if (tabId === 'alerts') loadAlerts();
+            if (tabId === 'alerts') showAlertView(currentAlertView);
         }
 
         function updateFormFields() {
             const formType = document.getElementById('formSelect').value;
-            const isAssessor = FORM_PERSONNEL[formType] === 'assessor';
-            
-            if (isAssessor) {
+            const personnel = FORM_PERSONNEL[formType] || 'instructor';
+
+            if (personnel === 'assessor') {
                 document.getElementById('classroomGroup').style.display = 'none';
                 document.getElementById('assessmentLocationGroup').style.display = 'block';
                 document.getElementById('instructorSection').style.display = 'none';
                 document.getElementById('assessorSection').style.display = 'block';
+            } else if (personnel === 'none') {
+                document.getElementById('classroomGroup').style.display = 'block';
+                document.getElementById('assessmentLocationGroup').style.display = 'none';
+                document.getElementById('instructorSection').style.display = 'none';
+                document.getElementById('assessorSection').style.display = 'none';
             } else {
                 document.getElementById('classroomGroup').style.display = 'block';
                 document.getElementById('assessmentLocationGroup').style.display = 'none';
@@ -764,6 +800,10 @@
                 data.assessment_location = formData.get('assessment_location');
                 data.num_assessors = numAssessors;
                 data.assessors = assessors;
+            } else if (FORM_PERSONNEL[formType] === 'none') {
+                data.classroom = formData.get('classroom');
+                data.num_instructors = 0;
+                data.instructors = [];
             } else {
                 const numInstructors = parseInt(formData.get('num_instructors'));
                 const instructors = [];
@@ -1397,7 +1437,6 @@
                 } else {
                     badge.style.display = 'none';
                 }
-
                 const summaryDiv = document.getElementById('alertsSummary');
                 summaryDiv.innerHTML = [
                     ['new', summary.new || 0],
@@ -1415,6 +1454,7 @@
                 const listDiv = document.getElementById('alertsList');
                 if (!alerts.length) {
                     listDiv.innerHTML = '<p style="color:#888; text-align:center; padding:20px;">No alerts found.</p>';
+                    document.getElementById('batchActionBar').style.display = 'none';
                     return;
                 }
 
@@ -1424,6 +1464,8 @@
                     <div class="alert-card" id="alertCard_${a.id}" style="border-left:4px solid ${col};">
                         <div class="alert-card-header">
                             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                                <input type="checkbox" class="alert-checkbox" value="${a.id}" onchange="updateBatchBar()"
+                                       style="width:16px;height:16px;cursor:pointer;flex-shrink:0;" title="Select for batch action">
                                 <span class="alert-status-badge" style="background:${col};">${STATUS_LABELS[a.status] || a.status}</span>
                                 <strong>${escHtml(a.course_title)}</strong>
                                 <span style="color:#777;font-size:12px;">${escHtml(a.course_date)}</span>
@@ -1450,7 +1492,7 @@
                         </div>
                     </div>`;
                 }).join('');
-
+                updateBatchBar();
             } catch (err) {
                 document.getElementById('alertsList').innerHTML = `<p style="color:red;">Error loading alerts: ${err.message}</p>`;
             }
@@ -1473,6 +1515,168 @@
             } catch (err) {
                 alert('Error: ' + err.message);
             }
+        }
+
+        function showAlertView(view) {
+            currentAlertView = view;
+            document.getElementById('alertAnalysisView').style.display = view === 'analysis' ? 'block' : 'none';
+            document.getElementById('alertListView').style.display = view === 'list' ? 'block' : 'none';
+            document.getElementById('alertViewAnalysisBtn').className = 'btn btn-sm' + (view === 'analysis' ? ' btn-primary' : ' btn-secondary');
+            document.getElementById('alertViewListBtn').className = 'btn btn-sm' + (view === 'list' ? ' btn-primary' : ' btn-secondary');
+            if (view === 'analysis') loadAlertsAnalysis();
+            else loadAlerts();
+        }
+
+        async function loadAlertsAnalysis() {
+            // Update badge + summary pills
+            try {
+                const summaryRes = await fetch('/api/alerts/summary');
+                const summary = await summaryRes.json();
+                const unresolved = (summary.new||0) + (summary.acknowledged||0) + (summary.in_progress||0);
+                const badge = document.getElementById('alertsBadge');
+                badge.textContent = unresolved;
+                badge.style.display = unresolved > 0 ? 'inline' : 'none';
+                document.getElementById('alertsSummary').innerHTML = [
+                    ['new', summary.new||0], ['acknowledged', summary.acknowledged||0],
+                    ['in_progress', summary.in_progress||0], ['resolved', summary.resolved||0]
+                ].map(([s,n]) => `<span class="alert-summary-pill" style="background:${STATUS_COLORS[s]};"
+                      onclick="showAlertView('list'); document.getElementById('alertStatusFilter').value='${s}'; loadAlerts();"
+                      title="Click to view">${STATUS_LABELS[s]}: ${n}</span>`
+                ).join('') + `<span style="color:#888;font-size:13px;align-self:center;">Total: ${summary.total||0}</span>`;
+            } catch(e) {}
+
+            const contentDiv = document.getElementById('alertAnalysisContent');
+            contentDiv.innerHTML = '<p style="color:#888;">Loading analysis...</p>';
+            try {
+                const res = await fetch('/api/alerts/analysis');
+                const hotspots = await res.json();
+                if (!hotspots.length) {
+                    contentDiv.innerHTML = '<p style="color:#28a745; text-align:center; padding:20px; font-size:15px;">&#10003; No unresolved alerts — all clear!</p>';
+                    return;
+                }
+                let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px;">
+                    <thead><tr style="background:#003366;color:white;">
+                        <th style="padding:10px 12px;text-align:left;">#</th>
+                        <th style="padding:10px 12px;text-align:left;">Question</th>
+                        <th style="padding:10px 8px;text-align:center;">Flagged</th>
+                        <th style="padding:10px 8px;text-align:center;">Avg Rating</th>
+                        <th style="padding:10px 8px;text-align:center;">Priority</th>
+                        <th style="padding:10px 12px;text-align:left;">Sample Comments</th>
+                        <th style="padding:10px 8px;"></th>
+                    </tr></thead><tbody>`;
+                hotspots.forEach((h, idx) => {
+                    const pc = h.priority_score >= 10 ? '#dc3545' : h.priority_score >= 4 ? '#fd7e14' : '#28a745';
+                    const comments = h.comments.length
+                        ? h.comments.slice(0,2).map(c => `<div style="font-style:italic;color:#555;font-size:12px;">&ldquo;${escHtml(c)}&rdquo;</div>`).join('')
+                        : '<span style="color:#aaa;">No comments</span>';
+                    html += `<tr style="border-bottom:1px solid #eee;${idx%2===1?'background:#f9f9f9':''}">
+                        <td style="padding:10px 12px;font-weight:700;color:#666;">${idx+1}</td>
+                        <td style="padding:10px 12px;"><strong>${escHtml(h.question_text||h.question_id)}</strong>
+                            <div style="color:#aaa;font-size:11px;">[${escHtml(h.question_id)}] ${h.forms.map(f=>escHtml(f)).join(', ')}</div></td>
+                        <td style="padding:10px 8px;text-align:center;font-weight:700;color:#dc3545;">${h.count}</td>
+                        <td style="padding:10px 8px;text-align:center;">${h.avg_rating.toFixed(1)}</td>
+                        <td style="padding:10px 8px;text-align:center;">
+                            <span style="background:${pc};color:white;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:700;">${h.priority_score.toFixed(1)}</span></td>
+                        <td style="padding:10px 12px;max-width:200px;">${comments}</td>
+                        <td style="padding:10px 8px;">
+                            <button class="btn btn-secondary btn-sm" style="font-size:11px;white-space:nowrap;"
+                                    onclick="batchUpdateAlertsByIds(${JSON.stringify(h.alert_ids)}, 'resolved', 'Batch resolved from analysis view')">
+                                &#10003; Resolve All
+                            </button></td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                html += `<div style="border-top:2px solid #e0e0e0;padding-top:18px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <div>
+                            <strong style="color:#003366;">&#129302; AI Insight</strong>
+                            <span style="color:#888;font-size:12px;margin-left:8px;">Powered by Google Gemini (free tier)</span>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="generateAiSummary()" id="aiSummaryBtn">Generate AI Summary</button>
+                    </div>
+                    <div id="aiSummaryResult" style="background:#f7f9ff;border:1px solid #c7d7ff;border-radius:8px;padding:14px;font-size:13px;line-height:1.7;display:none;white-space:pre-line;"></div>
+                    <p style="color:#aaa;font-size:11px;margin-top:8px;">Requires <code>GEMINI_API_KEY</code> in your <code>.env</code> file and <code>pip install google-generativeai</code>.</p>
+                </div>`;
+                contentDiv.innerHTML = html;
+            } catch (err) {
+                contentDiv.innerHTML = `<p style="color:red;">Error loading analysis: ${err.message}</p>`;
+            }
+        }
+
+        async function batchUpdateAlertsByIds(ids, status, notes) {
+            if (!ids || !ids.length) return;
+            if (!confirm(`Mark ${ids.length} alert(s) as "${status}"?`)) return;
+            try {
+                const res = await fetch('/api/alerts/batch', {
+                    method: 'PUT',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ids, status, action_notes: notes})
+                });
+                const data = await res.json();
+                if (data.success) loadAlertsAnalysis();
+                else alert('Error: ' + data.error);
+            } catch (err) { alert('Error: ' + err.message); }
+        }
+
+        async function batchUpdateAlerts() {
+            const ids = getSelectedAlertIds();
+            if (!ids.length) { alert('Please select at least one alert.'); return; }
+            const status = document.getElementById('batchStatusSelect').value;
+            const notes = document.getElementById('batchNotesInput').value.trim();
+            if (!status) { alert('Please select a status.'); return; }
+            if (!confirm(`Update ${ids.length} alert(s) to "${status}"?`)) return;
+            try {
+                const res = await fetch('/api/alerts/batch', {
+                    method: 'PUT',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ids, status, action_notes: notes})
+                });
+                const data = await res.json();
+                if (data.success) { loadAlerts(); document.getElementById('batchNotesInput').value = ''; }
+                else alert('Error: ' + data.error);
+            } catch (err) { alert('Error: ' + err.message); }
+        }
+
+        function getSelectedAlertIds() {
+            return Array.from(document.querySelectorAll('.alert-checkbox:checked')).map(cb => cb.value);
+        }
+
+        function selectAllAlerts(checked) {
+            document.querySelectorAll('.alert-checkbox').forEach(cb => cb.checked = checked);
+            updateBatchBar();
+        }
+
+        function updateBatchBar() {
+            const count = getSelectedAlertIds().length;
+            const bar = document.getElementById('batchActionBar');
+            bar.style.display = count > 0 ? 'flex' : 'none';
+            document.getElementById('batchSelectedCount').textContent = `${count} selected`;
+        }
+
+        async function generateAiSummary() {
+            const btn = document.getElementById('aiSummaryBtn');
+            const result = document.getElementById('aiSummaryResult');
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+            result.style.display = 'block';
+            result.textContent = 'Calling Gemini API...';
+            try {
+                const res = await fetch('/api/alerts/ai-summary');
+                const data = await res.json();
+                if (data.error) {
+                    result.textContent = '\u26a0 ' + data.error;
+                    result.style.borderColor = '#feb2b2';
+                    result.style.background = '#fff5f5';
+                } else {
+                    result.textContent = data.summary;
+                    result.style.borderColor = '#c7d7ff';
+                    result.style.background = '#f7f9ff';
+                }
+            } catch (err) {
+                result.textContent = 'Network error: ' + err.message;
+            }
+            btn.disabled = false;
+            btn.textContent = 'Generate AI Summary';
         }
 
         function escHtml(str) {
