@@ -1778,7 +1778,6 @@
                 if (data.success) { loadAlerts(); document.getElementById('batchNotesInput').value = ''; }
                 else alert('Error: ' + data.error);
             } catch (err) { alert('Error: ' + err.message); }
-        }
 
         function getSelectedAlertIds() {
             return Array.from(document.querySelectorAll('.alert-checkbox:checked')).map(cb => cb.value);
