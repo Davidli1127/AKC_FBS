@@ -22,6 +22,7 @@
             <button class="tab" onclick="showTab('forms')">Edit Form Questions</button>
             <button class="tab" onclick="showTab('existing')">Generated QR Codes</button>
             <button class="tab" onclick="showTab('alerts')" id="alertsTab">&#9888; Low Feedback Alerts <span id="alertsBadge" style="display:none; background:#dc3545; color:white; border-radius:10px; padding:1px 7px; font-size:11px; margin-left:4px; font-weight:700;"></span></button>
+            <button class="tab" onclick="showTab('analysis')">&#128202; Data Analysis</button>
         </div>
 
         <div id="courses" class="tab-content active">
@@ -307,6 +308,7 @@
                             <button id="analysisGroupCBtn" class="btn btn-secondary btn-sm" onclick="setAnalysisMode('course')">&#127979; By Course</button>
                             <div style="flex:1;"></div>
                             <button class="btn btn-sm" style="background:#dc3545;color:white;font-weight:600;" onclick="resolveAllUnresolved()">&#10003;&#10003; Resolve ALL Unresolved</button>
+                            <button class="btn btn-sm" style="background:#6c757d;color:white;" onclick="deleteAlerts(null,'resolved')" title="Delete all already-resolved alerts to clean up testing data">&#128465; Delete All Resolved</button>
                         </div>
                         <p id="analysisModeDesc" style="color:#555; font-size:13px; margin-bottom:14px;">
                             Questions are grouped and ranked by <strong>priority score</strong> (frequency &times; urgency). Click <strong>Resolve All</strong> on any row to bulk-close all alerts for that question.
@@ -327,6 +329,7 @@
                             <input type="text" id="batchNotesInput" placeholder="Notes (optional)" style="padding:5px 10px; border:1px solid #c7d7ff; border-radius:6px; width:200px;">
                             <button class="btn btn-primary btn-sm" onclick="batchUpdateAlerts()">Apply to Selected</button>
                             <button class="btn btn-secondary btn-sm" onclick="selectAllAlerts(false)">Clear Selection</button>
+                            <button class="btn btn-sm" style="background:#dc3545;color:white;" onclick="deleteSelectedAlerts()">&#128465; Delete Selected</button>
                         </div>
                         <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
                             <label style="font-weight:500;">Filter by status:</label>
@@ -343,6 +346,74 @@
                         </div>
                         <div id="alertsList"><p style="color:#888;">Loading alerts...</p></div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════ DATA ANALYSIS TAB ═══════════════ -->
+        <div id="analysis" class="tab-content">
+            <div class="card">
+                <div class="card-header">&#128202; Data Analysis Pipeline</div>
+                <div class="card-body">
+
+                    <!-- STAGE 1: Collection Overview -->
+                    <div style="margin-bottom:28px;">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                            <span style="background:#003366;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">1</span>
+                            <h3 style="margin:0;font-size:16px;color:#003366;">Data Collection Overview</h3>
+                        </div>
+                        <p style="color:#555;font-size:13px;margin-bottom:14px;">Total responses collected by form type. Click an unresolved alerts figure to go to the Alerts tab.</p>
+                        <div id="collectionCards" style="display:flex;gap:12px;flex-wrap:wrap;"><p style="color:#aaa;">Loading...</p></div>
+                    </div>
+
+                    <hr style="border:none;border-top:2px solid #eef;margin:20px 0;">
+
+                    <!-- STAGE 2+3: Segmentation + Analysis -->
+                    <div style="margin-bottom:28px;">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                            <span style="background:#003366;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">2</span>
+                            <h3 style="margin:0;font-size:16px;color:#003366;">Segmentation &amp; Analysis</h3>
+                        </div>
+                        <p style="color:#555;font-size:13px;margin-bottom:16px;">Filter by form, date range, or specific course, then run the analysis to see per-question ratings ranked from lowest to highest.</p>
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;background:#f7f9ff;border:1px solid #e0e8ff;border-radius:10px;padding:16px;margin-bottom:18px;">
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Form</label>
+                                <select id="analysisFormId" onchange="updateAnalysisCourses()" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:160px;"></select>
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Date From</label>
+                                <input type="date" id="analysisDateFrom" style="padding:7px 10px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Date To</label>
+                                <input type="date" id="analysisDateTo" style="padding:7px 10px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Course</label>
+                                <select id="analysisCourseFilter" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:160px;"><option value="">All courses</option></select>
+                            </div>
+                            <button class="btn btn-primary" onclick="runAnalysis()" style="padding:8px 18px;">&#9654; Run Analysis</button>
+                            <button class="btn btn-secondary btn-sm" onclick="clearAnalysisFilters()">Clear</button>
+                        </div>
+                        <div id="analysisResults">
+                            <p style="color:#aaa;text-align:center;padding:40px;font-size:14px;">Select a form and click <strong>Run Analysis</strong> to see results.</p>
+                        </div>
+                    </div>
+
+                    <hr style="border:none;border-top:2px solid #eef;margin:20px 0;">
+
+                    <!-- STAGE 4: Action -->
+                    <div>
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                            <span style="background:#003366;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">3</span>
+                            <h3 style="margin:0;font-size:16px;color:#003366;">Action Insights</h3>
+                        </div>
+                        <p style="color:#555;font-size:13px;margin-bottom:14px;">After running analysis, actionable insights appear here highlighting questions that need attention.</p>
+                        <div id="actionInsightsDiv">
+                            <p style="color:#aaa;text-align:center;padding:20px;">Run Analysis above to generate action insights.</p>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -419,6 +490,7 @@
         let allFetchedAlerts = [];
         let alertCurrentPage = 1;
         const ALERTS_PAGE_SIZE = 50;
+        let analysisFormsList = [];
 
         const FORM_PERSONNEL = JSON.parse(_appData.formPersonnel);
 
@@ -723,6 +795,7 @@
             
             if (tabId === 'forms') loadFormForEdit();
             if (tabId === 'alerts') showAlertView(currentAlertView);
+            if (tabId === 'analysis') loadAnalysisOverview();
         }
 
         function updateFormFields() {
@@ -1494,6 +1567,8 @@
                                     onclick="quickUpdateAlert('${a.id}','resolved')" title="One-click resolve">&#10003; Resolve</button>
                             <button class="btn btn-sm" style="background:#fd7e14;color:white;padding:3px 10px;font-size:11px;"
                                     onclick="quickUpdateAlert('${a.id}','acknowledged')" title="Acknowledge">&#128065; Ack</button>
+                            <button class="btn btn-sm" style="background:transparent;color:#dc3545;border:1px solid #dc3545;padding:3px 8px;font-size:11px;"
+                                    onclick="deleteAlert('${a.id}')" title="Delete alert">&#128465;</button>
                             <span style="color:#aaa;font-size:11px;">${escHtml(a.submitted_at)}</span>
                         </div>
                     </div>
@@ -1799,6 +1874,263 @@
             } catch(err) {
                 contentDiv.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
             }
+        }
+
+        // ─── Alert Delete Functions ───────────────────────────────────────
+        async function deleteAlert(alertId) {
+            if (!confirm('Delete this alert? This cannot be undone.')) return;
+            try {
+                const res = await fetch(`/api/alerts/${alertId}`, {method: 'DELETE'});
+                const data = await res.json();
+                if (data.success) loadAlerts();
+                else alert('Error: ' + data.error);
+            } catch(err) { alert('Error: ' + err.message); }
+        }
+
+        async function deleteSelectedAlerts() {
+            const ids = getSelectedAlertIds();
+            if (!ids.length) { alert('Select at least one alert first.'); return; }
+            await deleteAlerts(ids, null);
+        }
+
+        async function deleteAlerts(ids, statusFilter) {
+            const label = statusFilter ? `all "${statusFilter}" alerts` : `${ids.length} selected alert(s)`;
+            if (!confirm(`Permanently delete ${label}? This cannot be undone.`)) return;
+            try {
+                const body = ids ? {ids} : {status_filter: statusFilter};
+                const res = await fetch('/api/alerts/batch', {
+                    method: 'DELETE',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (currentAlertView === 'list') loadAlerts();
+                    else loadAlertsAnalysis();
+                } else alert('Error: ' + data.error);
+            } catch(err) { alert('Error: ' + err.message); }
+        }
+
+        // ─── Data Analysis Tab Functions ─────────────────────────────────────
+        async function loadAnalysisOverview() {
+            const cards = document.getElementById('collectionCards');
+            cards.innerHTML = '<p style="color:#aaa;">Loading...</p>';
+            try {
+                const res = await fetch('/api/analysis/summary');
+                const data = await res.json();
+                analysisFormsList = [];
+                let html = '';
+                const barColors = ['#003366','#0d6efd','#17a2b8','#6610f2','#20c997','#fd7e14'];
+                let colorIdx = 0;
+                for (const [fid, fd] of Object.entries(data)) {
+                    if (fid.startsWith('_')) continue;
+                    analysisFormsList.push({id: fid, title: fd.title || fid});
+                    const bc = barColors[colorIdx++ % barColors.length];
+                    html += `<div style="background:#f0f5ff;border:1px solid #c7d7ff;border-radius:10px;padding:16px 20px;min-width:200px;cursor:pointer;"
+                                  onclick="document.getElementById('analysisFormId').value='${fid}'; updateAnalysisCourses(); document.getElementById('analysisResults').innerHTML='<p style=\'color:#aaa;text-align:center;padding:40px;\'>Click Run Analysis to see results.</p>'">
+                        <div style="font-size:28px;font-weight:700;color:${bc};">${fd.total_responses}</div>
+                        <div style="font-size:13px;color:#333;margin-top:4px;font-weight:600;">${escHtml(fd.title || fid)}</div>
+                        <div style="font-size:11px;color:#888;margin-top:2px;">responses collected</div>
+                    </div>`;
+                }
+                const al = data._alerts || {};
+                html += `<div style="background:#fff5f5;border:1px solid #ffb3b3;border-radius:10px;padding:16px 20px;min-width:200px;cursor:pointer;"
+                              onclick="showTab('alerts')">
+                    <div style="font-size:28px;font-weight:700;color:#dc3545;">${al.unresolved || 0}</div>
+                    <div style="font-size:13px;color:#333;margin-top:4px;font-weight:600;">Unresolved Alerts</div>
+                    <div style="font-size:11px;color:#888;margin-top:2px;">${al.total || 0} total &nbsp;&#8594; click to view</div>
+                </div>`;
+                cards.innerHTML = html || '<p style="color:#aaa;">No data yet.</p>';
+
+                // Populate form selector
+                const sel = document.getElementById('analysisFormId');
+                sel.innerHTML = analysisFormsList.map(f =>
+                    `<option value="${f.id}">${escHtml(f.title || f.id)}</option>`
+                ).join('');
+                if (analysisFormsList.length) updateAnalysisCourses();
+            } catch(err) {
+                cards.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+            }
+        }
+
+        async function updateAnalysisCourses() {
+            const formId = document.getElementById('analysisFormId').value;
+            if (!formId) return;
+            try {
+                const res = await fetch(`/api/analysis/ratings?form_id=${encodeURIComponent(formId)}`);
+                const data = await res.json();
+                const sel = document.getElementById('analysisCourseFilter');
+                const courses = data.courses_available || [];
+                sel.innerHTML = '<option value="">All courses</option>' +
+                    courses.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
+            } catch(err) { /* silently fail */ }
+        }
+
+        async function runAnalysis() {
+            const formId = document.getElementById('analysisFormId').value;
+            const dateFrom = document.getElementById('analysisDateFrom').value;
+            const dateTo = document.getElementById('analysisDateTo').value;
+            const course = document.getElementById('analysisCourseFilter').value;
+            const resultsDiv = document.getElementById('analysisResults');
+            resultsDiv.innerHTML = '<p style="color:#888;text-align:center;padding:30px;">&#9203; Analysing...</p>';
+            document.getElementById('actionInsightsDiv').innerHTML = '<p style="color:#aaa;text-align:center;padding:20px;">Loading insights...</p>';
+            try {
+                let url = `/api/analysis/ratings?form_id=${encodeURIComponent(formId)}`;
+                if (dateFrom) url += `&date_from=${dateFrom}`;
+                if (dateTo) url += `&date_to=${dateTo}`;
+                if (course) url += `&course=${encodeURIComponent(course)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.error) { resultsDiv.innerHTML = `<p style="color:red;">${data.error}</p>`; return; }
+                renderAnalysisResults(data);
+                renderActionInsights(data);
+            } catch(err) {
+                resultsDiv.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+            }
+        }
+
+        function clearAnalysisFilters() {
+            document.getElementById('analysisDateFrom').value = '';
+            document.getElementById('analysisDateTo').value = '';
+            document.getElementById('analysisCourseFilter').value = '';
+            document.getElementById('analysisResults').innerHTML =
+                '<p style="color:#aaa;text-align:center;padding:40px;">Click Run Analysis to see results.</p>';
+            document.getElementById('actionInsightsDiv').innerHTML =
+                '<p style="color:#aaa;text-align:center;padding:20px;">Run Analysis above to generate action insights.</p>';
+        }
+
+        function renderAnalysisResults(data) {
+            const div = document.getElementById('analysisResults');
+            if (!data.questions || !data.questions.length) {
+                div.innerHTML = '<p style="color:#888;text-align:center;padding:30px;">No rating data found for the selected filters.</p>';
+                return;
+            }
+            const qs = data.questions;
+            const overallAvg = qs.length ? (qs.reduce((s,q)=>s+q.avg,0)/qs.length).toFixed(2) : '-';
+            const avgColor = overallAvg >= 4 ? '#28a745' : overallAvg >= 3 ? '#fd7e14' : '#dc3545';
+            const pctGood = Math.round(qs.filter(q=>q.avg>=4).length / qs.length * 100);
+            const belowThree = qs.filter(q=>q.avg<3).length;
+
+            let html = `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+                <div style="background:#f0f5ff;border:1px solid #c7d7ff;border-radius:8px;padding:14px 18px;text-align:center;min-width:110px;">
+                    <div style="font-size:26px;font-weight:700;color:#003366;">${data.filtered_rows}</div>
+                    <div style="font-size:12px;color:#666;">Responses Analysed</div>
+                    <div style="font-size:11px;color:#aaa;">of ${data.total_rows} total</div>
+                </div>
+                <div style="background:#f0f5ff;border:1px solid #c7d7ff;border-radius:8px;padding:14px 18px;text-align:center;min-width:110px;">
+                    <div style="font-size:26px;font-weight:700;color:${avgColor};">${overallAvg}</div>
+                    <div style="font-size:12px;color:#666;">Overall Avg Rating</div>
+                    <div style="font-size:11px;color:#aaa;">across all questions</div>
+                </div>
+                <div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:8px;padding:14px 18px;text-align:center;min-width:110px;">
+                    <div style="font-size:26px;font-weight:700;color:#28a745;">${pctGood}%</div>
+                    <div style="font-size:12px;color:#666;">Questions Rated ≥ 4</div>
+                    <div style="font-size:11px;color:#aaa;">Very Good or better</div>
+                </div>
+                <div style="background:#fff5f5;border:1px solid #ffb3b3;border-radius:8px;padding:14px 18px;text-align:center;min-width:110px;">
+                    <div style="font-size:26px;font-weight:700;color:#dc3545;">${belowThree}</div>
+                    <div style="font-size:12px;color:#666;">Questions Below 3.0</div>
+                    <div style="font-size:11px;color:#aaa;">need immediate action</div>
+                </div>
+            </div>`;
+
+            html += `<div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px;">
+                <thead><tr style="background:#003366;color:white;">
+                    <th style="padding:10px 12px;text-align:left;">Question <span style="font-weight:400;font-size:11px;opacity:0.8;">(sorted: lowest avg first)</span></th>
+                    <th style="padding:10px 8px;text-align:center;width:55px;">Avg</th>
+                    <th style="padding:10px 12px;text-align:left;">Rating Distribution &nbsp;<span style="font-weight:400;font-size:11px;opacity:0.8;">1=Poor &nbsp;5=Excellent</span></th>
+                    <th style="padding:10px 8px;text-align:center;width:55px;">Resp.</th>
+                </tr></thead><tbody>`;
+
+            const barColors = {1:'#dc3545',2:'#fd7e14',3:'#ffc107',4:'#17a2b8',5:'#28a745'};
+            qs.forEach((q, idx) => {
+                const ac = q.avg >= 4 ? '#28a745' : q.avg >= 3 ? '#fd7e14' : '#dc3545';
+                const dist = q.dist || {1:0,2:0,3:0,4:0,5:0};
+                const tot = Object.values(dist).reduce((a,b)=>a+b,0);
+                const pct = r => tot > 0 ? dist[r]/tot*100 : 0;
+                const bars = [1,2,3,4,5].map(r => pct(r) > 0 ?
+                    `<div style="width:${pct(r).toFixed(1)}%;min-width:3px;background:${barColors[r]};height:22px;" title="${['','Poor','Unsatisfactory','Satisfactory','Very Good','Excellent'][r]}: ${dist[r]} (${pct(r).toFixed(0)}%)"></div>` : ''
+                ).join('');
+                const legend = [1,2,3,4,5].filter(r=>dist[r]>0).map(r =>
+                    `<span style="background:${barColors[r]};color:white;border-radius:4px;padding:1px 5px;font-size:10px;margin-right:2px;">${r}:${dist[r]}</span>`
+                ).join('');
+                html += `<tr style="border-bottom:1px solid #eee;${idx%2===1?'background:#f9f9f9':''};">
+                    <td style="padding:10px 12px;">
+                        <div style="font-weight:600;color:#222;">${escHtml(q.text)}</div>
+                        <div style="color:#aaa;font-size:11px;">[${escHtml(q.id)}]</div>
+                    </td>
+                    <td style="padding:10px 8px;text-align:center;">
+                        <span style="font-size:20px;font-weight:700;color:${ac};">${q.avg.toFixed(1)}</span>
+                    </td>
+                    <td style="padding:10px 12px;">
+                        <div style="display:flex;width:100%;height:22px;border-radius:4px;overflow:hidden;background:#eee;margin-bottom:4px;">${bars}</div>
+                        <div>${legend}</div>
+                    </td>
+                    <td style="padding:10px 8px;text-align:center;color:#666;font-size:12px;">${q.count}</td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+
+            if (data.text_responses && data.text_responses.length) {
+                html += `<div style="margin-top:16px;">
+                    <button class="btn btn-secondary btn-sm" style="margin-bottom:10px;"
+                            onclick="const el=this.nextElementSibling; el.style.display=el.style.display==='none'?'block':'none'; this.textContent=el.style.display==='none'?'&#9654; Show Open-Ended Responses':'&#9660; Hide Open-Ended Responses'">
+                        &#9654; Show Open-Ended Responses (${data.text_responses.length} question${data.text_responses.length===1?'':'s'})
+                    </button>
+                    <div style="display:none;">`;
+                data.text_responses.forEach(t => {
+                    html += `<div style="margin-bottom:18px;"><div style="font-weight:600;color:#003366;margin-bottom:6px;font-size:13px;">${escHtml(t.text)} <span style="color:#aaa;font-weight:400;">(${t.responses.length} response${t.responses.length===1?'':'s'})</span></div>`;
+                    t.responses.forEach(r => {
+                        html += `<div style="background:#f9f9f9;border-left:3px solid #c7d7ff;padding:7px 12px;margin-bottom:4px;font-size:13px;color:#333;">${escHtml(r)}</div>`;
+                    });
+                    html += '</div>';
+                });
+                html += '</div></div>';
+            }
+            div.innerHTML = html;
+        }
+
+        function renderActionInsights(data) {
+            const div = document.getElementById('actionInsightsDiv');
+            const qs = data.questions || [];
+            const below3 = qs.filter(q=>q.avg<3).sort((a,b)=>a.avg-b.avg);
+            const mid = qs.filter(q=>q.avg>=3 && q.avg<4).sort((a,b)=>a.avg-b.avg);
+            const excellent = qs.filter(q=>q.avg>=4.5);
+            let html = '';
+
+            if (below3.length) {
+                html += `<div style="background:#fff5f5;border:1px solid #ffb3b3;border-radius:8px;padding:16px;margin-bottom:14px;">
+                    <strong style="color:#dc3545;">&#9888; ${below3.length} question(s) require <u>immediate action</u> (avg &lt; 3.0):</strong>
+                    <ul style="margin:8px 0 10px 0;padding-left:20px;">
+                        ${below3.map(q=>`<li style="margin-bottom:3px;">${escHtml(q.text)} <span style="background:#dc3545;color:white;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;">${q.avg.toFixed(1)}</span></li>`).join('')}
+                    </ul>
+                    <p style="margin:0;font-size:13px;">Review participant comments on the <a href="#" onclick="showTab('alerts');return false;" style="color:#dc3545;font-weight:600;">Low Feedback Alerts</a> tab for specific feedback on these questions.</p>
+                </div>`;
+            }
+            if (mid.length) {
+                html += `<div style="background:#fffbec;border:1px solid #ffd27a;border-radius:8px;padding:16px;margin-bottom:14px;">
+                    <strong style="color:#856404;">&#128203; ${mid.length} question(s) have room for improvement (3.0 – 3.9):</strong>
+                    <ul style="margin:8px 0 0 0;padding-left:20px;">
+                        ${mid.slice(0,6).map(q=>`<li style="margin-bottom:3px;">${escHtml(q.text)} <span style="background:#fd7e14;color:white;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;">${q.avg.toFixed(1)}</span></li>`).join('')}
+                        ${mid.length>6?`<li style="color:#aaa;">...and ${mid.length-6} more</li>`:''}
+                    </ul>
+                </div>`;
+            }
+            if (excellent.length && !below3.length && !mid.length) {
+                html += `<div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:8px;padding:16px;">
+                    <strong style="color:#276749;">&#10003; Outstanding! All questions rated ≥ 4.0 and ${excellent.length} rated ≥ 4.5 — excellent performance across the board.</strong>
+                </div>`;
+            } else if (excellent.length) {
+                html += `<div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:8px;padding:14px;">
+                    <strong style="color:#276749;">&#9733; ${excellent.length} top-performing question(s) rated ≥ 4.5:</strong>
+                    <ul style="margin:6px 0 0 0;padding-left:20px;">
+                        ${excellent.map(q=>`<li>${escHtml(q.text)} <span style="background:#28a745;color:white;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;">${q.avg.toFixed(1)}</span></li>`).join('')}
+                    </ul>
+                </div>`;
+            }
+            if (!html) html = '<p style="color:#888;text-align:center;padding:20px;">No insights to show for this selection.</p>';
+            div.innerHTML = html;
         }
 
         function escHtml(str) {

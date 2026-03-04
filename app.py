@@ -1110,6 +1110,245 @@ def get_alerts_ai_summary():
         return jsonify({'error': f'Gemini API error: {str(e)}'}), 500
 
 
+@app.route('/api/alerts/<alert_id>', methods=['DELETE'])
+@api_login_required
+def delete_alert(alert_id):
+    """Delete a single alert by ID"""
+    alerts = load_alerts()
+    original_len = len(alerts)
+    alerts = [a for a in alerts if a.get('id') != alert_id]
+    if len(alerts) == original_len:
+        return jsonify({'error': 'Alert not found'}), 404
+    save_alerts_data(alerts)
+    return jsonify({'success': True})
+
+
+@app.route('/api/alerts/batch', methods=['DELETE'])
+@api_login_required
+def batch_delete_alerts():
+    """Bulk-delete alerts by IDs or by status filter.
+    Body: {ids: [...]} or {status_filter: 'resolved'}
+    """
+    data = request.json or {}
+    ids = set(data.get('ids', []))
+    status_filter = data.get('status_filter', '')
+    alerts = load_alerts()
+    before = len(alerts)
+    if ids:
+        alerts = [a for a in alerts if a.get('id') not in ids]
+    elif status_filter:
+        alerts = [a for a in alerts if a.get('status') != status_filter]
+    else:
+        return jsonify({'error': 'Provide ids or status_filter'}), 400
+    deleted = before - len(alerts)
+    save_alerts_data(alerts)
+    return jsonify({'success': True, 'deleted': deleted})
+
+
+@app.route('/api/analysis/summary', methods=['GET'])
+@api_login_required
+def get_analysis_summary():
+    """Return high-level collection stats: total responses per form + alert counts."""
+    config = load_config()
+    result = {}
+    for form_id, form in config['forms'].items():
+        excel_path = get_excel_path(form_id)
+        row_count = 0
+        if os.path.exists(excel_path):
+            try:
+                wb = load_workbook(excel_path, read_only=True)
+                ws = wb.active
+                row_count = sum(1 for row in ws.iter_rows(min_row=2, values_only=True) if any(c for c in row))
+                wb.close()
+            except Exception:
+                row_count = 0
+        result[form_id] = {
+            'title': form.get('title', form_id),
+            'total_responses': row_count
+        }
+    alerts = load_alerts()
+    result['_alerts'] = {
+        'total': len(alerts),
+        'unresolved': sum(1 for a in alerts if a.get('status') != 'resolved')
+    }
+    return jsonify(result)
+
+
+@app.route('/api/analysis/ratings', methods=['GET'])
+@api_login_required
+def get_analysis_ratings():
+    """Read Excel data and compute per-question averages and rating distributions.
+    Query params: form_id, date_from (YYYY-MM-DD), date_to (YYYY-MM-DD), course
+    """
+    form_id = request.args.get('form_id', 'form1')
+    date_from_str = request.args.get('date_from', '').strip()
+    date_to_str = request.args.get('date_to', '').strip()
+    course_filter = request.args.get('course', '').strip()
+
+    config = load_config()
+    form = config['forms'].get(form_id)
+    if not form:
+        return jsonify({'error': 'Form not found'}), 404
+
+    excel_path = get_excel_path(form_id)
+    if not os.path.exists(excel_path):
+        return jsonify({'questions': [], 'text_responses': [], 'total_rows': 0,
+                        'filtered_rows': 0, 'courses_available': []})
+
+    try:
+        dt_from = datetime.strptime(date_from_str, '%Y-%m-%d') if date_from_str else None
+    except ValueError:
+        dt_from = None
+    try:
+        dt_to = datetime.strptime(date_to_str, '%Y-%m-%d') if date_to_str else None
+    except ValueError:
+        dt_to = None
+
+    # Build question maps from config
+    rating_q_map = {}   # q_id -> question text
+    text_q_map = {}     # q_id -> question text
+    for section in form.get('sections', []):
+        s_type = section.get('type', '')
+        for q in section.get('questions', []):
+            if s_type in ('rating', 'instructor_rating', 'assessor_rating'):
+                rating_q_map[q['id']] = q.get('text', q['id'])
+            elif s_type == 'text_questions':
+                text_q_map[q['id']] = q.get('text', q['id'])
+
+    try:
+        wb = load_workbook(excel_path, read_only=True)
+        ws = wb.active
+        all_rows = list(ws.iter_rows(values_only=True))
+        wb.close()
+    except Exception as e:
+        return jsonify({'error': f'Could not read Excel: {str(e)}'}), 500
+
+    if len(all_rows) < 2:
+        return jsonify({'questions': [], 'text_responses': [], 'total_rows': 0,
+                        'filtered_rows': 0, 'courses_available': []})
+
+    headers = all_rows[0]
+    data_rows = [r for r in all_rows[1:] if any(c for c in r)]
+
+    # Find date and course columns
+    date_col_idx = None
+    course_col_idx = None
+    for i, h in enumerate(headers):
+        if h is None:
+            continue
+        h_upper = str(h).upper().strip()
+        if h_upper in ('DATE', 'COURSE DATE'):
+            date_col_idx = i
+        if h_upper in ('COURSE NAME', 'COURSE TITLE'):
+            course_col_idx = i
+
+    # Collect available courses (for dropdown, before date filter)
+    courses_set = set()
+    if course_col_idx is not None:
+        for row in data_rows:
+            if course_col_idx < len(row) and row[course_col_idx]:
+                courses_set.add(str(row[course_col_idx]).strip())
+
+    # Filter rows
+    filtered_rows = []
+    for row in data_rows:
+        if (dt_from or dt_to) and date_col_idx is not None and date_col_idx < len(row):
+            cell = row[date_col_idx]
+            if cell:
+                rd = None
+                try:
+                    if isinstance(cell, datetime):
+                        rd = cell
+                    elif isinstance(cell, str):
+                        for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%m/%d/%Y'):
+                            try:
+                                rd = datetime.strptime(cell, fmt)
+                                break
+                            except ValueError:
+                                continue
+                except Exception:
+                    pass
+                if rd:
+                    if dt_from and rd < dt_from:
+                        continue
+                    if dt_to and rd > dt_to:
+                        continue
+        if course_filter and course_col_idx is not None and course_col_idx < len(row):
+            cell_course = str(row[course_col_idx] or '').strip()
+            if course_filter.lower() not in cell_course.lower():
+                continue
+        filtered_rows.append(row)
+
+    # Map column index -> (q_id, q_text)
+    rating_cols = {}
+    text_cols = {}
+    for i, h in enumerate(headers):
+        if h is None:
+            continue
+        h_str = str(h)
+        q_key = h_str.split(' - ')[0].strip()
+        if q_key in rating_q_map:
+            rating_cols[i] = (q_key, rating_q_map[q_key])
+        elif q_key in text_q_map:
+            text_cols[i] = (q_key, text_q_map[q_key])
+        else:
+            # Handle instructor format B{n}{id} and assessor format A{n}.{id}
+            if len(q_key) >= 3 and q_key[0] == 'B' and q_key[1].isdigit():
+                candidate = q_key[2:]
+                if candidate in rating_q_map:
+                    rating_cols[i] = (candidate, rating_q_map[candidate])
+            elif '.' in q_key and q_key[0] in ('A', 'B'):
+                candidate = q_key.split('.')[-1]
+                if candidate in rating_q_map:
+                    rating_cols[i] = (candidate, rating_q_map[candidate])
+
+    # Aggregate rating stats
+    stats = {}
+    for row in filtered_rows:
+        for col_idx, (qid, qtext) in rating_cols.items():
+            if col_idx >= len(row):
+                continue
+            val = row[col_idx]
+            try:
+                r = int(float(str(val))) if val is not None else None
+            except (ValueError, TypeError):
+                continue
+            if r is None or r < 1 or r > 5:
+                continue
+            if qid not in stats:
+                stats[qid] = {'text': qtext, 'count': 0, 'total': 0, 'dist': {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}}
+            stats[qid]['count'] += 1
+            stats[qid]['total'] += r
+            stats[qid]['dist'][r] += 1
+
+    questions_out = []
+    for qid, s in stats.items():
+        avg = round(s['total'] / s['count'], 2) if s['count'] else 0
+        questions_out.append({'id': qid, 'text': s['text'], 'count': s['count'],
+                              'avg': avg, 'dist': s['dist']})
+    questions_out.sort(key=lambda x: x['avg'])   # lowest avg first = most needs attention
+
+    # Aggregate text responses
+    text_agg = {}
+    for row in filtered_rows:
+        for col_idx, (qid, qtext) in text_cols.items():
+            if col_idx >= len(row):
+                continue
+            val = str(row[col_idx] or '').strip()
+            if val and val.lower() not in ('none', '-', ''):
+                if qid not in text_agg:
+                    text_agg[qid] = {'text': qtext, 'responses': []}
+                text_agg[qid]['responses'].append(val)
+
+    return jsonify({
+        'questions': questions_out,
+        'text_responses': list(text_agg.values()),
+        'total_rows': len(data_rows),
+        'filtered_rows': len(filtered_rows),
+        'courses_available': sorted(courses_set)
+    })
+
+
 @app.route('/api/forms', methods=['POST'])
 @api_login_required
 def create_form():
