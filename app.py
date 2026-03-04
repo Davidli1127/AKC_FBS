@@ -785,7 +785,6 @@ def create_course():
         course['num_instructors'] = data.get('num_instructors', 1)
         course['instructors'] = data.get('instructors', [])
     else:
-        # Custom form with no personnel sections
         course['classroom'] = data.get('classroom', '')
         course['num_instructors'] = 0
         course['instructors'] = []
@@ -840,7 +839,6 @@ def get_course_qrcode(course_id):
     return send_file(buf, mimetype='image/png', as_attachment=True,
                      download_name=f'QR_{course["course_title"]}_{course["course_date"]}.png')
 
-
 @app.route('/api/scan/qrcode', methods=['GET'])
 @api_login_required
 def get_universal_qrcode():
@@ -861,7 +859,6 @@ def get_universal_qrcode():
     buf.seek(0)
     return send_file(buf, mimetype='image/png', as_attachment=True,
                      download_name='AKC_Universal_QR.png')
-
 
 @app.route('/student-login/<course_id>', methods=['GET', 'POST'])
 def student_login(course_id):
@@ -1022,7 +1019,6 @@ def get_alerts_analysis():
     for qid, g in groups.items():
         ratings = g['ratings']
         avg = sum(ratings) / len(ratings) if ratings else 0
-        # Priority: frequency * inverse of avg rating (lower rating = higher urgency)
         priority = round(g['count'] * (3 - avg), 2)
         result.append({
             'question_id': g['question_id'],
