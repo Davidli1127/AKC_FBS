@@ -1762,6 +1762,8 @@
                 } else alert('Error: ' + data.error);
             } catch (err) { alert('Error: ' + err.message); }
         }
+
+        async function batchUpdateAlerts() {
             const ids = getSelectedAlertIds();
             if (!ids.length) { alert('Please select at least one alert.'); return; }
             const status = document.getElementById('batchStatusSelect').value;
@@ -1778,6 +1780,7 @@
                 if (data.success) { loadAlerts(); document.getElementById('batchNotesInput').value = ''; }
                 else alert('Error: ' + data.error);
             } catch (err) { alert('Error: ' + err.message); }
+        }
 
         function getSelectedAlertIds() {
             return Array.from(document.querySelectorAll('.alert-checkbox:checked')).map(cb => cb.value);
