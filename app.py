@@ -73,27 +73,50 @@ def save_alerts_data(alerts):
 
 
 def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
-    """Detect ratings of 1 or 2 and create alert records"""
+    """Detect ratings of 1 or 2 from rating-type questions only and create alert records.
+    Text/open-ended questions are intentionally excluded even if a participant types '1' or '2'.
+    """
     alerts = load_alerts()
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     rating_labels = {1: 'Poor', 2: 'Unsatisfactory'}
+
+    RATING_SECTION_TYPES = {'rating', 'instructor_rating', 'assessor_rating'}
+    rating_q_ids = set()   # question IDs that should trigger alerts
+    text_q_ids = set()     # question IDs that must NEVER trigger alerts
     q_texts = {}
     for section in form_config.get('sections', []):
+        s_type = section.get('type', '')
         for q in section.get('questions', []):
             q_texts[q['id']] = q['text']
+            if s_type in RATING_SECTION_TYPES:
+                rating_q_ids.add(q['id'])
+            elif s_type == 'text_questions':
+                text_q_ids.add(q['id'])
 
     for key, value in data.items():
         if key.endswith('_comment'):
+            continue
+        # Resolve the base question ID:
+        # Instructor keys look like B1_1 (prefix B1, question id 1)
+        # Assessor keys look like A1_1 (prefix A1, question id 1)
+        # Plain rating keys match the question id directly (e.g. A1, A2)
+        base_key = key
+        if '_' in key:
+            prefix, rest = key.split('_', 1)
+            if prefix and prefix[0] in ('B', 'A') and prefix[1:].isdigit():
+                base_key = rest
+        # Explicit exclusion: text questions must not trigger alerts
+        if base_key in text_q_ids:
+            continue
+        # Only proceed if this resolves to a known rating question
+        if base_key not in rating_q_ids:
             continue
         try:
             rating = int(value)
         except (ValueError, TypeError):
             continue
         if rating <= 2:
-            q_text = q_texts.get(key, '')
-            if not q_text:
-                short_id = key.split('_')[-1]
-                q_text = q_texts.get(short_id, key)
+            q_text = q_texts.get(base_key, q_texts.get(key, key))
             comment = data.get(f'{key}_comment', '')
             alert = {
                 'id': str(uuid.uuid4())[:12],

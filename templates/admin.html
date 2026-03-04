@@ -293,59 +293,69 @@
 
         <div id="alerts" class="tab-content">
             <div class="card">
-                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                    <span>Low Feedback Alerts</span>
-                    <div style="display:flex; gap:6px;">
-                        <button id="alertViewAnalysisBtn" class="btn btn-primary btn-sm" onclick="showAlertView('analysis')">&#128202; Hotspot Analysis</button>
-                        <button id="alertViewListBtn" class="btn btn-secondary btn-sm" onclick="showAlertView('list')">&#128203; All Alerts</button>
-                    </div>
-                </div>
+                <div class="card-header">&#9888; Low Feedback Alerts</div>
                 <div class="card-body">
-                    <div class="alert-summary-bar" id="alertsSummary"></div>
-                    <div id="alertAnalysisView">
-                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
-                            <button id="analysisGroupQBtn" class="btn btn-primary btn-sm" onclick="setAnalysisMode('question')">&#128203; By Question</button>
-                            <button id="analysisGroupCBtn" class="btn btn-secondary btn-sm" onclick="setAnalysisMode('course')">&#127979; By Course</button>
-                            <div style="flex:1;"></div>
-                            <button class="btn btn-sm" style="background:#dc3545;color:white;font-weight:600;" onclick="resolveAllUnresolved()">&#10003;&#10003; Resolve ALL Unresolved</button>
-                            <button class="btn btn-sm" style="background:#6c757d;color:white;" onclick="deleteAlerts(null,'resolved')" title="Delete all already-resolved alerts to clean up testing data">&#128465; Delete All Resolved</button>
+
+                    <!-- Status summary pills -->
+                    <div class="alert-summary-bar" id="alertsSummary" style="margin-bottom:16px;"></div>
+
+                    <!-- Collapsible Hotspot Analysis panel -->
+                    <div style="border:1px solid #c7d7ff; border-radius:8px; margin-bottom:20px; overflow:hidden;">
+                        <div style="background:#f0f5ff; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; cursor:pointer; user-select:none;" onclick="toggleAlertAnalysis()">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span id="analysisToggleIcon" style="font-size:11px; color:#003366;">&#9654;</span>
+                                <strong style="color:#003366; font-size:14px;">&#128202; Hotspot Analysis</strong>
+                                <span style="color:#777; font-size:12px;">Questions ranked by urgency &mdash; click to expand</span>
+                            </div>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;" onclick="event.stopPropagation()">
+                                <button id="analysisGroupQBtn" class="btn btn-primary btn-sm" onclick="setAnalysisMode('question')">&#128203; By Question</button>
+                                <button id="analysisGroupCBtn" class="btn btn-secondary btn-sm" onclick="setAnalysisMode('course')">&#127979; By Course</button>
+                                <button class="btn btn-sm" style="background:#dc3545;color:white;font-weight:600;" onclick="resolveAllUnresolved()">&#10003;&#10003; Resolve ALL Unresolved</button>
+                                <button class="btn btn-sm" style="background:#6c757d;color:white;" onclick="deleteAlerts(null,'resolved')" title="Delete all resolved alerts to clean up test data">&#128465; Delete Resolved</button>
+                            </div>
                         </div>
-                        <p id="analysisModeDesc" style="color:#555; font-size:13px; margin-bottom:14px;">
-                            Questions are grouped and ranked by <strong>priority score</strong> (frequency &times; urgency). Click <strong>Resolve All</strong> on any row to bulk-close all alerts for that question.
-                        </p>
-                        <div id="alertAnalysisContent"><p style="color:#888;">Loading analysis...</p></div>
+                        <div id="alertAnalysisCollapsible" style="display:none; padding:14px; border-top:1px solid #e0e8ff;">
+                            <p id="analysisModeDesc" style="color:#555; font-size:13px; margin-bottom:14px;">
+                                Questions are grouped and ranked by <strong>priority score</strong> (frequency &times; urgency). Click <strong>Resolve All</strong> or <strong>Ack All</strong> on any row to bulk-close alerts.
+                            </p>
+                            <div id="alertAnalysisContent"><p style="color:#888;">Loading...</p></div>
+                        </div>
                     </div>
 
-                    <div id="alertListView" style="display:none;">
-                        <div id="batchActionBar" style="display:none; align-items:center; gap:10px; flex-wrap:wrap; background:#f0f5ff; border:1px solid #c7d7ff; border-radius:8px; padding:10px 14px; margin-bottom:14px;">
-                            <span id="batchSelectedCount" style="font-weight:600; color:#003366;">0 selected</span>
-                            <select id="batchStatusSelect" style="padding:5px 10px; border:1px solid #c7d7ff; border-radius:6px;">
-                                <option value="">-- Mark as --</option>
-                                <option value="acknowledged">Acknowledged</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="resolved">Resolved</option>
-                                <option value="new">New</option>
-                            </select>
-                            <input type="text" id="batchNotesInput" placeholder="Notes (optional)" style="padding:5px 10px; border:1px solid #c7d7ff; border-radius:6px; width:200px;">
-                            <button class="btn btn-primary btn-sm" onclick="batchUpdateAlerts()">Apply to Selected</button>
-                            <button class="btn btn-secondary btn-sm" onclick="selectAllAlerts(false)">Clear Selection</button>
-                            <button class="btn btn-sm" style="background:#dc3545;color:white;" onclick="deleteSelectedAlerts()">&#128465; Delete Selected</button>
-                        </div>
-                        <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
-                            <label style="font-weight:500;">Filter by status:</label>
-                            <select id="alertStatusFilter" onchange="loadAlerts()" style="padding:6px 10px; border:1px solid #ddd; border-radius:6px;">
-                                <option value="">All</option>
-                                <option value="new">New</option>
-                                <option value="acknowledged">Acknowledged</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="resolved">Resolved</option>
-                            </select>
-                            <button class="btn btn-secondary btn-sm" onclick="loadAlerts()">&#8635; Refresh</button>
-                            <button class="btn btn-secondary btn-sm" onclick="selectAllAlerts(true)">&#9745; Select All</button>
-                            <button class="btn btn-secondary btn-sm" onclick="selectAllAlerts(false)">&#9744; Deselect All</button>
-                        </div>
-                        <div id="alertsList"><p style="color:#888;">Loading alerts...</p></div>
+                    <!-- Batch action bar (shown when checkboxes are ticked) -->
+                    <div id="batchActionBar" style="display:none; align-items:center; gap:10px; flex-wrap:wrap; background:#f0f5ff; border:1px solid #c7d7ff; border-radius:8px; padding:10px 14px; margin-bottom:14px;">
+                        <span id="batchSelectedCount" style="font-weight:600; color:#003366;">0 selected</span>
+                        <select id="batchStatusSelect" style="padding:5px 10px; border:1px solid #c7d7ff; border-radius:6px;">
+                            <option value="">-- Mark as --</option>
+                            <option value="acknowledged">Acknowledged</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="new">New</option>
+                        </select>
+                        <input type="text" id="batchNotesInput" placeholder="Notes (optional)" style="padding:5px 10px; border:1px solid #c7d7ff; border-radius:6px; width:200px;">
+                        <button class="btn btn-primary btn-sm" onclick="batchUpdateAlerts()">Apply to Selected</button>
+                        <button class="btn btn-secondary btn-sm" onclick="selectAllAlerts(false)">Clear Selection</button>
+                        <button class="btn btn-sm" style="background:#dc3545;color:white;" onclick="deleteSelectedAlerts()">&#128465; Delete Selected</button>
                     </div>
+
+                    <!-- Filter bar -->
+                    <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
+                        <label style="font-weight:500;">Filter:</label>
+                        <select id="alertStatusFilter" onchange="loadAlerts()" style="padding:6px 10px; border:1px solid #ddd; border-radius:6px;">
+                            <option value="">All</option>
+                            <option value="new">New</option>
+                            <option value="acknowledged">Acknowledged</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                        </select>
+                        <button class="btn btn-secondary btn-sm" onclick="loadAlerts()">&#8635; Refresh</button>
+                        <button class="btn btn-secondary btn-sm" onclick="selectAllAlerts(true)">&#9745; Select All</button>
+                        <button class="btn btn-secondary btn-sm" onclick="selectAllAlerts(false)">&#9744; Deselect All</button>
+                    </div>
+
+                    <!-- Individual alert cards -->
+                    <div id="alertsList"><p style="color:#888;">Loading alerts...</p></div>
+
                 </div>
             </div>
         </div>
@@ -794,7 +804,7 @@
             document.getElementById(tabId).classList.add('active');
             
             if (tabId === 'forms') loadFormForEdit();
-            if (tabId === 'alerts') showAlertView(currentAlertView);
+            if (tabId === 'alerts') loadAlertsAll();
             if (tabId === 'analysis') loadAnalysisOverview();
         }
 
@@ -1626,13 +1636,40 @@
         }
 
         function showAlertView(view) {
-            currentAlertView = view;
-            document.getElementById('alertAnalysisView').style.display = view === 'analysis' ? 'block' : 'none';
-            document.getElementById('alertListView').style.display = view === 'list' ? 'block' : 'none';
-            document.getElementById('alertViewAnalysisBtn').className = 'btn btn-sm' + (view === 'analysis' ? ' btn-primary' : ' btn-secondary');
-            document.getElementById('alertViewListBtn').className = 'btn btn-sm' + (view === 'list' ? ' btn-primary' : ' btn-secondary');
-            if (view === 'analysis') loadAlertsAnalysis();
-            else loadAlerts();
+            // Legacy: now everything is one view; kept for compatibility
+            loadAlertsAll();
+        }
+
+        function toggleAlertAnalysis() {
+            const panel = document.getElementById('alertAnalysisCollapsible');
+            const icon = document.getElementById('analysisToggleIcon');
+            const isOpen = panel.style.display !== 'none';
+            if (isOpen) {
+                panel.style.display = 'none';
+                icon.innerHTML = '&#9654;';
+            } else {
+                panel.style.display = 'block';
+                icon.innerHTML = '&#9660;';
+                if (currentAnalysisMode === 'course') loadAlertsAnalysisByCourse();
+                else loadAlertsAnalysis();
+            }
+        }
+
+        function loadAlertsAll() {
+            // Load the list (always shown) and refresh analysis if it is open
+            loadAlerts();
+            const panel = document.getElementById('alertAnalysisCollapsible');
+            if (panel && panel.style.display !== 'none') {
+                if (currentAnalysisMode === 'course') loadAlertsAnalysisByCourse();
+                else loadAlertsAnalysis();
+            }
+        }
+
+        function reloadAlertsAll() {
+            // Called after batch operations — refresh both analysis and list
+            loadAlerts();
+            if (currentAnalysisMode === 'course') loadAlertsAnalysisByCourse();
+            else loadAlertsAnalysis();
         }
 
         async function loadAlertsAnalysis() {
@@ -1721,13 +1758,10 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    if (currentAnalysisMode === 'course') loadAlertsAnalysisByCourse();
-                    else loadAlertsAnalysis();
+                    reloadAlertsAll();
                 } else alert('Error: ' + data.error);
             } catch (err) { alert('Error: ' + err.message); }
         }
-
-        async function batchUpdateAlerts() {
             const ids = getSelectedAlertIds();
             if (!ids.length) { alert('Please select at least one alert.'); return; }
             const status = document.getElementById('batchStatusSelect').value;
@@ -1788,8 +1822,7 @@
                 });
                 const data = await patchRes.json();
                 if (data.success) {
-                    if (currentAnalysisMode === 'course') loadAlertsAnalysisByCourse();
-                    else loadAlertsAnalysis();
+                    reloadAlertsAll();
                 } else alert('Error: ' + data.error);
             } catch (err) { alert('Error: ' + err.message); }
         }
@@ -1905,8 +1938,8 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    if (currentAlertView === 'list') loadAlerts();
-                    else loadAlertsAnalysis();
+                    if (currentAlertView === 'list') reloadAlertsAll();
+                    else reloadAlertsAll();
                 } else alert('Error: ' + data.error);
             } catch(err) { alert('Error: ' + err.message); }
         }
