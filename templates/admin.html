@@ -434,9 +434,14 @@
                                 <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Date To</label>
                                 <input type="date" id="analysisDateTo" style="padding:7px 10px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;">
                             </div>
-                            <div>
+                            <div style="position:relative;">
                                 <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Course</label>
-                                <select id="analysisCourseFilter" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:160px;"><option value="">All courses</option></select>
+                                <input type="text" id="analysisCourseFilter" placeholder="All courses (type to search...)" autocomplete="off"
+                                       oninput="showCourseAC('analysisCourseFilter','analysisCourseSugg',analysisCoursesAvailable)"
+                                       onfocus="showCourseAC('analysisCourseFilter','analysisCourseSugg',analysisCoursesAvailable)"
+                                       onblur="setTimeout(()=>{const s=document.getElementById('analysisCourseSugg');if(s)s.style.display='none';},200)"
+                                       style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:200px;">
+                                <div id="analysisCourseSugg" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #c7d7ff;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.12);"></div>
                             </div>
                             <button class="btn btn-primary" onclick="runAnalysis()" style="padding:8px 18px;">&#9654; Run Analysis</button>
                             <button class="btn btn-secondary btn-sm" onclick="clearAnalysisFilters()">Clear</button>
@@ -471,9 +476,14 @@
                                 <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Date To</label>
                                 <input type="date" id="textDateTo" style="padding:7px 10px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;">
                             </div>
-                            <div>
+                            <div style="position:relative;">
                                 <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Course</label>
-                                <select id="textCourseFilter" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:160px;"><option value="">All courses</option></select>
+                                <input type="text" id="textCourseFilter" placeholder="All courses (type to search...)" autocomplete="off"
+                                       oninput="showCourseAC('textCourseFilter','textCourseSugg',textCoursesAvailable)"
+                                       onfocus="showCourseAC('textCourseFilter','textCourseSugg',textCoursesAvailable)"
+                                       onblur="setTimeout(()=>{const s=document.getElementById('textCourseSugg');if(s)s.style.display='none';},200)"
+                                       style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:200px;">
+                                <div id="textCourseSugg" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #c7d7ff;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.12);"></div>
                             </div>
                             <button class="btn btn-primary" onclick="runTextAnalysis()" style="padding:8px 18px;">&#128196; View Responses</button>
                             <button class="btn btn-secondary btn-sm" onclick="clearTextFilters()">Clear</button>
@@ -573,6 +583,100 @@
         let alertCurrentPage = 1;
         const ALERTS_PAGE_SIZE = 50;
         let analysisFormsList = [];
+        let analysisCoursesAvailable = [];
+        let textCoursesAvailable = [];
+        let lastTextResponseData = null;
+        let lastTextCourseFilter = '';
+
+        function showCourseAC(inputId, suggId, list) {
+            const input = document.getElementById(inputId);
+            const sugg  = document.getElementById(suggId);
+            if (!sugg) return;
+            const val    = (input.value || '').toLowerCase().trim();
+            const items  = val ? list.filter(c => c.toLowerCase().includes(val)) : list;
+            if (!items.length) { sugg.style.display = 'none'; return; }
+            let html = items.map(c =>
+                `<div class="ac-item" data-val="${escHtml(c)}"
+                      style="padding:7px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f5ff;"
+                      onmouseover="this.style.background='#eef4ff'" onmouseout="this.style.background=''"
+                      >${escHtml(c)}</div>`
+            ).join('');
+            if (val) html += `<div class="ac-item" data-val=""
+                style="padding:5px 12px;cursor:pointer;font-size:12px;color:#888;border-top:1px solid #eee;"
+                onmouseover="this.style.background='#eef4ff'" onmouseout="this.style.background=''">✕ Clear (all courses)</div>`;
+            sugg.innerHTML = html;
+            sugg.querySelectorAll('.ac-item').forEach(item => {
+                item.addEventListener('mousedown', e => {
+                    e.preventDefault();
+                    input.value = item.dataset.val;
+                    sugg.style.display = 'none';
+                });
+            });
+            sugg.style.display = 'block';
+        }
+
+        // ── Text-response utilities ─────────────────────────────────────
+        const TEXT_JUNK = /^(n\/?a|nil|none|no|no comment|nothing|-|ok|okay|fine|na|good|great|-)$/i;
+        const isJunkResp = v => !v || !v.trim() || v.trim().length < 3 || TEXT_JUNK.test(v.trim());
+
+        const TEXT_STOP = new Set(['the','a','an','is','are','was','were','be','been','being','have','has',
+            'had','do','does','did','will','would','could','should','may','might','shall','to','of','in',
+            'for','on','with','as','by','at','from','that','this','it','its','and','or','but','if','so',
+            'not','no','i','we','they','he','she','you','my','our','their','his','her','your','me','us',
+            'them','him','very','just','also','more','most','please','thank','thanks','good','great','can',
+            'all','well','some','any','get','got','quite','too','was','been','also']);
+
+        function computeWordFreq(texts) {
+            const freq = {};
+            texts.forEach(t => {
+                (t||'').toLowerCase().replace(/[^a-z\s]/g,' ').split(/\s+/).forEach(w => {
+                    if (w.length > 2 && !TEXT_STOP.has(w)) freq[w] = (freq[w]||0) + 1;
+                });
+            });
+            return Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,12);
+        }
+
+        function exportTextToCSV() {
+            if (!lastTextResponseData) return;
+            const rows = [['Question','Question ID','Course','Date','Response']];
+            (lastTextResponseData.questions||[]).forEach(q => {
+                (q.responses||[]).filter(r => !isJunkResp(r.value)).forEach(r => {
+                    rows.push([q.text, q.id, r.course||'', r.date||'', r.value]);
+                });
+            });
+            const csv = rows.map(r => r.map(c => `"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+            const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href = url; a.download = `text_responses_${new Date().toISOString().slice(0,10)}.csv`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function filterTextByKeyword(kw) {
+            const lower = (kw||'').toLowerCase().trim();
+            document.querySelectorAll('.text-response-item').forEach(el => {
+                const val = el.dataset.value || '';
+                const matches = !lower || val.toLowerCase().includes(lower);
+                el.style.display = matches ? '' : 'none';
+                if (matches && lower) {
+                    const re = new RegExp('('+lower.replace(/[.*+?^$()|[\]\\]/g,'\\$&')+')','gi');
+                    el.innerHTML = escHtml(val).replace(re,'<mark style="background:#fff3cd;padding:0 2px;border-radius:2px;font-weight:600;">$1</mark>');
+                } else if (matches) {
+                    el.innerHTML = escHtml(val);
+                }
+            });
+            document.querySelectorAll('.q-block').forEach(block => {
+                const vis = [...block.querySelectorAll('.text-response-item')].filter(el=>el.style.display!=='none').length;
+                const ctr = block.querySelector('.q-resp-count');
+                if (ctr) ctr.textContent = `${vis} response${vis!==1?'s':''}`;
+            });
+        }
+
+        function toggleWordFreq(id) {
+            const el = document.getElementById(id);
+            if (el) el.style.display = el.style.display==='none' ? 'block' : 'none';
+        }
 
         const FORM_PERSONNEL = JSON.parse(_appData.formPersonnel);
         const FORM_QR_FIELDS = JSON.parse(_appData.formQrFields || '{}');
@@ -2235,10 +2339,10 @@
             try {
                 const res = await fetch(`/api/analysis/ratings?form_id=${encodeURIComponent(formId)}`);
                 const data = await res.json();
-                const sel = document.getElementById('analysisCourseFilter');
-                const courses = data.courses_available || [];
-                sel.innerHTML = '<option value="">All courses</option>' +
-                    courses.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
+                analysisCoursesAvailable = data.courses_available || [];
+                document.getElementById('analysisCourseFilter').value = '';
+                const s = document.getElementById('analysisCourseSugg');
+                if (s) s.style.display = 'none';
             } catch(err) { /* silently fail */ }
         }
 
@@ -2279,6 +2383,8 @@
 
         function clearAnalysisFilters() {
             document.getElementById('analysisCourseFilter').value = '';
+            const s = document.getElementById('analysisCourseSugg');
+            if (s) s.style.display = 'none';
             document.getElementById('analysisResults').innerHTML =
                 '<p style="color:#aaa;text-align:center;padding:40px;">Click Run Analysis to see results.</p>';
             document.getElementById('actionInsightsDiv').innerHTML =
@@ -2291,10 +2397,10 @@
             try {
                 const res = await fetch(`/api/analysis/text?form_id=${encodeURIComponent(formId)}`);
                 const data = await res.json();
-                const sel = document.getElementById('textCourseFilter');
-                const courses = data.courses_available || [];
-                sel.innerHTML = '<option value="">All courses</option>' +
-                    courses.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
+                textCoursesAvailable = data.courses_available || [];
+                document.getElementById('textCourseFilter').value = '';
+                const s = document.getElementById('textCourseSugg');
+                if (s) s.style.display = 'none';
             } catch(err) { /* silently fail */ }
         }
 
@@ -2320,56 +2426,98 @@
         }
 
         function renderTextResponses(data, activeCourseFilter) {
+            lastTextResponseData = data;
+            lastTextCourseFilter = activeCourseFilter;
             const div = document.getElementById('textResponsesResults');
-            const qs = data.questions || [];
-            if (!qs.length || !qs.some(q => q.responses && q.responses.length)) {
-                div.innerHTML = '<p style="color:#888;text-align:center;padding:30px;">No text responses found for the selected filters.</p>';
+            const qs  = data.questions || [];
+            const singleCourse = !!activeCourseFilter;
+            const enriched = qs.map(q => ({
+                ...q,
+                clean: (q.responses||[]).filter(r => !isJunkResp(r.value)),
+                junk:  (q.responses||[]).filter(r =>  isJunkResp(r.value)).length
+            })).filter(q => q.clean.length > 0 || q.junk > 0);
+
+            const totalClean = enriched.reduce((s,q)=>s+q.clean.length, 0);
+            const totalJunk  = enriched.reduce((s,q)=>s+q.junk, 0);
+
+            if (!enriched.some(q=>q.clean.length)) {
+                div.innerHTML = '<p style="color:#888;text-align:center;padding:30px;">No substantive text responses found. All responses appear to be blank or N/A.</p>';
                 return;
             }
-            const singleCourse = !!activeCourseFilter;
 
-            let html = `<div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <span style="font-size:13px;color:#666;"><strong>${data.filtered_rows}</strong> response${data.filtered_rows!==1?'s':''} analysed`;
-            if (!singleCourse) html += ` &nbsp;|&nbsp; <strong>${new Set(qs.flatMap(q=>q.responses.map(r=>r.course)).filter(c=>c)).size}</strong> course sessions`;
-            html += `</span></div>`;
+            // Toolbar
+            const courseCount = singleCourse ? 0 : new Set(qs.flatMap(q=>(q.responses||[]).map(r=>r.course)).filter(c=>c)).size;
+            let html = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;background:#f7f9ff;border:1px solid #e0e8ff;border-radius:8px;margin-bottom:14px;">
+                <span style="font-size:13px;color:#666;flex:1;">
+                    <strong>${totalClean}</strong> response${totalClean!==1?'s':''} across <strong>${enriched.filter(q=>q.clean.length).length}</strong> question${enriched.filter(q=>q.clean.length).length!==1?'s':''}`;
+            if (!singleCourse && courseCount) html += ` &nbsp;&#183;&nbsp; <strong>${courseCount}</strong> course session${courseCount!==1?'s':''}`;
+            if (totalJunk) html += ` <span style="color:#aaa;font-size:12px;">(${totalJunk} blank/junk hidden)</span>`;
+            html += `</span>
+                <input type="text" id="textKeywordSearch" placeholder="&#128269; Search responses..." oninput="filterTextByKeyword(this.value)"
+                       style="padding:6px 10px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:190px;flex:1;max-width:280px;">
+                <button class="btn btn-secondary btn-sm" onclick="exportTextToCSV()" style="white-space:nowrap;">&#8595; Export CSV</button>
+            </div>`;
 
-            qs.forEach(q => {
-                if (!q.responses || !q.responses.length) return;
-                const count = q.responses.length;
+            enriched.forEach(q => {
+                if (!q.clean.length) return;
+                const count  = q.clean.length;
+                const freqId = 'wf_' + q.id.replace(/\W/g,'_');
+                const wordFreq = computeWordFreq(q.clean.map(r=>r.value));
+                const hasFreq  = wordFreq.length >= 3;
 
-                html += `<div style="border:1px solid #d0dff8;border-radius:10px;margin-bottom:20px;overflow:hidden;">
-                    <div style="background:#003366;color:white;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+                html += `<div class="q-block" style="border:1px solid #d0dff8;border-radius:10px;margin-bottom:20px;overflow:hidden;">
+                    <div style="background:#003366;color:white;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
                         <div>
                             <span style="font-size:14px;font-weight:600;">${escHtml(q.text)}</span>
-                            <span style="font-size:11px;opacity:0.7;margin-left:8px;">[${escHtml(q.id)}]</span>
+                            <span style="font-size:11px;opacity:0.6;margin-left:8px;">[${escHtml(q.id)}]</span>
                         </div>
-                        <span style="background:rgba(255,255,255,0.2);border-radius:12px;padding:2px 10px;font-size:12px;">${count} response${count!==1?'s':''}</span>
-                    </div>
-                    <div style="padding:12px 14px;">`;
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span class="q-resp-count" style="background:rgba(255,255,255,0.2);border-radius:12px;padding:2px 10px;font-size:12px;">${count} response${count!==1?'s':''}</span>
+                            ${hasFreq ? `<button onclick="toggleWordFreq('${freqId}')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.45);color:white;border-radius:6px;padding:2px 10px;font-size:11px;cursor:pointer;">&#128200; Keywords</button>` : ''}
+                        </div>
+                    </div>`;
+
+                if (hasFreq) {
+                    const maxN = wordFreq[0][1];
+                    html += `<div id="${freqId}" style="display:none;background:#f0f5ff;border-bottom:1px solid #d0dff8;padding:10px 14px;">
+                        <div style="font-size:12px;font-weight:600;color:#003366;margin-bottom:7px;">Top keywords (stop-words removed):</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;">`;
+                    wordFreq.forEach(([w,n]) => {
+                        const bg = n/maxN > 0.7 ? '#003366' : n/maxN > 0.4 ? '#0d6efd' : '#6c8ebf';
+                        html += `<span style="background:${bg};color:white;border-radius:20px;padding:3px 11px;font-size:12px;">${escHtml(w)} <strong>${n}</strong></span>`;
+                    });
+                    html += `</div></div>`;
+                }
+
+                html += `<div style="padding:12px 14px;">`;
 
                 if (singleCourse) {
-                    q.responses.forEach((r, i) => {
-                        html += `<div style="background:${i%2===0?'#f9fbff':'#fff'};border-left:3px solid #4a90d9;padding:8px 12px;margin-bottom:5px;border-radius:0 6px 6px 0;font-size:13px;color:#333;">${escHtml(r.value)}</div>`;
+                    q.clean.forEach((r,i) => {
+                        html += `<div class="text-response-item" data-value="${escHtml(r.value)}" style="background:${i%2===0?'#f9fbff':'#fff'};border-left:3px solid #4a90d9;padding:8px 12px;margin-bottom:5px;border-radius:0 6px 6px 0;font-size:13px;color:#333;">${escHtml(r.value)}</div>`;
                     });
                 } else {
-                    const courseGroups = {};
-                    q.responses.forEach(r => {
-                        const key = (r.course || 'Unknown') + (r.date ? ' (' + r.date + ')' : '');
-                        if (!courseGroups[key]) courseGroups[key] = [];
-                        courseGroups[key].push(r.value);
+                    const groups = {};
+                    q.clean.forEach(r => {
+                        const k = (r.course||'Unknown') + (r.date ? ' ('+r.date+')' : '');
+                        if (!groups[k]) groups[k] = [];
+                        groups[k].push(r.value);
                     });
-                    Object.entries(courseGroups).forEach(([courseKey, responses]) => {
+                    Object.entries(groups).forEach(([gk, vals]) => {
                         html += `<div style="margin-bottom:12px;">
-                            <div style="font-size:12px;font-weight:600;color:#003366;background:#eef4ff;border-radius:4px;padding:4px 9px;margin-bottom:5px;display:inline-block;">${escHtml(courseKey)} &nbsp;&#8212;&nbsp; ${responses.length} response${responses.length!==1?'s':''}</div>`;
-                        responses.forEach((val, i) => {
-                            html += `<div style="background:${i%2===0?'#f9fbff':'#fff'};border-left:3px solid #4a90d9;padding:8px 12px;margin-bottom:4px;border-radius:0 6px 6px 0;font-size:13px;color:#333;">${escHtml(val)}</div>`;
+                            <div style="font-size:12px;font-weight:600;color:#003366;background:#eef4ff;border-radius:4px;padding:4px 9px;margin-bottom:5px;display:inline-block;">${escHtml(gk)} &mdash; ${vals.length} response${vals.length!==1?'s':''}</div>`;
+                        vals.forEach((v,i) => {
+                            html += `<div class="text-response-item" data-value="${escHtml(v)}" style="background:${i%2===0?'#f9fbff':'#fff'};border-left:3px solid #4a90d9;padding:8px 12px;margin-bottom:4px;border-radius:0 6px 6px 0;font-size:13px;color:#333;">${escHtml(v)}</div>`;
                         });
                         html += `</div>`;
                     });
                 }
 
+                if (q.junk) {
+                    html += `<div style="font-size:11px;color:#bbb;margin-top:6px;padding-top:6px;border-top:1px dashed #eee;">&#128683; ${q.junk} blank/N/A response${q.junk!==1?'s':''} hidden</div>`;
+                }
                 html += `</div></div>`;
             });
+
             div.innerHTML = html;
         }
 
@@ -2377,6 +2525,9 @@
             document.getElementById('textDateFrom').value = '';
             document.getElementById('textDateTo').value = '';
             document.getElementById('textCourseFilter').value = '';
+            const s = document.getElementById('textCourseSugg');
+            if (s) s.style.display = 'none';
+            lastTextResponseData = null;
             document.getElementById('textResponsesResults').innerHTML =
                 '<p style="color:#aaa;text-align:center;padding:40px;font-size:14px;">Select a form and click <strong>View Responses</strong> to read open-ended answers.</p>';
         }
