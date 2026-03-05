@@ -1382,6 +1382,142 @@ def get_analysis_ratings():
     })
 
 
+@app.route('/api/analysis/text', methods=['GET'])
+@api_login_required
+def get_analysis_text():
+    """Return open-ended / text responses grouped by question.
+    Each response is tagged with its course name and date.
+    Supports same filters as /api/analysis/ratings.
+    Also includes multiple_choice and yes_no responses.
+    """
+    form_id = request.args.get('form_id', 'form1')
+    date_from_str = request.args.get('date_from', '').strip()
+    date_to_str   = request.args.get('date_to', '').strip()
+    course_filter = request.args.get('course', '').strip()
+
+    config = load_config()
+    form = config['forms'].get(form_id)
+    if not form:
+        return jsonify({'error': 'Form not found'}), 404
+
+    excel_path = get_excel_path(form_id)
+    if not os.path.exists(excel_path):
+        return jsonify({'questions': [], 'total_rows': 0,
+                        'filtered_rows': 0, 'courses_available': []})
+
+    TEXT_SECTION_TYPES = {'text_questions', 'multiple_choice', 'yes_no'}
+    text_q_map = {} 
+    for section in form.get('sections', []):
+        s_type = section.get('type', '')
+        if s_type in TEXT_SECTION_TYPES:
+            for q in section.get('questions', []):
+                text_q_map[q['id']] = q.get('text', q['id'])
+
+    if not text_q_map:
+        return jsonify({'questions': [], 'total_rows': 0,
+                        'filtered_rows': 0, 'courses_available': []})
+
+    try:
+        dt_from = datetime.strptime(date_from_str, '%Y-%m-%d') if date_from_str else None
+    except ValueError:
+        dt_from = None
+    try:
+        dt_to = datetime.strptime(date_to_str, '%Y-%m-%d') if date_to_str else None
+    except ValueError:
+        dt_to = None
+
+    try:
+        wb = load_workbook(excel_path, read_only=True)
+        ws = wb.active
+        all_rows = list(ws.iter_rows(values_only=True))
+        wb.close()
+    except Exception as e:
+        return jsonify({'error': f'Could not read Excel: {str(e)}'}), 500
+
+    if len(all_rows) < 2:
+        return jsonify({'questions': [], 'total_rows': 0,
+                        'filtered_rows': 0, 'courses_available': []})
+
+    headers = all_rows[0]
+    data_rows = [r for r in all_rows[1:] if any(c for c in r)]
+
+    date_col_idx   = None
+    course_col_idx = None
+    for i, h in enumerate(headers):
+        if h is None:
+            continue
+        h_upper = str(h).upper().strip()
+        if h_upper in ('DATE', 'COURSE DATE'):
+            date_col_idx = i
+        if h_upper in ('COURSE NAME', 'COURSE TITLE'):
+            course_col_idx = i
+
+    courses_set = set()
+    if course_col_idx is not None:
+        for row in data_rows:
+            if course_col_idx < len(row) and row[course_col_idx]:
+                courses_set.add(str(row[course_col_idx]).strip())
+
+    filtered_rows = []
+    for row in data_rows:
+        if (dt_from or dt_to) and date_col_idx is not None and date_col_idx < len(row):
+            cell = row[date_col_idx]
+            if cell:
+                rd = None
+                try:
+                    if isinstance(cell, datetime):
+                        rd = cell
+                    elif isinstance(cell, str):
+                        for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%m/%d/%Y'):
+                            try:
+                                rd = datetime.strptime(cell, fmt); break
+                            except ValueError:
+                                continue
+                except Exception:
+                    pass
+                if rd:
+                    if dt_from and rd < dt_from: continue
+                    if dt_to   and rd > dt_to:   continue
+        if course_filter and course_col_idx is not None and course_col_idx < len(row):
+            cell_course = str(row[course_col_idx] or '').strip()
+            if course_filter.lower() not in cell_course.lower():
+                continue
+        filtered_rows.append(row)
+
+    text_cols = {} 
+    for i, h in enumerate(headers):
+        if h is None:
+            continue
+        q_key = str(h).split(' - ')[0].strip()
+        if q_key in text_q_map:
+            text_cols[i] = (q_key, text_q_map[q_key])
+
+    text_agg = {} 
+    for row in filtered_rows:
+        course_val = str(row[course_col_idx] or '').strip() if course_col_idx is not None and course_col_idx < len(row) else ''
+        date_val   = str(row[date_col_idx]   or '').strip() if date_col_idx   is not None and date_col_idx   < len(row) else ''
+        for col_idx, (qid, qtext) in text_cols.items():
+            if col_idx >= len(row):
+                continue
+            val = str(row[col_idx] or '').strip()
+            if not val or val.lower() in ('none', '-', 'n/a', ''):
+                continue
+            if qid not in text_agg:
+                text_agg[qid] = {'id': qid, 'text': qtext, 'responses': []}
+            text_agg[qid]['responses'].append({'value': val, 'course': course_val, 'date': date_val})
+
+    questions_out = list(text_agg.values())
+    q_order = {q['id']: i for i, q in enumerate(q for sec in form.get('sections', []) for q in sec.get('questions', []))}
+    questions_out.sort(key=lambda x: q_order.get(x['id'], 9999))
+
+    return jsonify({
+        'questions': questions_out,
+        'total_rows': len(data_rows),
+        'filtered_rows': len(filtered_rows),
+        'courses_available': sorted(courses_set)
+    })
+
+
 @app.route('/api/forms', methods=['POST'])
 @api_login_required
 def create_form():
