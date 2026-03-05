@@ -725,15 +725,45 @@ def search_db_courses():
 @app.route('/api/db/participants', methods=['GET'])
 @api_login_required
 def get_participants():
-    """Get participants for a class with pagination"""
+    """Get participants for a class with pagination.
+    Enriches each participant with form_submitted: True/False by checking
+    submissions.json for any course whose course_title matches the class code.
+    """
     class_code = request.args.get('class_code', '')
     offset = request.args.get('offset', 0, type=int)
     limit = request.args.get('limit', 20, type=int)
-    
+
     if not class_code:
         return jsonify({'error': 'Class code required'}), 400
-    
+
     result = db.get_participants_by_class(class_code, offset, limit)
+    if 'error' in result:
+        return jsonify(result)
+
+    config = load_config()
+    submissions = load_submissions()
+    class_code_norm = class_code.strip().upper()
+    matching_course_ids = [
+        c['id'] for c in config.get('courses', [])
+        if c.get('course_title', '').strip().upper() == class_code_norm
+    ]
+
+    submitted_names = set()
+    submitted_ids = set()
+    for cid in matching_course_ids:
+        for s in submissions.get(cid, []):
+            submitted_names.add(_norm_name(s.get('name', '')))
+            if s.get('id_number'):
+                submitted_ids.add(_norm_id(s['id_number']))
+
+    for p in result.get('participants', []):
+        name_norm = _norm_name(p.get('name', ''))
+        id_norm = _norm_id(p.get('id_number', ''))
+        p['form_submitted'] = (
+            name_norm in submitted_names or
+            (bool(id_norm) and id_norm in submitted_ids)
+        )
+
     return jsonify(result)
 
 @app.route('/api/db/update-survey-sent', methods=['POST'])
@@ -1537,8 +1567,7 @@ def create_form():
         new_form['formNumber'] = data.get('formNumber', new_form.get('formNumber', ''))
         new_form['description'] = data.get('description', new_form.get('description', ''))
     else:
-        qr_fields = data.get('qr_fields')  # dict or None
-        # Build headerFields from qr_fields if provided
+        qr_fields = data.get('qr_fields')
         header_fields = [
             {'id': 'course_title', 'label': 'Course Title', 'type': 'text', 'required': True, 'prefilled': True},
             {'id': 'course_date', 'label': 'Course Date', 'type': 'date', 'required': True, 'prefilled': True},

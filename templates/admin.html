@@ -739,17 +739,17 @@
                     </div>`;
                     
                     html += '<table class="participants-table"><thead><tr>';
-                    html += '<th>Name</th><th>Identification No.</th><th>Email</th><th>Designation</th><th>Survey Sent</th>';
+                    html += '<th>Name</th><th>Identification No.</th><th>Email</th><th>Form Submitted</th>';
                     html += '</tr></thead><tbody id="participantsTableBody">';
                     
                     for (const p of allParticipants) {
-                        const surveyStatus = p.survey_sent ? '✓ Yes' : '✗ No';
-                        const statusClass = p.survey_sent ? 'status-sent' : 'status-pending';
+                        const submitted = p.form_submitted;
+                        const surveyStatus = submitted ? '✓ Yes' : '✗ No';
+                        const statusClass = submitted ? 'status-sent' : 'status-pending';
                         html += `<tr>
                             <td>${p.name || '-'}</td>
                             <td style="font-family:monospace; font-size:13px;">${p.id_number || '-'}</td>
                             <td>${p.email || '-'}</td>
-                            <td>${p.designation || '-'}</td>
                             <td class="${statusClass}">${surveyStatus}</td>
                         </tr>`;
                     }
