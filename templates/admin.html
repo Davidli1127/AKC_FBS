@@ -101,6 +101,8 @@
                             </div>
                         </div>
 
+                        <div id="customQrFields"></div>
+
                         <div style="text-align: center; margin-top: 20px;">
                             <button type="submit" class="btn btn-primary">Generate QR Code</button>
                         </div>
@@ -215,6 +217,44 @@
                         <div class="form-group">
                             <label>Description</label>
                             <textarea id="newFormDescription" rows="3" placeholder="Dear Participant, ..."></textarea>
+                        </div>
+
+                        <div style="border:1px solid #c7d7ff; border-radius:8px; padding:16px; margin-bottom:16px; background:#f7faff;">
+                            <strong style="color:#003366; font-size:14px;">&#128274; QR Code Generation Configuration</strong>
+                            <p style="color:#555; font-size:12px; margin:6px 0 14px;">When generating a QR link for this form, which fields should the admin fill in? Students will see these as prefilled header info at the top of the form.</p>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px 24px; margin-bottom:14px;">
+                                <label style="display:flex;align-items:center;gap:8px;font-size:13px;">
+                                    <input type="checkbox" id="qrShowClassroom" checked>
+                                    Show <strong>Classroom / Venue</strong> field
+                                </label>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:13px;">
+                                    <input type="checkbox" id="qrShowAssessmentLocation">
+                                    Show <strong>Assessment Location</strong> field
+                                </label>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <input type="checkbox" id="qrShowInstructors">
+                                    <span style="font-size:13px;">Show <strong>Instructors</strong> section</span>
+                                    <span style="font-size:12px;color:#666;">Max:</span>
+                                    <input type="number" id="qrMaxInstructors" value="3" min="1" max="10"
+                                           style="width:50px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+                                </div>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <input type="checkbox" id="qrShowAssessors">
+                                    <span style="font-size:13px;">Show <strong>Assessors</strong> section</span>
+                                    <span style="font-size:12px;color:#666;">Max:</span>
+                                    <input type="number" id="qrMaxAssessors" value="2" min="1" max="10"
+                                           style="width:50px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                                    <strong style="font-size:13px;color:#003366;">Custom Fields</strong>
+                                    <button type="button" class="btn btn-success btn-sm" onclick="addQrCustomField()" style="font-size:12px;padding:3px 10px;">+ Add Custom Field</button>
+                                </div>
+                                <div id="qrCustomFieldsContainer">
+                                    <p id="noCustomFieldsMsg" style="color:#aaa;font-size:12px;margin:0;">No custom fields. Click &ldquo;+ Add Custom Field&rdquo; to add one.</p>
+                                </div>
+                            </div>
                         </div>
 
                         <div id="sectionBuilder" style="border-top:2px solid #e0e0e0; padding-top:18px; margin-top:6px;">
@@ -363,7 +403,13 @@
                             <span style="background:#003366;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">1</span>
                             <h3 style="margin:0;font-size:16px;color:#003366;">Data Collection Overview</h3>
                         </div>
-                        <p style="color:#555;font-size:13px;margin-bottom:14px;">Total responses collected by form type. Click an unresolved alerts figure to go to the Alerts tab.</p>
+                        <p style="color:#555;font-size:13px;margin-bottom:14px;">Total responses collected by form type. Click a card to jump to that form in the analysis below.</p>
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                            <input type="text" id="overviewSearch" placeholder="&#128269; Search form name..."
+                                   oninput="filterOverviewCards(this.value)"
+                                   style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:8px;font-size:13px;min-width:220px;flex:1;max-width:380px;">
+                            <span id="overviewFormCount" style="color:#888;font-size:13px;"></span>
+                        </div>
                         <div id="collectionCards" style="display:flex;gap:12px;flex-wrap:wrap;"><p style="color:#aaa;">Loading...</p></div>
                     </div>
 
@@ -474,7 +520,8 @@
     </div>
 
     <div id="appData" style="display:none"
-         data-form-personnel='{{ form_personnel | tojson }}'></div>
+         data-form-personnel='{{ form_personnel | tojson }}'
+         data-form-qr-fields='{{ form_qr_fields | tojson }}'></div>
 
     <script>
         const _appData = document.getElementById('appData').dataset;
@@ -492,6 +539,7 @@
         let analysisFormsList = [];
 
         const FORM_PERSONNEL = JSON.parse(_appData.formPersonnel);
+        const FORM_QR_FIELDS = JSON.parse(_appData.formQrFields || '{}');
 
         async function loadClassCodes() {
             const date = document.getElementById('courseDate').value;
@@ -798,25 +846,70 @@
         }
 
         function updateFormFields() {
-            const formType = document.getElementById('formSelect').value;
-            const personnel = FORM_PERSONNEL[formType] || 'instructor';
+            const formId = document.getElementById('formSelect').value;
+            const qf = FORM_QR_FIELDS[formId];
 
-            if (personnel === 'assessor') {
-                document.getElementById('classroomGroup').style.display = 'none';
-                document.getElementById('assessmentLocationGroup').style.display = 'block';
-                document.getElementById('instructorSection').style.display = 'none';
-                document.getElementById('assessorSection').style.display = 'block';
-            } else if (personnel === 'none') {
-                document.getElementById('classroomGroup').style.display = 'block';
-                document.getElementById('assessmentLocationGroup').style.display = 'none';
-                document.getElementById('instructorSection').style.display = 'none';
-                document.getElementById('assessorSection').style.display = 'none';
+            if (qf) {
+                // Form has explicit qr_fields config — show only declared fields
+                document.getElementById('classroomGroup').style.display = (qf.classroom && qf.classroom.show) ? 'block' : 'none';
+                document.getElementById('assessmentLocationGroup').style.display = (qf.assessment_location && qf.assessment_location.show) ? 'block' : 'none';
+
+                const instShow = qf.instructors && qf.instructors.show;
+                document.getElementById('instructorSection').style.display = instShow ? 'block' : 'none';
+                if (instShow) {
+                    const maxInst = qf.instructors.max || 3;
+                    const sel = document.getElementById('numInstructors');
+                    sel.innerHTML = '';
+                    for (let i = 1; i <= maxInst; i++) sel.add(new Option(i, i));
+                    updateInstructorFields();
+                }
+
+                const assShow = qf.assessors && qf.assessors.show;
+                document.getElementById('assessorSection').style.display = assShow ? 'block' : 'none';
+                if (assShow) {
+                    const maxAss = qf.assessors.max || 2;
+                    const sel = document.getElementById('numAssessors');
+                    sel.innerHTML = '';
+                    for (let i = 1; i <= maxAss; i++) sel.add(new Option(i, i));
+                    updateAssessorFields();
+                }
+
+                renderQrCustomFields(qf.custom_fields || []);
             } else {
-                document.getElementById('classroomGroup').style.display = 'block';
-                document.getElementById('assessmentLocationGroup').style.display = 'none';
-                document.getElementById('instructorSection').style.display = 'block';
-                document.getElementById('assessorSection').style.display = 'none';
+                // Fallback: auto-detect from section types
+                document.getElementById('customQrFields').innerHTML = '';
+                const personnel = FORM_PERSONNEL[formId] || 'instructor';
+                if (personnel === 'assessor') {
+                    document.getElementById('classroomGroup').style.display = 'none';
+                    document.getElementById('assessmentLocationGroup').style.display = 'block';
+                    document.getElementById('instructorSection').style.display = 'none';
+                    document.getElementById('assessorSection').style.display = 'block';
+                } else if (personnel === 'none') {
+                    document.getElementById('classroomGroup').style.display = 'block';
+                    document.getElementById('assessmentLocationGroup').style.display = 'none';
+                    document.getElementById('instructorSection').style.display = 'none';
+                    document.getElementById('assessorSection').style.display = 'none';
+                } else {
+                    document.getElementById('classroomGroup').style.display = 'block';
+                    document.getElementById('assessmentLocationGroup').style.display = 'none';
+                    document.getElementById('instructorSection').style.display = 'block';
+                    document.getElementById('assessorSection').style.display = 'none';
+                }
             }
+        }
+
+        function renderQrCustomFields(customFields) {
+            const container = document.getElementById('customQrFields');
+            if (!customFields || !customFields.length) { container.innerHTML = ''; return; }
+            let html = '';
+            customFields.forEach(cf => {
+                const req = cf.required ? 'required' : '';
+                html += `<div class="form-group">
+                    <label>${escHtml(cf.label)}${cf.required ? ' <span style="color:red;">*</span>' : ''}:</label>
+                    <input type="text" name="custom_${cf.id}" ${req}>
+                </div>`;
+            });
+            container.innerHTML = html;
         }
 
         function updateInstructorFields() {
@@ -867,8 +960,27 @@
                 course_title: courseTitle,
                 course_date: formData.get('course_date')
             };
-            
-            if (FORM_PERSONNEL[formType] === 'assessor') {
+
+            const qf = FORM_QR_FIELDS[formType];
+            if (qf) {
+                if (qf.classroom && qf.classroom.show) data.classroom = formData.get('classroom') || '';
+                if (qf.assessment_location && qf.assessment_location.show) data.assessment_location = formData.get('assessment_location') || '';
+                if (qf.instructors && qf.instructors.show) {
+                    const n = parseInt(formData.get('num_instructors') || '1');
+                    const arr = [];
+                    for (let i = 1; i <= n; i++) arr.push(formData.get(`instructor_${i}`) || '');
+                    data.num_instructors = n; data.instructors = arr;
+                }
+                if (qf.assessors && qf.assessors.show) {
+                    const n = parseInt(formData.get('num_assessors') || '1');
+                    const arr = [];
+                    for (let i = 1; i <= n; i++) arr.push(formData.get(`assessor_${i}`) || '');
+                    data.num_assessors = n; data.assessors = arr;
+                }
+                const customVals = {};
+                (qf.custom_fields || []).forEach(cf => { customVals[cf.id] = formData.get(`custom_${cf.id}`) || ''; });
+                if (Object.keys(customVals).length) data.custom_field_values = customVals;
+            } else if (FORM_PERSONNEL[formType] === 'assessor') {
                 const numAssessors = parseInt(formData.get('num_assessors'));
                 const assessors = [];
                 for (let i = 1; i <= numAssessors; i++) {
@@ -943,14 +1055,25 @@
             const li = document.createElement('li');
             li.className = 'course-item';
             li.id = `course-${course.id}`;
-            
+
+            const qf = FORM_QR_FIELDS[course.form_id];
             let locationInfo, personnelInfo;
-            if (FORM_PERSONNEL[course.form_id] === 'assessor') {
+            if (qf) {
+                const locParts = [];
+                if (qf.classroom && qf.classroom.show && course.classroom) locParts.push(`Classroom: ${course.classroom}`);
+                if (qf.assessment_location && qf.assessment_location.show && course.assessment_location) locParts.push(`Location: ${course.assessment_location}`);
+                (qf.custom_fields || []).forEach(cf => { if (course[cf.id]) locParts.push(`${cf.label}: ${course[cf.id]}`); });
+                locationInfo = `Date: ${course.course_date}` + (locParts.length ? ' | ' + locParts.join(' | ') : '');
+                const perParts = [];
+                if (qf.instructors && qf.instructors.show && course.instructors && course.instructors.length) perParts.push(`Instructors: ${course.instructors.join(', ')}`);
+                if (qf.assessors && qf.assessors.show && course.assessors && course.assessors.length) perParts.push(`Assessors: ${course.assessors.join(', ')}`);
+                personnelInfo = perParts.join(' | ') || '';
+            } else if (FORM_PERSONNEL[course.form_id] === 'assessor') {
                 locationInfo = `Date: ${course.course_date} | Location: ${course.assessment_location}`;
                 personnelInfo = `Assessors: ${course.assessors.join(', ')}`;
             } else {
                 locationInfo = `Date: ${course.course_date} | Classroom: ${course.classroom}`;
-                personnelInfo = `Instructors: ${course.instructors.join(', ')}`;
+                personnelInfo = `Instructors: ${(course.instructors || []).join(', ')}`;
             }
             
             const title = course.course_title.replace(/'/g, "\\'");
@@ -1299,7 +1422,9 @@
         function builderAddQuestion(secIdx) {
             const sec = newFormSections[secIdx];
             const qNum = sec.questions.length + 1;
-            sec.questions.push({ id: sec.id + qNum, text: '' });
+            const newQ = { id: sec.id + qNum, text: '' };
+            if (sec.type === 'multiple_choice') newQ.options = ['Option A', 'Option B', 'Option C'];
+            sec.questions.push(newQ);
             builderRender();
         }
 
@@ -1347,9 +1472,14 @@
                         <div style="display:flex;align-items:center;gap:5px;">
                             <label style="font-size:12px;font-weight:600;margin:0;color:#003366;">Type:</label>
                             <select class="b-sectype" style="padding:3px 6px;border:1px solid #99b;border-radius:4px;font-size:13px;"
-                                    onchange="newFormSections[${idx}].type=this.value;">
-                                <option value="rating" ${sec.type==='rating'?'selected':''}>&#9733; 1–5 Rating Scale</option>
+                                    onchange="newFormSections[${idx}].type=this.value; builderRender();">
+                                <option value="rating" ${sec.type==='rating'?'selected':''}>&#9733; 1&ndash;5 Rating Scale</option>
+                                <option value="instructor_rating" ${sec.type==='instructor_rating'?'selected':''}>&#128100; Instructor Rating</option>
+                                <option value="assessor_rating" ${sec.type==='assessor_rating'?'selected':''}>&#128101; Assessor Rating</option>
                                 <option value="text_questions" ${sec.type==='text_questions'?'selected':''}>&#9998; Short Answer / Text</option>
+                                <option value="multiple_choice" ${sec.type==='multiple_choice'?'selected':''}>&#9745; Multiple Choice</option>
+                                <option value="yes_no" ${sec.type==='yes_no'?'selected':''}>&#10003;&#10007; Yes / No</option>
+                                <option value="scale_slider" ${sec.type==='scale_slider'?'selected':''}>&#128200; Scale 1&ndash;10</option>
                             </select>
                         </div>
                         <button type="button" class="btn btn-danger btn-sm" onclick="builderRemoveSection(${idx})" style="margin-left:auto;">Remove</button>
@@ -1360,18 +1490,36 @@
                     html += `<p style="color:#aaa;font-size:12px;margin:4px 0 8px;">No questions yet.</p>`;
                 } else {
                     sec.questions.forEach((q, qi) => {
+                        const isMultiChoice = sec.type === 'multiple_choice';
+                        const optionsHtml = isMultiChoice ? `
+                        <div style="margin-top:4px;padding-left:73px;">
+                            <span style="font-size:11px;color:#888;">Options (radio choices):</span>
+                            ${(q.options || []).map((opt, oi) => `
+                            <div style="display:flex;gap:4px;align-items:center;margin-top:3px;">
+                                <input type="text" value="${bEsc(opt)}"
+                                       style="flex:1;padding:2px 6px;border:1px solid #ddd;border-radius:4px;font-size:12px;"
+                                       oninput="newFormSections[${idx}].questions[${qi}].options[${oi}]=this.value;">
+                                <button type="button" class="btn btn-danger btn-sm" style="padding:1px 6px;font-size:11px;"
+                                        onclick="builderRemoveOption(${idx},${qi},${oi})">&#10005;</button>
+                            </div>`).join('')}
+                            <button type="button" class="btn btn-success btn-sm" style="margin-top:4px;font-size:11px;padding:2px 8px;"
+                                    onclick="builderAddOption(${idx},${qi})">+ Add Option</button>
+                        </div>` : '';
                         html += `
-                        <div style="display:flex;gap:8px;align-items:center;margin-bottom:7px;">
-                            <span style="font-size:11px;color:#888;white-space:nowrap;">Q ID:</span>
-                            <input type="text" class="b-qid" value="${bEsc(q.id)}"
-                                   style="width:65px;padding:3px 6px;border:1px solid #ddd;border-radius:4px;font-size:12px;"
-                                   oninput="newFormSections[${idx}].questions[${qi}].id=this.value;">
-                            <input type="text" class="b-qtext" value="${bEsc(q.text)}"
-                                   placeholder="Question text..."
-                                   style="flex:1;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:13px;"
-                                   oninput="newFormSections[${idx}].questions[${qi}].text=this.value;">
-                            <button type="button" class="btn btn-danger btn-sm" onclick="builderRemoveQuestion(${idx},${qi})"
-                                    style="padding:3px 8px;">✕</button>
+                        <div style="margin-bottom:7px;">
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <span style="font-size:11px;color:#888;white-space:nowrap;">Q ID:</span>
+                                <input type="text" class="b-qid" value="${bEsc(q.id)}"
+                                       style="width:65px;padding:3px 6px;border:1px solid #ddd;border-radius:4px;font-size:12px;"
+                                       oninput="newFormSections[${idx}].questions[${qi}].id=this.value;">
+                                <input type="text" class="b-qtext" value="${bEsc(q.text)}"
+                                       placeholder="Question text..."
+                                       style="flex:1;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:13px;"
+                                       oninput="newFormSections[${idx}].questions[${qi}].text=this.value;">
+                                <button type="button" class="btn btn-danger btn-sm" onclick="builderRemoveQuestion(${idx},${qi})"
+                                        style="padding:3px 8px;">&#10005;</button>
+                            </div>
+                            ${optionsHtml}
                         </div>`;
                     });
                 }
@@ -1387,6 +1535,58 @@
         function bEsc(str) {
             if (!str) return '';
             return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
+        function builderAddOption(secIdx, qIdx) {
+            const opts = newFormSections[secIdx].questions[qIdx].options || [];
+            opts.push('Option ' + (opts.length + 1));
+            newFormSections[secIdx].questions[qIdx].options = opts;
+            builderRender();
+        }
+
+        function builderRemoveOption(secIdx, qIdx, optIdx) {
+            newFormSections[secIdx].questions[qIdx].options.splice(optIdx, 1);
+            builderRender();
+        }
+
+        let qrCustomFields = [];
+        let qrCustomFieldCounter = 0;
+
+        function addQrCustomField() {
+            qrCustomFieldCounter++;
+            qrCustomFields.push({ id: 'custom' + qrCustomFieldCounter, label: '', required: false });
+            renderQrCustomFieldsBuilder();
+        }
+
+        function removeQrCustomField(idx) {
+            qrCustomFields.splice(idx, 1);
+            renderQrCustomFieldsBuilder();
+        }
+
+        function renderQrCustomFieldsBuilder() {
+            const container = document.getElementById('qrCustomFieldsContainer');
+            if (!qrCustomFields.length) {
+                container.innerHTML = '<p id="noCustomFieldsMsg" style="color:#aaa;font-size:12px;margin:0;">No custom fields. Click &ldquo;+ Add Custom Field&rdquo; to add one.</p>';
+                return;
+            }
+            let html = '';
+            qrCustomFields.forEach((cf, idx) => {
+                html += `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;background:#fff;padding:6px 10px;border:1px solid #e0e8ff;border-radius:6px;">
+                    <span style="font-size:11px;color:#888;white-space:nowrap;">ID:</span>
+                    <input type="text" value="${bEsc(cf.id)}" placeholder="e.g. cohort"
+                           style="width:100px;padding:3px 6px;border:1px solid #ddd;border-radius:4px;font-size:12px;"
+                           oninput="qrCustomFields[${idx}].id=this.value;">
+                    <span style="font-size:11px;color:#888;white-space:nowrap;">Label:</span>
+                    <input type="text" value="${bEsc(cf.label)}" placeholder="e.g. Cohort"
+                           style="flex:1;padding:3px 6px;border:1px solid #ddd;border-radius:4px;font-size:12px;"
+                           oninput="qrCustomFields[${idx}].label=this.value;">
+                    <label style="font-size:12px;display:flex;align-items:center;gap:4px;white-space:nowrap;">
+                        <input type="checkbox" ${cf.required ? 'checked' : ''} onchange="qrCustomFields[${idx}].required=this.checked;"> Required
+                    </label>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="removeQrCustomField(${idx})" style="padding:2px 7px;">&#10005;</button>
+                </div>`;
+            });
+            container.innerHTML = html;
         }
 
         async function submitNewForm() {
@@ -1412,15 +1612,27 @@
 
             const sections = copyFrom ? [] : newFormSections.map(s => ({
                 id: s.id, title: s.title, type: s.type,
-                questions: s.questions.map(q => ({ id: q.id, text: q.text }))
+                questions: s.questions.map(q => {
+                    const out = { id: q.id, text: q.text };
+                    if (s.type === 'multiple_choice') out.options = q.options || [];
+                    return out;
+                })
             }));
+
+            const qrFields = {
+                classroom:           { show: document.getElementById('qrShowClassroom').checked,           label: 'Classroom' },
+                assessment_location: { show: document.getElementById('qrShowAssessmentLocation').checked,  label: 'Assessment Location' },
+                instructors:         { show: document.getElementById('qrShowInstructors').checked,         max: parseInt(document.getElementById('qrMaxInstructors').value) || 3 },
+                assessors:           { show: document.getElementById('qrShowAssessors').checked,           max: parseInt(document.getElementById('qrMaxAssessors').value) || 2 },
+                custom_fields:       qrCustomFields.filter(cf => cf.id && cf.label).map(cf => ({ id: cf.id, label: cf.label, required: !!cf.required }))
+            };
 
             resultDiv.innerHTML = '<span style="color:#666;">Creating form...</span>';
             try {
                 const response = await fetch('/api/forms', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ form_id: formId, title, formNumber, description, copy_from: copyFrom, sections })
+                    body: JSON.stringify({ form_id: formId, title, formNumber, description, copy_from: copyFrom, sections, qr_fields: qrFields })
                 });
                 const result = await response.json();
                 if (result.success) {
@@ -1431,6 +1643,15 @@
                     document.getElementById('formSelect').add(opt2);
                     const isAssessor = result.form.sections && result.form.sections.some(s => s.type === 'assessor_rating');
                     FORM_PERSONNEL[result.form.id] = isAssessor ? 'assessor' : 'instructor';
+                    if (result.form.qr_fields) FORM_QR_FIELDS[result.form.id] = result.form.qr_fields;
+                    document.getElementById('qrShowClassroom').checked = true;
+                    document.getElementById('qrShowAssessmentLocation').checked = false;
+                    document.getElementById('qrShowInstructors').checked = false;
+                    document.getElementById('qrShowAssessors').checked = false;
+                    document.getElementById('qrMaxInstructors').value = '3';
+                    document.getElementById('qrMaxAssessors').value = '2';
+                    qrCustomFields = []; qrCustomFieldCounter = 0;
+                    renderQrCustomFieldsBuilder();
                     document.getElementById('editFormSelect').value = result.form.id;
                     loadFormForEdit();
                     document.getElementById('newFormId').value = '';
@@ -1944,7 +2165,8 @@
                     if (fid.startsWith('_')) continue;
                     analysisFormsList.push({id: fid, title: fd.title || fid});
                     const bc = barColors[colorIdx++ % barColors.length];
-                    html += `<div style="background:#f0f5ff;border:1px solid #c7d7ff;border-radius:10px;padding:16px 20px;min-width:200px;cursor:pointer;"
+                    html += `<div data-form-id="${fid}" data-form-title="${escHtml(fd.title || fid).toLowerCase()}"
+                                  style="background:#f0f5ff;border:1px solid #c7d7ff;border-radius:10px;padding:16px 20px;min-width:200px;cursor:pointer;"
                                   onclick="document.getElementById('analysisFormId').value='${fid}'; updateAnalysisCourses(); document.getElementById('analysisResults').innerHTML='<p style=\'color:#aaa;text-align:center;padding:40px;\'>Click Run Analysis to see results.</p>'">
                         <div style="font-size:28px;font-weight:700;color:${bc};">${fd.total_responses}</div>
                         <div style="font-size:13px;color:#333;margin-top:4px;font-weight:600;">${escHtml(fd.title || fid)}</div>
@@ -1959,6 +2181,8 @@
                     <div style="font-size:11px;color:#888;margin-top:2px;">${al.total || 0} total &nbsp;&#8594; click to view</div>
                 </div>`;
                 cards.innerHTML = html || '<p style="color:#aaa;">No data yet.</p>';
+                const countEl = document.getElementById('overviewFormCount');
+                if (countEl) countEl.textContent = `${analysisFormsList.length} form${analysisFormsList.length !== 1 ? 's' : ''}`;
                 const sel = document.getElementById('analysisFormId');
                 sel.innerHTML = analysisFormsList.map(f =>
                     `<option value="${f.id}">${escHtml(f.title || f.id)}</option>`
@@ -2005,9 +2229,19 @@
             }
         }
 
+        function filterOverviewCards(q) {
+            const lower = (q || '').toLowerCase().trim();
+            const cards = document.querySelectorAll('#collectionCards [data-form-id]');
+            cards.forEach(card => {
+                const title = (card.dataset.formTitle || '').toLowerCase();
+                card.style.display = !lower || title.includes(lower) ? '' : 'none';
+            });
+            const shown = [...cards].filter(c => c.style.display !== 'none').length;
+            const countEl = document.getElementById('overviewFormCount');
+            if (countEl) countEl.textContent = lower ? `${shown} of ${cards.length} forms` : `${cards.length} form${cards.length !== 1 ? 's' : ''}`;
+        }
+
         function clearAnalysisFilters() {
-            document.getElementById('analysisDateFrom').value = '';
-            document.getElementById('analysisDateTo').value = '';
             document.getElementById('analysisCourseFilter').value = '';
             document.getElementById('analysisResults').innerHTML =
                 '<p style="color:#aaa;text-align:center;padding:40px;">Click Run Analysis to see results.</p>';

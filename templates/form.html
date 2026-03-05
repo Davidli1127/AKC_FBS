@@ -8,13 +8,11 @@
 </head>
 <body>
     <div class="form-container" id="formContainer">
-        <!-- Header -->
         <div class="form-header">
             <img src="{{ url_for('static', filename='logo.png') }}" alt="AKC Logo" class="logo">
             <div class="form-number">{{ form.formNumber }}</div>
         </div>
 
-        <!-- Description -->
         <div class="form-description">
             {{ form.description }}
         </div>
@@ -25,15 +23,36 @@
                     <label>Course Title:</label>
                     <input type="text" value="{{ course.course_title }}" readonly>
                 </div>
+                {% if form.qr_fields is defined %}
+                    {% if form.qr_fields.classroom and form.qr_fields.classroom.show %}
+                    <div class="header-field">
+                        <label>{{ form.qr_fields.classroom.label or 'Classroom' }}:</label>
+                        <input type="text" value="{{ course.classroom or '' }}" readonly>
+                    </div>
+                    {% endif %}
+                    {% if form.qr_fields.assessment_location and form.qr_fields.assessment_location.show %}
+                    <div class="header-field">
+                        <label>{{ form.qr_fields.assessment_location.label or 'Assessment Location' }}:</label>
+                        <input type="text" value="{{ course.assessment_location or '' }}" readonly>
+                    </div>
+                    {% endif %}
+                    {% for cf in form.qr_fields.get('custom_fields', []) %}
+                    <div class="header-field">
+                        <label>{{ cf.label }}:</label>
+                        <input type="text" value="{{ course.get(cf.id, '') }}" readonly>
+                    </div>
+                    {% endfor %}
+                {% elif form.id == 'form2' %}
                 <div class="header-field">
-                    {% if form.id == 'form2' %}
                     <label>Assessment Location:</label>
                     <input type="text" value="{{ course.assessment_location }}" readonly>
-                    {% else %}
+                </div>
+                {% else %}
+                <div class="header-field">
                     <label>Classroom:</label>
                     <input type="text" value="{{ course.classroom }}" readonly>
-                    {% endif %}
                 </div>
+                {% endif %}
                 <div class="header-field">
                     <label>Course Date:</label>
                     <input type="text" value="{{ course.course_date }}" readonly>
@@ -159,6 +178,77 @@
                         </div>
                         {% endfor %}
                     </div>
+
+                {% elif section.type == 'multiple_choice' %}
+                    <div class="form-section">
+                        {% if section.title %}
+                        <div class="section-title">{{ section.id }} &nbsp;&nbsp; {{ section.title }}</div>
+                        {% endif %}
+                        {% for question in section.questions %}
+                        <div class="question-block">
+                            <div style="display:flex; gap:10px; align-items:flex-start; padding:8px 0;">
+                                <span class="question-number">{{ loop.index }}</span>
+                                <div style="flex:1;">
+                                    <div class="question-text" style="margin-bottom:8px;">{{ question.text }}</div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                                        {% for opt in question.options %}
+                                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:4px 10px; border:1px solid #ddd; border-radius:6px; font-size:14px;">
+                                            <input type="radio" name="{{ question.id }}" value="{{ opt }}" required>
+                                            {{ opt }}
+                                        </label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                {% elif section.type == 'yes_no' %}
+                    <div class="form-section">
+                        {% if section.title %}
+                        <div class="section-title">{{ section.id }} &nbsp;&nbsp; {{ section.title }}</div>
+                        {% endif %}
+                        {% for question in section.questions %}
+                        <div class="question-block">
+                            <div style="display:flex; gap:10px; align-items:center; padding:8px 0;">
+                                <span class="question-number">{{ loop.index }}</span>
+                                <span class="question-text" style="flex:1;">{{ question.text }}</span>
+                                <div style="display:flex; gap:14px;">
+                                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px; font-weight:600; color:#28a745;">
+                                        <input type="radio" name="{{ question.id }}" value="Yes" required> Yes
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px; font-weight:600; color:#dc3545;">
+                                        <input type="radio" name="{{ question.id }}" value="No" required> No
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                {% elif section.type == 'scale_slider' %}
+                    <div class="form-section">
+                        {% if section.title %}
+                        <div class="section-title">{{ section.id }} &nbsp;&nbsp; {{ section.title }}</div>
+                        {% endif %}
+                        {% for question in section.questions %}
+                        <div class="question-block">
+                            <div class="question-row">
+                                <span class="question-number">{{ loop.index }}</span>
+                                <span class="question-text">{{ question.text }}</span>
+                                <div class="rating-options">
+                                    {% for i in range(1, 11) %}
+                                    <div class="rating-option">
+                                        <input type="radio" name="{{ question.id }}" id="{{ question.id }}_{{ i }}" value="{{ i }}" required>
+                                        <label for="{{ question.id }}_{{ i }}">{{ i }}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
                 {% endif %}
             {% endfor %}
 
@@ -175,7 +265,6 @@
     </div>
 
     <script>
-        // Show optional comment box when participant rates 1 or 2
         document.querySelectorAll('input[type="radio"]').forEach(function(radio) {
             radio.addEventListener('change', function() {
                 const name = this.name;

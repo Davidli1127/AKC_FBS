@@ -312,7 +312,16 @@ def init_excel(form_id):
             elif section['type'] == 'text_questions':
                 for q in section['questions']:
                     headers.append(q['id'])
-    
+            elif section['type'] == 'multiple_choice':
+                for q in section['questions']:
+                    headers.append(q['id'])
+            elif section['type'] == 'yes_no':
+                for q in section['questions']:
+                    headers.append(q['id'])
+            elif section['type'] == 'scale_slider':
+                for q in section['questions']:
+                    headers.append(q['id'])
+
     ws.append(headers)
     wb.save(excel_path)
 
@@ -386,7 +395,7 @@ def save_response(form_id, course_id, data):
             else:
                 data_map[label] = data.get(field['id'], '')
         for section in form.get('sections', []):
-            if section['type'] in ('rating', 'text_questions'):
+            if section['type'] in ('rating', 'text_questions', 'multiple_choice', 'yes_no', 'scale_slider'):
                 for q in section['questions']:
                     data_map[q['id']] = data.get(q['id'], '')
 
@@ -546,7 +555,12 @@ def admin():
         fid: _detect_personnel(f.get('sections', []))
         for fid, f in config['forms'].items()
     }
-    return render_template('admin.html', config=config, form_personnel=form_personnel)
+    form_qr_fields = {
+        fid: f['qr_fields']
+        for fid, f in config['forms'].items()
+        if 'qr_fields' in f
+    }
+    return render_template('admin.html', config=config, form_personnel=form_personnel, form_qr_fields=form_qr_fields)
 
 @app.route('/admin/form/<form_id>')
 @login_required
@@ -781,9 +795,34 @@ def create_course():
         'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
 
-    _form_sections = config['forms'].get(data['form_id'], {}).get('sections', [])
-    _section_types = {s.get('type') for s in _form_sections}
-    if 'assessor_rating' in _section_types:
+    _form_cfg = config['forms'].get(data['form_id'], {})
+    _qr_fields = _form_cfg.get('qr_fields')
+    _section_types = {s.get('type') for s in _form_cfg.get('sections', [])}
+
+    if _qr_fields:
+        if _qr_fields.get('classroom', {}).get('show'):
+            course['classroom'] = data.get('classroom', '')
+        if _qr_fields.get('assessment_location', {}).get('show'):
+            course['assessment_location'] = data.get('assessment_location', '')
+        if _qr_fields.get('instructors', {}).get('show'):
+            num = data.get('num_instructors', 1)
+            course['num_instructors'] = num
+            course['instructors'] = data.get('instructors', [])
+        else:
+            course['num_instructors'] = 0
+            course['instructors'] = []
+        if _qr_fields.get('assessors', {}).get('show'):
+            num = data.get('num_assessors', 1)
+            course['num_assessors'] = num
+            course['assessors'] = data.get('assessors', [])
+        else:
+            course['num_assessors'] = 0
+            course['assessors'] = []
+
+        custom_vals = data.get('custom_field_values', {})
+        for cf in _qr_fields.get('custom_fields', []):
+            course[cf['id']] = custom_vals.get(cf['id'], '')
+    elif 'assessor_rating' in _section_types:
         course['assessment_location'] = data.get('assessment_location', '')
         course['num_assessors'] = data.get('num_assessors', 1)
         course['assessors'] = data.get('assessors', [])
@@ -1362,18 +1401,33 @@ def create_form():
         new_form['formNumber'] = data.get('formNumber', new_form.get('formNumber', ''))
         new_form['description'] = data.get('description', new_form.get('description', ''))
     else:
+        qr_fields = data.get('qr_fields')  # dict or None
+        # Build headerFields from qr_fields if provided
+        header_fields = [
+            {'id': 'course_title', 'label': 'Course Title', 'type': 'text', 'required': True, 'prefilled': True},
+            {'id': 'course_date', 'label': 'Course Date', 'type': 'date', 'required': True, 'prefilled': True},
+        ]
+        if qr_fields:
+            if qr_fields.get('classroom', {}).get('show'):
+                lbl = qr_fields['classroom'].get('label', 'Classroom')
+                header_fields.append({'id': 'classroom', 'label': lbl, 'type': 'text', 'required': True, 'prefilled': True})
+            if qr_fields.get('assessment_location', {}).get('show'):
+                lbl = qr_fields['assessment_location'].get('label', 'Assessment Location')
+                header_fields.append({'id': 'assessment_location', 'label': lbl, 'type': 'text', 'required': True, 'prefilled': True})
+            for cf in qr_fields.get('custom_fields', []):
+                header_fields.append({'id': cf['id'], 'label': cf['label'], 'type': 'text', 'required': cf.get('required', False), 'prefilled': True})
+        else:
+            header_fields.append({'id': 'classroom', 'label': 'Classroom', 'type': 'text', 'required': True, 'prefilled': True})
+        header_fields += [
+            {'id': 'name', 'label': 'Name', 'type': 'text', 'required': False, 'prefilled': False},
+            {'id': 'position', 'label': 'Position', 'type': 'text', 'required': True, 'prefilled': False},
+        ]
         new_form = {
             'id': form_id,
             'title': data.get('title', 'New Form'),
             'formNumber': data.get('formNumber', ''),
             'description': data.get('description', ''),
-            'headerFields': [
-                {'id': 'course_title', 'label': 'Course Title', 'type': 'text', 'required': True, 'prefilled': True},
-                {'id': 'course_date', 'label': 'Course Date', 'type': 'date', 'required': True, 'prefilled': True},
-                {'id': 'classroom', 'label': 'Classroom', 'type': 'text', 'required': True, 'prefilled': True},
-                {'id': 'name', 'label': 'Name', 'type': 'text', 'required': False, 'prefilled': False},
-                {'id': 'position', 'label': 'Position', 'type': 'text', 'required': True, 'prefilled': False},
-            ],
+            'headerFields': header_fields,
             'ratingOptions': [
                 {'value': 1, 'label': 'Poor'},
                 {'value': 2, 'label': 'Unsatisfactory'},
@@ -1383,6 +1437,8 @@ def create_form():
             ],
             'sections': data.get('sections', [])
         }
+        if qr_fields:
+            new_form['qr_fields'] = qr_fields
 
     config['forms'][form_id] = new_form
     save_config(config)
