@@ -81,8 +81,8 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
     rating_labels = {1: 'Poor', 2: 'Unsatisfactory'}
 
     RATING_SECTION_TYPES = {'rating', 'instructor_rating', 'assessor_rating'}
-    rating_q_ids = set()   # question IDs that should trigger alerts
-    text_q_ids = set()     # question IDs that must NEVER trigger alerts
+    rating_q_ids = set()  
+    text_q_ids = set() 
     q_texts = {}
     for section in form_config.get('sections', []):
         s_type = section.get('type', '')
@@ -96,25 +96,23 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
     for key, value in data.items():
         if key.endswith('_comment'):
             continue
-        # Resolve the base question ID:
-        # Instructor keys look like B1_1 (prefix B1, question id 1)
-        # Assessor keys look like A1_1 (prefix A1, question id 1)
-        # Plain rating keys match the question id directly (e.g. A1, A2)
+
         base_key = key
         if '_' in key:
             prefix, rest = key.split('_', 1)
             if prefix and prefix[0] in ('B', 'A') and prefix[1:].isdigit():
                 base_key = rest
-        # Explicit exclusion: text questions must not trigger alerts
+
         if base_key in text_q_ids:
             continue
-        # Only proceed if this resolves to a known rating question
+
         if base_key not in rating_q_ids:
             continue
         try:
             rating = int(value)
         except (ValueError, TypeError):
             continue
+
         if rating <= 2:
             q_text = q_texts.get(base_key, q_texts.get(key, key))
             comment = data.get(f'{key}_comment', '')
@@ -139,7 +137,6 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
 
     save_alerts_data(alerts)
 
-
 def load_submissions():
     """Load submission records from JSON file"""
     if os.path.exists(SUBMISSIONS_FILE):
@@ -147,22 +144,18 @@ def load_submissions():
             return json.load(f)
     return {}
 
-
 def save_submissions_data(submissions):
     """Save submission records to JSON file"""
     with open(SUBMISSIONS_FILE, 'w', encoding='utf-8') as f:
         json.dump(submissions, f, indent=2, ensure_ascii=False)
 
-
 def _norm_name(name):
     """Normalize a name for comparison: collapse whitespace, uppercase"""
     return ' '.join(name.strip().split()).upper()
 
-
 def _norm_id(id_number):
     """Normalize an identification number for comparison: strip, uppercase"""
     return id_number.strip().upper()
-
 
 def has_submitted(course_id, identifier):
     """Check if a student (by ID number) has already submitted for this course"""
@@ -170,7 +163,6 @@ def has_submitted(course_id, identifier):
     id_norm = _norm_id(identifier)
     return any(_norm_id(s.get('id_number', s.get('name', ''))) == id_norm
                for s in submissions.get(course_id, []))
-
 
 def record_submission(course_id, participant_name, id_number=''):
     """Record a student submission to prevent duplicates"""
@@ -184,24 +176,20 @@ def record_submission(course_id, participant_name, id_number=''):
     })
     save_submissions_data(submissions)
 
-
 def load_config():
     """Load configuration from JSON file"""
     with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
         return json.load(f)
-
 
 def save_config(config):
     """Save configuration to JSON file"""
     with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
 
-
 def clean_expired_courses():
     """Remove courses that are older than COURSE_EXPIRY_HOURS (default 24 hours)"""
     config = load_config()
     now = datetime.now()
-    
     original_count = len(config['courses'])
     valid_courses = []
     
@@ -235,12 +223,10 @@ FORM_FILE_NAMES = {
     'form2': 'Assessor_Evaluation'
 }
 
-
 def get_excel_path(form_id):
     """Get the Excel file path for a form"""
     file_name = FORM_FILE_NAMES.get(form_id, form_id)
     return os.path.join(DATA_DIR, f'{file_name}_responses.xlsx')
-
 
 def init_excel(form_id):
     """Initialize Excel file with headers if it doesn't exist"""
@@ -491,7 +477,6 @@ def scan_lookup():
     return jsonify({'options': options, 'participant_name': participant_name,
                     'class_code': class_code, 'id_number': id_number.upper()})
 
-
 @app.route('/api/scan/select', methods=['POST'])
 def scan_select():
     """After user picks one option from multiple sessions."""
@@ -515,7 +500,6 @@ def scan_select():
     session['student_id_number'] = id_number.upper()
     session['student_course_id'] = course_id
     return jsonify({'redirect': url_for('form_page', course_id=course_id)})
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -1056,7 +1040,6 @@ def get_alerts_analysis():
     result.sort(key=lambda x: x['priority_score'], reverse=True)
     return jsonify(result)
 
-
 @app.route('/api/alerts/batch', methods=['PUT'])
 @api_login_required
 def batch_update_alerts():
@@ -1079,7 +1062,6 @@ def batch_update_alerts():
             updated += 1
     save_alerts_data(alerts)
     return jsonify({'success': True, 'updated': updated})
-
 
 @app.route('/api/alerts/ai-summary', methods=['GET'])
 @api_login_required
@@ -1167,7 +1149,6 @@ def batch_delete_alerts():
     save_alerts_data(alerts)
     return jsonify({'success': True, 'deleted': deleted})
 
-
 @app.route('/api/analysis/summary', methods=['GET'])
 @api_login_required
 def get_analysis_summary():
@@ -1195,7 +1176,6 @@ def get_analysis_summary():
         'unresolved': sum(1 for a in alerts if a.get('status') != 'resolved')
     }
     return jsonify(result)
-
 
 @app.route('/api/analysis/ratings', methods=['GET'])
 @api_login_required
@@ -1227,9 +1207,8 @@ def get_analysis_ratings():
     except ValueError:
         dt_to = None
 
-    # Build question maps from config
-    rating_q_map = {}   # q_id -> question text
-    text_q_map = {}     # q_id -> question text
+    rating_q_map = {}  
+    text_q_map = {}
     for section in form.get('sections', []):
         s_type = section.get('type', '')
         for q in section.get('questions', []):
@@ -1252,8 +1231,6 @@ def get_analysis_ratings():
 
     headers = all_rows[0]
     data_rows = [r for r in all_rows[1:] if any(c for c in r)]
-
-    # Find date and course columns
     date_col_idx = None
     course_col_idx = None
     for i, h in enumerate(headers):
@@ -1265,7 +1242,6 @@ def get_analysis_ratings():
         if h_upper in ('COURSE NAME', 'COURSE TITLE'):
             course_col_idx = i
 
-    # Collect available courses (for dropdown, before date filter)
     courses_set = set()
     if course_col_idx is not None:
         for row in data_rows:
@@ -1302,7 +1278,6 @@ def get_analysis_ratings():
                 continue
         filtered_rows.append(row)
 
-    # Map column index -> (q_id, q_text)
     rating_cols = {}
     text_cols = {}
     for i, h in enumerate(headers):
@@ -1315,7 +1290,6 @@ def get_analysis_ratings():
         elif q_key in text_q_map:
             text_cols[i] = (q_key, text_q_map[q_key])
         else:
-            # Handle instructor format B{n}{id} and assessor format A{n}.{id}
             if len(q_key) >= 3 and q_key[0] == 'B' and q_key[1].isdigit():
                 candidate = q_key[2:]
                 if candidate in rating_q_map:
@@ -1325,7 +1299,6 @@ def get_analysis_ratings():
                 if candidate in rating_q_map:
                     rating_cols[i] = (candidate, rating_q_map[candidate])
 
-    # Aggregate rating stats
     stats = {}
     for row in filtered_rows:
         for col_idx, (qid, qtext) in rating_cols.items():
@@ -1349,9 +1322,7 @@ def get_analysis_ratings():
         avg = round(s['total'] / s['count'], 2) if s['count'] else 0
         questions_out.append({'id': qid, 'text': s['text'], 'count': s['count'],
                               'avg': avg, 'dist': s['dist']})
-    questions_out.sort(key=lambda x: x['avg'])   # lowest avg first = most needs attention
-
-    # Aggregate text responses
+    questions_out.sort(key=lambda x: x['avg'])  
     text_agg = {}
     for row in filtered_rows:
         for col_idx, (qid, qtext) in text_cols.items():
@@ -1378,13 +1349,11 @@ def create_form():
     """Create a new custom form"""
     config = load_config()
     data = request.json
-
     form_id = data.get('form_id', '').strip().lower().replace(' ', '_')
     if not form_id:
         return jsonify({'error': 'Form ID is required'}), 400
     if form_id in config['forms']:
         return jsonify({'error': f'Form ID "{form_id}" already exists'}), 400
-
     template_id = data.get('copy_from', '')
     if template_id and template_id in config['forms']:
         new_form = copy.deepcopy(config['forms'][template_id])
@@ -1435,9 +1404,7 @@ def delete_form(form_id):
 if __name__ == '__main__':
     print("Checking for expired course links...")
     clean_expired_courses()
-    
     config = load_config()
     for form_id in config['forms']:
         init_excel(form_id)
-    
     app.run(debug=True, host='0.0.0.0', port=5000)

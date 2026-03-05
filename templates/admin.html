@@ -296,10 +296,7 @@
                 <div class="card-header">&#9888; Low Feedback Alerts</div>
                 <div class="card-body">
 
-                    <!-- Status summary pills -->
                     <div class="alert-summary-bar" id="alertsSummary" style="margin-bottom:16px;"></div>
-
-                    <!-- Collapsible Hotspot Analysis panel -->
                     <div style="border:1px solid #c7d7ff; border-radius:8px; margin-bottom:20px; overflow:hidden;">
                         <div style="background:#f0f5ff; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; cursor:pointer; user-select:none;" onclick="toggleAlertAnalysis()">
                             <div style="display:flex; align-items:center; gap:8px;">
@@ -322,7 +319,6 @@
                         </div>
                     </div>
 
-                    <!-- Batch action bar (shown when checkboxes are ticked) -->
                     <div id="batchActionBar" style="display:none; align-items:center; gap:10px; flex-wrap:wrap; background:#f0f5ff; border:1px solid #c7d7ff; border-radius:8px; padding:10px 14px; margin-bottom:14px;">
                         <span id="batchSelectedCount" style="font-weight:600; color:#003366;">0 selected</span>
                         <select id="batchStatusSelect" style="padding:5px 10px; border:1px solid #c7d7ff; border-radius:6px;">
@@ -338,7 +334,6 @@
                         <button class="btn btn-sm" style="background:#dc3545;color:white;" onclick="deleteSelectedAlerts()">&#128465; Delete Selected</button>
                     </div>
 
-                    <!-- Filter bar -->
                     <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
                         <label style="font-weight:500;">Filter:</label>
                         <select id="alertStatusFilter" onchange="loadAlerts()" style="padding:6px 10px; border:1px solid #ddd; border-radius:6px;">
@@ -353,20 +348,16 @@
                         <button class="btn btn-secondary btn-sm" onclick="selectAllAlerts(false)">&#9744; Deselect All</button>
                     </div>
 
-                    <!-- Individual alert cards -->
                     <div id="alertsList"><p style="color:#888;">Loading alerts...</p></div>
 
                 </div>
             </div>
         </div>
 
-        <!-- ═══════════════ DATA ANALYSIS TAB ═══════════════ -->
         <div id="analysis" class="tab-content">
             <div class="card">
                 <div class="card-header">&#128202; Data Analysis Pipeline</div>
                 <div class="card-body">
-
-                    <!-- STAGE 1: Collection Overview -->
                     <div style="margin-bottom:28px;">
                         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
                             <span style="background:#003366;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">1</span>
@@ -378,7 +369,6 @@
 
                     <hr style="border:none;border-top:2px solid #eef;margin:20px 0;">
 
-                    <!-- STAGE 2+3: Segmentation + Analysis -->
                     <div style="margin-bottom:28px;">
                         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
                             <span style="background:#003366;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">2</span>
@@ -412,7 +402,6 @@
 
                     <hr style="border:none;border-top:2px solid #eef;margin:20px 0;">
 
-                    <!-- STAGE 4: Action -->
                     <div>
                         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
                             <span style="background:#003366;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">3</span>
@@ -1602,7 +1591,6 @@
                 </div>`;
             }).join('');
 
-            // Pagination bar
             if (totalPages > 1) {
                 listDiv.innerHTML += `<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:16px 0;flex-wrap:wrap;">
                     <button class="btn btn-secondary btn-sm" ${alertCurrentPage<=1?'disabled':''}
@@ -1636,7 +1624,6 @@
         }
 
         function showAlertView(view) {
-            // Legacy: now everything is one view; kept for compatibility
             loadAlertsAll();
         }
 
@@ -1656,7 +1643,6 @@
         }
 
         function loadAlertsAll() {
-            // Load the list (always shown) and refresh analysis if it is open
             loadAlerts();
             const panel = document.getElementById('alertAnalysisCollapsible');
             if (panel && panel.style.display !== 'none') {
@@ -1666,7 +1652,6 @@
         }
 
         function reloadAlertsAll() {
-            // Called after batch operations — refresh both analysis and list
             loadAlerts();
             if (currentAnalysisMode === 'course') loadAlertsAnalysisByCourse();
             else loadAlertsAnalysis();
@@ -1911,7 +1896,6 @@
             }
         }
 
-        // ─── Alert Delete Functions ───────────────────────────────────────
         async function deleteAlert(alertId) {
             if (!confirm('Delete this alert? This cannot be undone.')) return;
             try {
@@ -1946,7 +1930,6 @@
             } catch(err) { alert('Error: ' + err.message); }
         }
 
-        // ─── Data Analysis Tab Functions ─────────────────────────────────────
         async function loadAnalysisOverview() {
             const cards = document.getElementById('collectionCards');
             cards.innerHTML = '<p style="color:#aaa;">Loading...</p>';
@@ -1976,8 +1959,6 @@
                     <div style="font-size:11px;color:#888;margin-top:2px;">${al.total || 0} total &nbsp;&#8594; click to view</div>
                 </div>`;
                 cards.innerHTML = html || '<p style="color:#aaa;">No data yet.</p>';
-
-                // Populate form selector
                 const sel = document.getElementById('analysisFormId');
                 sel.innerHTML = analysisFormsList.map(f =>
                     `<option value="${f.id}">${escHtml(f.title || f.id)}</option>`
