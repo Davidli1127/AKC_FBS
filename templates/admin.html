@@ -620,10 +620,8 @@
             sugg.style.display = 'block';
         }
 
-        // ── Text-response utilities ─────────────────────────────────────
         const TEXT_JUNK = /^(n\/?a|nil|none|no|no comment|nothing|-|ok|okay|fine|na|good|great|-)$/i;
         const isJunkResp = v => !v || !v.trim() || v.trim().length < 3 || TEXT_JUNK.test(v.trim());
-
         const TEXT_STOP = new Set(['the','a','an','is','are','was','were','be','been','being','have','has',
             'had','do','does','did','will','would','could','should','may','might','shall','to','of','in',
             'for','on','with','as','by','at','from','that','this','it','its','and','or','but','if','so',
@@ -995,7 +993,6 @@
             const qf = FORM_QR_FIELDS[formId];
 
             if (qf) {
-                // Form has explicit qr_fields config — show only declared fields
                 document.getElementById('classroomGroup').style.display = (qf.classroom && qf.classroom.show) ? 'block' : 'none';
                 document.getElementById('assessmentLocationGroup').style.display = (qf.assessment_location && qf.assessment_location.show) ? 'block' : 'none';
 
@@ -1021,7 +1018,6 @@
 
                 renderQrCustomFields(qf.custom_fields || []);
             } else {
-                // Fallback: auto-detect from section types
                 document.getElementById('customQrFields').innerHTML = '';
                 const personnel = FORM_PERSONNEL[formId] || 'instructor';
                 if (personnel === 'assessor') {
@@ -2464,7 +2460,6 @@
                 return;
             }
 
-            // Toolbar
             const courseCount = singleCourse ? 0 : new Set(qs.flatMap(q=>(q.responses||[]).map(r=>r.course)).filter(c=>c)).size;
             let html = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;background:#f7f9ff;border:1px solid #e0e8ff;border-radius:8px;margin-bottom:14px;">
                 <span style="font-size:13px;color:#666;flex:1;">

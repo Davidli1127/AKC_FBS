@@ -155,8 +155,8 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
     RATING_SECTION_TYPES = {'rating', 'instructor_rating', 'assessor_rating'}
     rating_q_ids = set()
     text_q_ids   = set()
-    text_q_map   = {}   # qid -> question text (free-form text only)
-    q_texts      = {}   # all question texts
+    text_q_map   = {} 
+    q_texts      = {}  
     for section in form_config.get('sections', []):
         s_type = section.get('type', '')
         for q in section.get('questions', []):
@@ -167,7 +167,6 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
                 text_q_ids.add(q['id'])
                 text_q_map[q['id']] = q['text']
 
-    # ── 1. Rating alerts (score ≤ 2) ────────────────────────────────────────
     new_rating_alert_q_ids = set()
     for key, value in data.items():
         if key.endswith('_comment'):
@@ -212,8 +211,6 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
             })
             new_rating_alert_q_ids.add(base_key)
 
-    # ── 2. Text-sentiment alerts (negative keywords in free-form answers) ────
-    # Scan text question responses
     for qid, q_text in text_q_map.items():
         response_val = str(data.get(qid, '')).strip()
         if len(response_val) < 5:
@@ -242,8 +239,6 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
             'updated_at': '',
         })
 
-    # Scan _comment fields on rating questions (only when the rating was NOT
-    # already ≤ 2 — to avoid duplicating the comment already in a rating alert)
     for key, value in data.items():
         if not key.endswith('_comment'):
             continue
@@ -252,7 +247,7 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
             continue
         base_q_id = key[:-len('_comment')]
         if base_q_id in new_rating_alert_q_ids:
-            continue   # comment already captured inside the rating alert
+            continue 
         matches = _extract_negative_matches(comment_val)
         if not matches:
             continue
