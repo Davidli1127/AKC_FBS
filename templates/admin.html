@@ -377,11 +377,16 @@
                     <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
                         <label style="font-weight:500;">Filter:</label>
                         <select id="alertStatusFilter" onchange="loadAlerts()" style="padding:6px 10px; border:1px solid #ddd; border-radius:6px;">
-                            <option value="">All</option>
+                            <option value="">All Statuses</option>
                             <option value="new">New</option>
                             <option value="acknowledged">Acknowledged</option>
                             <option value="in_progress">In Progress</option>
                             <option value="resolved">Resolved</option>
+                        </select>
+                        <select id="alertTypeFilter" onchange="loadAlerts()" style="padding:6px 10px; border:1px solid #ddd; border-radius:6px;">
+                            <option value="">All Types</option>
+                            <option value="rating">&#11088; Low Rating</option>
+                            <option value="text_sentiment">&#128172; Negative Text</option>
                         </select>
                         <button class="btn btn-secondary btn-sm" onclick="loadAlerts()">&#8635; Refresh</button>
                         <button class="btn btn-secondary btn-sm" onclick="selectAllAlerts(true)">&#9745; Select All</button>
@@ -1858,8 +1863,13 @@
         };
 
         async function loadAlerts() {
-            const status = document.getElementById('alertStatusFilter').value;
-            const url = '/api/alerts' + (status ? '?status=' + status : '');
+            const status    = document.getElementById('alertStatusFilter').value;
+            const alertType = document.getElementById('alertTypeFilter').value;
+            let url = '/api/alerts';
+            const params = [];
+            if (status)    params.push('status='     + status);
+            if (alertType) params.push('alert_type=' + alertType);
+            if (params.length) url += '?' + params.join('&');
             try {
                 const [alertsRes, summaryRes] = await Promise.all([
                     fetch(url),
@@ -1934,8 +1944,17 @@
                     </div>
                     <div class="alert-card-body">
                         <p><strong>Question:</strong> [${escHtml(a.question_id)}] ${escHtml(a.question_text)}</p>
-                        <p><strong>Rating:</strong> <span style="color:${col};font-weight:700;">${a.rating} \u2014 ${escHtml(a.rating_label)}</span></p>
-                        ${a.comment ? `<p><strong>Comment:</strong> <em>"${escHtml(a.comment)}"</em></p>` : ''}
+                        ${a.alert_type === 'text_sentiment'
+                            ? `<p style="margin:4px 0 2px;"><strong>Alert Type:</strong>
+                                   <span style="background:#e65100;color:white;border-radius:4px;padding:2px 9px;font-size:11px;font-weight:700;">&#128172; Negative Text Feedback</span>
+                               </p>
+                               <p style="background:#fff8f0;border-left:3px solid #ff9800;padding:8px 12px;border-radius:0 6px 6px 0;margin:6px 0;font-size:13px;color:#333;"><strong>Response:</strong> &ldquo;${escHtml(a.comment)}&rdquo;</p>
+                               ${a.matched_keywords ? `<p style="margin-top:6px;"><strong style="font-size:12px;">Flagged terms:</strong>&nbsp;
+                                   ${a.matched_keywords.split(',').map(k => `<span style="background:#fff3e0;border:1px solid #ffcc80;color:#bf360c;border-radius:10px;padding:2px 9px;font-size:11px;margin:2px;display:inline-block;">${escHtml(k.trim())}</span>`).join('')}
+                               </p>` : ''}`
+                            : `<p><strong>Rating:</strong> <span style="color:${col};font-weight:700;">${a.rating} \u2014 ${escHtml(a.rating_label)}</span></p>
+                               ${a.comment ? `<p><strong>Comment:</strong> <em>&ldquo;${escHtml(a.comment)}&rdquo;</em></p>` : ''}`
+                        }
                         ${a.participant_name ? `<p style="color:#999;font-size:12px;">Participant: ${escHtml(a.participant_name)}</p>` : ''}
                         ${a.action_notes ? `<p style="color:#555;font-size:12px;border-top:1px dashed #ddd;margin-top:6px;padding-top:6px;">Notes: ${escHtml(a.action_notes)}</p>` : ''}
                     </div>

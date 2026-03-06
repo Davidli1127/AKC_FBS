@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_file
 import json
 import os
+import re
 import io
 import base64
 import copy
@@ -58,6 +59,77 @@ SUBMISSIONS_FILE = os.path.join(DATA_DIR, 'submissions.json')
 ALERTS_FILE = os.path.join(DATA_DIR, 'low_feedback_alerts.json')
 
 
+_NEGATIVE_FEEDBACK_RE = re.compile(
+    r'(?:'
+    r'\b(?:bad|terrible|horrible|awful|dreadful|lousy|pathetic|mediocre|appalling|atrocious|abysmal|dismal|deplorable|disgraceful|shameful|dreadful)\b'
+    r'|\b(?:disappointing|disappointed|disappointment|dissatisfied|unsatisfied|dissatisfaction)\b'
+    r'|\b(?:unacceptable|unsatisfactory|inadequate|insufficient|substandard|subpar|inferior|deficient)\b'
+    r'|\b(?:useless|pointless|worthless|ineffective|inefficient|unhelpful|futile|impractical)\b'
+    r'|\b(?:waste|wasted|wasting|squandered)\b'
+    r'|\b(?:unprofessional|rude|dismissive|arrogant|condescending|disrespectful|discourteous|impolite|hostile|aggressive|sarcastic)\b'
+    r'|\b(?:unfair|biased|unjust|partial)\b'
+    r'|\b(?:confusing|confused|unclear|incomprehensible|incoherent|ambiguous|vague)\b'
+    r'|\b(?:disorganized|disorganised|unorganized|unorganised|chaotic|messy|unstructured|haphazard|scattered)\b'
+    r'|\b(?:unprepared|underprepared|unqualified|incompetent|clueless|ill.?prepared)\b'
+    r'|\b(?:irrelevant|outdated|obsolete|outmoded|inaccurate|incorrect|misleading)\b'
+    r'|\b(?:boring|bored|monotonous|tedious|unengaging|uninteresting|uninspiring|unstimulating|repetitive|lifeless|dry)\b'
+    r'|\b(?:rushed|overwhelming|erratic|inconsistent|disorderly|scattered)\b'
+    r'|\b(?:dirty|unclean|unhygienic|uncomfortable|cramped|stuffy|noisy)\b'
+    r'|\b(?:faulty|broken|damaged|defective|malfunctioning)\b'
+    r'|\b(?:frustrated|frustrating|annoying|annoyed|irritating|irritated|exasperating|exasperated)\b'
+    r'|\b(?:unenthusiastic|unresponsive|disengaged|demotivating|unsupportive|disinterested|indifferent)\b'
+    r'|\b(?:lacking|lacked|lacks|incomplete|unfinished)\b'
+    r'|\b(?:failed|failure|unsuccessful|fail)\b'
+    r'|\b(?:unhappy|displeased|upset|miserable|angry|furious)\b'
+    r'|\b(?:unpleasant|nasty|horrible|embarrassing)\b'
+    r'|\b(?:delayed|behind\s+schedule)\b'
+    r'|\b(?:complaint|complain|complaining|grievance)\b'
+    r'|\b(?:neglected|overlooked|ignored)\b'
+    r'|\b(?:poorly|badly)\b'
+    # Compound negative phrases
+    r'|(?:not|no)\s+(?:good|great|helpful|clear|organi[sz]ed|prepared|relevant|professional|effective|sufficient|satisfactory|adequate|engaging|interesting|useful|informative|well)\b'
+    r'|not\s+up\s+to\s+(?:date|standard|scratch|par|expectation)'
+    r'|out[\s-]of[\s-]date'
+    r'|no\s+(?:improvement|progress|update|support|guidance|feedback|direction|structure)'
+    r'|could\s+(?:be|use)\s+(?:better|improved?|clearer|more\s+\w+|enhanced)'
+    r'|should\s+(?:be|have\s+been)\s+(?:better|improved?|clearer|more\s+\w+)'
+    r'|need[s]?\s+(?:to\s+be\s+)?(?:improved?|better|updated?|fixed?|revised?|restructured?)'
+    r'|room\s+for\s+improvement'
+    r'|could\s+(?:do|be)\s+better'
+    r'|waste\s+of\s+(?:time|money|resources)'
+    r'|wasting\s+(?:my\s+|our\s+)?(?:time|money)'
+    r'|too\s+(?:fast|slow|long|short|rushed|technical|complicated|complex|difficult|hard|easy|loud|quiet|hot|cold|strict|harsh|boring|advanced|basic|wordy|general|narrow|vague|broad)'
+    r'|(?:hard|difficult)\s+to\s+(?:understand|follow|see|hear|read|concentrate|focus|keep\s+up)'
+    r'|not\s+enough\s+(?:time|detail|content|practice|examples?|breaks?|information|feedback|depth|clarity|activities)'
+    r'|need[s]?\s+more\s+(?:time|detail|content|practice|examples?|information|depth|clarity|activities|engagement|materials?|resources|exercises?)'
+    r'|(?:did\s+not|didn[\']t|couldn[\']t|can[\']t|cannot|was\s+not|wasn[\']t)\s+(?:understand|follow|hear|learn|see|focus|engage|benefit|grasp|participate)'
+    r'|would\s+not\s+recommend|cannot\s+recommend|not\s+recommend(?:ed)?'
+    r'|lack\s+of\s+(?:clarity|organi[sz]ation|preparation|engagement|examples?|support|content|materials?|professionalism|structure|direction|communication|variety|depth|relevance)'
+    r'|poor\s+(?:quality|performance|organi[sz]ation|facilities|equipment|materials?|content|delivery|communication|management|presentation|audio|ventilation|lighting)'
+    r'|bad\s+(?:quality|experience|delivery|content|environment|facilities?|behaviour|behavior|attitude|examples?|management)'
+    r'|very\s+(?:bad|poor|disappointing|confusing|unclear|boring|slow|fast|harsh|strict|difficult|loud|noisy|hot|cold)'
+    r'|extremely\s+(?:bad|poor|disappointing|confusing|unclear|boring|difficult|slow|fast)'
+    r'|so\s+(?:bad|poor|boring|confusing|slow|fast|difficult|long|short)'
+    r'|need[s]?\s+(?:a\s+lot\s+of\s+)?improvement'
+    r'|not\s+satisfied|not\s+happy|not\s+pleased'
+    r'|more\s+(?:preparation|practice|examples?|time|clarity|structure|engagement)\s+(?:is|are|was|were)?\s*needed'
+    r')',
+    re.IGNORECASE
+)
+
+def _extract_negative_matches(text):
+    """Return deduplicated list of matched negative phrases found in text."""
+    seen = set()
+    results = []
+    for m in _NEGATIVE_FEEDBACK_RE.finditer(text or ''):
+        word = m.group(0).strip()
+        key  = word.lower()
+        if key not in seen:
+            seen.add(key)
+            results.append(word)
+    return results
+
+
 def load_alerts():
     """Load low feedback alerts from JSON file"""
     if os.path.exists(ALERTS_FILE):
@@ -73,17 +145,18 @@ def save_alerts_data(alerts):
 
 
 def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
-    """Detect ratings of 1 or 2 from rating-type questions only and create alert records.
-    Text/open-ended questions are intentionally excluded even if a participant types '1' or '2'.
+    """Detect low ratings (≤ 2) and negative sentiment in free-text responses,
+    creating alert records for admin review.
     """
     alerts = load_alerts()
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     rating_labels = {1: 'Poor', 2: 'Unsatisfactory'}
 
     RATING_SECTION_TYPES = {'rating', 'instructor_rating', 'assessor_rating'}
-    rating_q_ids = set()  
-    text_q_ids = set() 
-    q_texts = {}
+    rating_q_ids = set()
+    text_q_ids   = set()
+    text_q_map   = {}   # qid -> question text (free-form text only)
+    q_texts      = {}   # all question texts
     for section in form_config.get('sections', []):
         s_type = section.get('type', '')
         for q in section.get('questions', []):
@@ -92,7 +165,10 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
                 rating_q_ids.add(q['id'])
             elif s_type == 'text_questions':
                 text_q_ids.add(q['id'])
+                text_q_map[q['id']] = q['text']
 
+    # ── 1. Rating alerts (score ≤ 2) ────────────────────────────────────────
+    new_rating_alert_q_ids = set()
     for key, value in data.items():
         if key.endswith('_comment'):
             continue
@@ -105,7 +181,6 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
 
         if base_key in text_q_ids:
             continue
-
         if base_key not in rating_q_ids:
             continue
         try:
@@ -114,9 +189,9 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
             continue
 
         if rating <= 2:
-            q_text = q_texts.get(base_key, q_texts.get(key, key))
+            q_text  = q_texts.get(base_key, q_texts.get(key, key))
             comment = data.get(f'{key}_comment', '')
-            alert = {
+            alerts.append({
                 'id': str(uuid.uuid4())[:12],
                 'course_id': course_id,
                 'course_title': course.get('course_title', ''),
@@ -128,12 +203,80 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
                 'rating': rating,
                 'rating_label': rating_labels.get(rating, str(rating)),
                 'comment': comment,
+                'alert_type': 'rating',
+                'matched_keywords': '',
                 'status': 'new',
                 'action_notes': '',
                 'submitted_at': now,
-                'updated_at': ''
-            }
-            alerts.append(alert)
+                'updated_at': '',
+            })
+            new_rating_alert_q_ids.add(base_key)
+
+    # ── 2. Text-sentiment alerts (negative keywords in free-form answers) ────
+    # Scan text question responses
+    for qid, q_text in text_q_map.items():
+        response_val = str(data.get(qid, '')).strip()
+        if len(response_val) < 5:
+            continue
+        matches = _extract_negative_matches(response_val)
+        if not matches:
+            continue
+        seen = dict.fromkeys(m.lower() for m in matches)
+        alerts.append({
+            'id': str(uuid.uuid4())[:12],
+            'course_id': course_id,
+            'course_title': course.get('course_title', ''),
+            'course_date': course.get('course_date', ''),
+            'form_id': form_id,
+            'participant_name': data.get('name', 'Anonymous'),
+            'question_id': qid,
+            'question_text': q_text,
+            'rating': None,
+            'rating_label': '',
+            'comment': response_val,
+            'alert_type': 'text_sentiment',
+            'matched_keywords': ', '.join(seen)[:300],
+            'status': 'new',
+            'action_notes': '',
+            'submitted_at': now,
+            'updated_at': '',
+        })
+
+    # Scan _comment fields on rating questions (only when the rating was NOT
+    # already ≤ 2 — to avoid duplicating the comment already in a rating alert)
+    for key, value in data.items():
+        if not key.endswith('_comment'):
+            continue
+        comment_val = str(value).strip() if value else ''
+        if len(comment_val) < 5:
+            continue
+        base_q_id = key[:-len('_comment')]
+        if base_q_id in new_rating_alert_q_ids:
+            continue   # comment already captured inside the rating alert
+        matches = _extract_negative_matches(comment_val)
+        if not matches:
+            continue
+        q_text = q_texts.get(base_q_id, base_q_id)
+        seen   = dict.fromkeys(m.lower() for m in matches)
+        alerts.append({
+            'id': str(uuid.uuid4())[:12],
+            'course_id': course_id,
+            'course_title': course.get('course_title', ''),
+            'course_date': course.get('course_date', ''),
+            'form_id': form_id,
+            'participant_name': data.get('name', 'Anonymous'),
+            'question_id': base_q_id,
+            'question_text': q_text,
+            'rating': None,
+            'rating_label': '',
+            'comment': comment_val,
+            'alert_type': 'text_sentiment',
+            'matched_keywords': ', '.join(seen)[:300],
+            'status': 'new',
+            'action_notes': '',
+            'submitted_at': now,
+            'updated_at': '',
+        })
 
     save_alerts_data(alerts)
 
@@ -1028,11 +1171,14 @@ def submit_form(course_id):
 @app.route('/api/alerts', methods=['GET'])
 @api_login_required
 def get_alerts():
-    """Get low feedback alerts, optionally filtered by status"""
+    """Get low feedback alerts, optionally filtered by status and/or alert_type"""
     alerts = load_alerts()
     status_filter = request.args.get('status', '')
+    type_filter   = request.args.get('alert_type', '')
     if status_filter:
         alerts = [a for a in alerts if a.get('status') == status_filter]
+    if type_filter:
+        alerts = [a for a in alerts if a.get('alert_type', 'rating') == type_filter]
     alerts.sort(key=lambda a: a.get('submitted_at', ''), reverse=True)
     return jsonify(alerts)
 
