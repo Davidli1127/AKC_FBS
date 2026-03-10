@@ -220,6 +220,8 @@ def get_participants_by_class(class_code, offset=0, limit=20):
     Fetch participants for a specific class with pagination.
     Returns dict with participants list, total count, and pagination info.
     Uses [Class Code] column instead of [Course Code].
+    Deduplicates rows in Python: same Identification Number (or same Name when
+    ID is absent) within the same class is only kept once.
     """
     conn = get_connection()
     if not conn:
@@ -228,13 +230,7 @@ def get_participants_by_class(class_code, offset=0, limit=20):
     try:
         cursor = conn.cursor()
         search_pattern = f'%{class_code}%'
-        count_query = f"""
-            SELECT COUNT(*) 
-            FROM {PARTICIPANT_TABLE}
-            WHERE [Class Code] LIKE ?
-        """
-        cursor.execute(count_query, (search_pattern,))
-        total_count = cursor.fetchone()[0]
+        # Fetch all matching rows so we can deduplicate before paginating
         query = f"""
             SELECT 
                 [Class Code],
@@ -246,15 +242,29 @@ def get_participants_by_class(class_code, offset=0, limit=20):
             FROM {PARTICIPANT_TABLE}
             WHERE [Class Code] LIKE ?
             ORDER BY [Participant Name]
-            OFFSET ? ROWS
-            FETCH NEXT ? ROWS ONLY
         """
         
-        cursor.execute(query, (search_pattern, offset, limit))
+        cursor.execute(query, (search_pattern,))
         
-        participants = []
+        seen_ids = set()
+        seen_names = set()
+        unique_participants = []
         for row in cursor.fetchall():
-            participants.append({
+            id_number = str(row[5]).strip().upper() if row[5] else ''
+            name = str(row[1]).strip().upper() if row[1] else ''
+
+            # Deduplicate: use ID number as primary key, fall back to name
+            if id_number:
+                if id_number in seen_ids:
+                    continue
+                seen_ids.add(id_number)
+            else:
+                if name in seen_names:
+                    continue
+                if name:
+                    seen_names.add(name)
+
+            unique_participants.append({
                 'class_code': row[0] if row[0] else '',
                 'name': row[1] if row[1] else '',
                 'email': row[2] if row[2] else '',
@@ -264,8 +274,10 @@ def get_participants_by_class(class_code, offset=0, limit=20):
             })
         
         conn.close()
+        total_count = len(unique_participants)
+        paginated = unique_participants[offset:offset + limit]
         return {
-            'participants': participants,
+            'participants': paginated,
             'total': total_count,
             'offset': offset,
             'limit': limit,
