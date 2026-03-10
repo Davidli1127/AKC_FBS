@@ -230,7 +230,7 @@ def get_participants_by_class(class_code, offset=0, limit=20):
     try:
         cursor = conn.cursor()
         search_pattern = f'%{class_code}%'
-        # Fetch all matching rows so we can deduplicate before paginating
+        # Deduplicate before paginating
         query = f"""
             SELECT 
                 [Class Code],
@@ -253,7 +253,6 @@ def get_participants_by_class(class_code, offset=0, limit=20):
             id_number = str(row[5]).strip().upper() if row[5] else ''
             name = str(row[1]).strip().upper() if row[1] else ''
 
-            # Deduplicate: use ID number as primary key, fall back to name
             if id_number:
                 if id_number in seen_ids:
                     continue
