@@ -199,7 +199,7 @@
                                 <input type="text" id="newFormTitle" placeholder="My Custom Evaluation Form">
                             </div>
                             <div class="form-group">
-                                <label>Form Number <small style="color:#888;">(optional)</small></label>
+                                <label>Form Number <small style="color:#888;">(Optional)</small></label>
                                 <input type="text" id="newFormNumber" placeholder="R3530-05a (Rev 0)">
                             </div>
                             <div class="form-group">
@@ -309,7 +309,7 @@
                 </div>
                 <div style="display:none;">
                     <div class="card-body" style="padding:10px 16px;">
-                        <p style="color:#888; font-size:12px; margin:0 0 12px;">These forms were deleted but had existing responses. Their data remains in the database forever and can be viewed in the Analysis tab.</p>
+                        <p style="color:#888; font-size:12px; margin:0 0 12px;">These forms were deleted but had existing responses. Their data remains in the database and can be viewed in the Analysis tab.</p>
                         <table style="width:100%; border-collapse:collapse; font-size:13px;">
                             <thead><tr style="background:#f0ebff;">
                                 <th style="padding:7px 12px; text-align:left;">Form Title</th>
@@ -383,7 +383,7 @@
                             <div style="display:flex; gap:6px; flex-wrap:wrap;" onclick="event.stopPropagation()">
                                 <button id="analysisGroupQBtn" class="btn btn-primary btn-sm" onclick="setAnalysisMode('question')">&#128203; By Question</button>
                                 <button id="analysisGroupCBtn" class="btn btn-secondary btn-sm" onclick="setAnalysisMode('course')">&#127979; By Course</button>
-                                <button class="btn btn-sm" style="background:#dc3545;color:white;font-weight:600;" onclick="resolveAllUnresolved()">&#10003;&#10003; Resolve ALL Unresolved</button>
+                                <button class="btn btn-sm" style="background:#dc3545;color:white;font-weight:600;" onclick="resolveAllUnresolved()">&#10003;&#10003; Resolve ALL</button>
                                 <button class="btn btn-sm" style="background:#6c757d;color:white;" onclick="deleteAlerts(null,'resolved')" title="Delete all resolved alerts to clean up test data">&#128465; Delete Resolved</button>
                             </div>
                         </div>
@@ -398,7 +398,7 @@
                     <div id="batchActionBar" style="display:none; align-items:center; gap:10px; flex-wrap:wrap; background:#f0f5ff; border:1px solid #c7d7ff; border-radius:8px; padding:10px 14px; margin-bottom:14px;">
                         <span id="batchSelectedCount" style="font-weight:600; color:#003366;">0 selected</span>
                         <select id="batchStatusSelect" style="padding:5px 10px; border:1px solid #c7d7ff; border-radius:6px;">
-                            <option value="">-- Mark as --</option>
+                            <option value="">—— Mark as ——</option>
                             <option value="acknowledged">Acknowledged</option>
                             <option value="in_progress">In Progress</option>
                             <option value="resolved">Resolved</option>
