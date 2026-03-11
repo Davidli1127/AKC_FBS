@@ -34,7 +34,9 @@
                             <label>Select Form Type:</label>
                             <select id="formSelect" name="form_id" required onchange="updateFormFields()">
                                 {% for form_id, form in config.forms.items() %}
+                                {% if not form.is_archived %}
                                 <option value="{{ form_id }}">{{ form.title }}</option>
+                                {% endif %}
                                 {% endfor %}
                             </select>
                         </div>
@@ -193,11 +195,7 @@
 
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 24px;">
                             <div class="form-group">
-                                <label>Form ID <small style="color:#888;">(alphanumeric, e.g. "form3")</small></label>
-                                <input type="text" id="newFormId" pattern="[a-zA-Z0-9_]+" placeholder="form3">
-                            </div>
-                            <div class="form-group">
-                                <label>Form Title</label>
+                                <label>Form Title <small style="color:#888;">(ID will be auto-generated from title)</small></label>
                                 <input type="text" id="newFormTitle" placeholder="My Custom Evaluation Form">
                             </div>
                             <div class="form-group">
@@ -209,7 +207,9 @@
                                 <select id="newFormCopyFrom" onchange="onCopyFromChange()">
                                     <option value="">Start from scratch</option>
                                     {% for form_id, form in config.forms.items() %}
+                                    {% if not form.is_archived %}
                                     <option value="{{ form_id }}">{{ form.title }}</option>
+                                    {% endif %}
                                     {% endfor %}
                                 </select>
                             </div>
@@ -285,7 +285,9 @@
                             <label>Select Form to Edit:</label>
                             <select id="editFormSelect" onchange="loadFormForEdit()">
                                 {% for form_id, form in config.forms.items() %}
+                                {% if not form.is_archived %}
                                 <option value="{{ form_id }}">{{ form.title }}</option>
+                                {% endif %}
                                 {% endfor %}
                             </select>
                         </div>
@@ -296,6 +298,40 @@
                     <div id="formEditor"></div>
                 </div>
             </div>
+
+            {% set archived_forms = config.forms.items() | selectattr('1.is_archived') | list %}
+            {% if archived_forms %}
+            <div class="card" style="margin-top:16px; border:1px solid #e0d0ff;">
+                <div class="card-header" style="background:#f5f0ff; color:#5a3e9b; cursor:pointer; display:flex; justify-content:space-between; align-items:center;"
+                     onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none' ? 'block' : 'none'">
+                    <span>&#128274; Archived Forms <span style="font-size:12px; font-weight:400; margin-left:8px;">{{ archived_forms | length }} form{{ 's' if archived_forms | length != 1 }}</span></span>
+                    <span style="font-size:12px; color:#7a6aaa;">Data permanently preserved &nbsp;&rsaquo;</span>
+                </div>
+                <div style="display:none;">
+                    <div class="card-body" style="padding:10px 16px;">
+                        <p style="color:#888; font-size:12px; margin:0 0 12px;">These forms were deleted but had existing responses. Their data remains in the database forever and can be viewed in the Analysis tab.</p>
+                        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                            <thead><tr style="background:#f0ebff;">
+                                <th style="padding:7px 12px; text-align:left;">Form Title</th>
+                                <th style="padding:7px 12px; text-align:left;">Form ID</th>
+                                <th style="padding:7px 12px; text-align:center;">Status</th>
+                            </tr></thead>
+                            <tbody>
+                            {% for form_id, form in archived_forms %}
+                            <tr style="border-bottom:1px solid #ede8ff;">
+                                <td style="padding:8px 12px; font-weight:600;">{{ form.title }}</td>
+                                <td style="padding:8px 12px; color:#888; font-family:monospace;">{{ form_id }}</td>
+                                <td style="padding:8px 12px; text-align:center;">
+                                    <span style="background:#ede8ff; color:#5a3e9b; padding:2px 10px; border-radius:99px; font-size:11px; font-weight:600;">&#128274; Archived</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <div id="existing" class="tab-content">
@@ -1732,13 +1768,11 @@
 
         async function submitNewForm() {
             const resultDiv = document.getElementById('createFormResult');
-            const formId   = document.getElementById('newFormId').value.trim();
             const title    = document.getElementById('newFormTitle').value.trim();
             const formNumber = document.getElementById('newFormNumber').value.trim();
             const description = document.getElementById('newFormDescription').value.trim();
             const copyFrom = document.getElementById('newFormCopyFrom').value;
 
-            if (!formId) { alert('Please enter a Form ID.'); return; }
             if (!title)  { alert('Please enter a Form Title.'); return; }
             if (!copyFrom) {
                 for (const sec of newFormSections) {
@@ -1773,11 +1807,11 @@
                 const response = await fetch('/api/forms', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ form_id: formId, title, formNumber, description, copy_from: copyFrom, sections, qr_fields: qrFields })
+                    body: JSON.stringify({ title, formNumber, description, copy_from: copyFrom, sections, qr_fields: qrFields })
                 });
                 const result = await response.json();
                 if (result.success) {
-                    resultDiv.innerHTML = `<span style="color:green;">✓ Form "<strong>${result.form.title}</strong>" created!</span>`;
+                    resultDiv.innerHTML = `<span style="color:green;">✓ Form "<strong>${result.form.title}</strong>" created! (ID: <code>${result.form.id}</code>)</span>`;
                     const opt1 = new Option(result.form.title, result.form.id);
                     const opt2 = new Option(result.form.title, result.form.id);
                     document.getElementById('editFormSelect').add(opt1);
@@ -1795,7 +1829,6 @@
                     renderQrCustomFieldsBuilder();
                     document.getElementById('editFormSelect').value = result.form.id;
                     loadFormForEdit();
-                    document.getElementById('newFormId').value = '';
                     document.getElementById('newFormTitle').value = '';
                     document.getElementById('newFormNumber').value = '';
                     document.getElementById('newFormDescription').value = '';
@@ -1823,20 +1856,33 @@
                 return;
             }
             const formTitle = document.getElementById('editFormSelect').options[document.getElementById('editFormSelect').selectedIndex].text;
-            if (!confirm(`Delete form "${formTitle}"? This cannot be undone.`)) return;
+            if (!confirm(`Delete form "${formTitle}"?\n\nIf this form has collected responses, it will be archived (data is never deleted). If there are no responses, it will be permanently removed.`)) return;
             try {
                 const resp = await fetch(`/api/forms/${formId}`, { method: 'DELETE' });
                 const result = await resp.json();
                 if (result.success) {
-                    ['editFormSelect', 'formSelect'].forEach(id => {
-                        const sel = document.getElementById(id);
-                        for (let i = sel.options.length - 1; i >= 0; i--) {
-                            if (sel.options[i].value === formId) sel.remove(i);
-                        }
-                        if (sel.options.length > 0) sel.selectedIndex = 0;
-                    });
-                    loadFormForEdit();
-                    alert('Form deleted.');
+                    if (result.archived) {
+                        // Form has data — mark it as archived in the UI rather than removing it
+                        ['editFormSelect', 'formSelect'].forEach(id => {
+                            const sel = document.getElementById(id);
+                            for (let i = sel.options.length - 1; i >= 0; i--) {
+                                if (sel.options[i].value === formId) sel.remove(i);
+                            }
+                            if (sel.options.length > 0) sel.selectedIndex = 0;
+                        });
+                        loadFormForEdit();
+                        alert(`"${formTitle}" has been archived.\n\nAll collected responses are preserved in the database and can still be viewed in the Analysis tab.\n\nThe form will appear in the Archived Forms section on this page.`);
+                    } else {
+                        ['editFormSelect', 'formSelect'].forEach(id => {
+                            const sel = document.getElementById(id);
+                            for (let i = sel.options.length - 1; i >= 0; i--) {
+                                if (sel.options[i].value === formId) sel.remove(i);
+                            }
+                            if (sel.options.length > 0) sel.selectedIndex = 0;
+                        });
+                        loadFormForEdit();
+                        alert('Form deleted.');
+                    }
                 } else {
                     alert('Error: ' + result.error);
                 }

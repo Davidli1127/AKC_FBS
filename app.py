@@ -7,7 +7,6 @@ import base64
 import copy
 from collections import defaultdict
 from datetime import datetime, timedelta
-from openpyxl import Workbook, load_workbook
 import uuid
 from functools import wraps
 from dotenv import load_dotenv
@@ -55,7 +54,6 @@ COURSE_EXPIRY_HOURS = 24 # Default 24 hours, can adjust if needed
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
-SUBMISSIONS_FILE = os.path.join(DATA_DIR, 'submissions.json')
 ALERTS_FILE = os.path.join(DATA_DIR, 'low_feedback_alerts.json')
 
 
@@ -275,18 +273,6 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
 
     save_alerts_data(alerts)
 
-def load_submissions():
-    """Load submission records from JSON file"""
-    if os.path.exists(SUBMISSIONS_FILE):
-        with open(SUBMISSIONS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {}
-
-def save_submissions_data(submissions):
-    """Save submission records to JSON file"""
-    with open(SUBMISSIONS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(submissions, f, indent=2, ensure_ascii=False)
-
 def _norm_name(name):
     """Normalize a name for comparison: collapse whitespace, uppercase"""
     return ' '.join(name.strip().split()).upper()
@@ -296,23 +282,8 @@ def _norm_id(id_number):
     return id_number.strip().upper()
 
 def has_submitted(course_id, identifier):
-    """Check if a student (by ID number) has already submitted for this course"""
-    submissions = load_submissions()
-    id_norm = _norm_id(identifier)
-    return any(_norm_id(s.get('id_number', s.get('name', ''))) == id_norm
-               for s in submissions.get(course_id, []))
-
-def record_submission(course_id, participant_name, id_number=''):
-    """Record a student submission to prevent duplicates"""
-    submissions = load_submissions()
-    if course_id not in submissions:
-        submissions[course_id] = []
-    submissions[course_id].append({
-        'name': ' '.join(participant_name.strip().split()),
-        'id_number': id_number.strip().upper(),
-        'submitted_at': datetime.now().isoformat()
-    })
-    save_submissions_data(submissions)
+    """Check if a student (by ID number) has already submitted for this course."""
+    return db.has_submitted_db(course_id, identifier)
 
 def load_config():
     """Load configuration from JSON file"""
@@ -356,208 +327,28 @@ def clean_expired_courses():
     
     return removed_count
 
-FORM_FILE_NAMES = {
-    'form1': 'Trainer_Evaluation',
-    'form2': 'Assessor_Evaluation'
-}
+def _slugify_form_id(title):
+    """Convert a form title to a stable lowercase slug used as form_id.
+    e.g. 'TRAINER EVALUATION FORM' -> 'trainer_evaluation_form'
+    """
+    s = title.strip().lower()
+    s = re.sub(r'[^a-z0-9]+', '_', s)
+    return s.strip('_') or 'form_' + uuid.uuid4().hex[:8]
 
-def get_excel_path(form_id):
-    """Get the Excel file path for a form"""
-    file_name = FORM_FILE_NAMES.get(form_id, form_id)
-    return os.path.join(DATA_DIR, f'{file_name}_responses.xlsx')
-
-def init_excel(form_id):
-    """Initialize Excel file with headers if it doesn't exist"""
-    excel_path = get_excel_path(form_id)
-    
-    if os.path.exists(excel_path):
-        return
-    
-    config = load_config()
-    form = config['forms'].get(form_id)
-    if not form:
-        return
-    
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Responses"
-    
-    if form_id == 'form1':
-        headers = [
-            'COURSE NAME',
-            'DATE',
-            'CLASSROOM',
-            'INSTRUCTOR 1',
-            'INSTRUCTOR 2',
-            'INSTRUCTOR 3',
-            'LANGUAGE'
-        ]
-        
-        for section in form['sections']:
-            if section['type'] == 'rating':
-                for q in section['questions']:
-                    headers.append(f"{q['id']} - {q['text']}")
-            elif section['type'] == 'instructor_rating':
-                for q in section['questions']:
-                    headers.append(f"B1{q['id']} - {q['text']}")
-                for inst_num in range(2, 4):
-                    for q in section['questions']:
-                        headers.append(f"B{inst_num}{q['id']}")
-            elif section['type'] == 'text_questions':
-                for q in section['questions']:
-                    headers.append(f"{q['id']} - {q['text']}")
-    elif form_id == 'form2':
-        headers = [
-            'COURSE NAME',
-            'DATE',
-            'CLASSROOM',
-            'ASSESSOR 1',
-            'ASSESSOR 2',
-            'LANGUAGE'
-        ]
-        
-        for section in form['sections']:
-            if section['type'] == 'assessor_rating':
-                for q in section['questions']:
-                    headers.append(f"A1.{q['id']} - {q['text']}")
-                for q in section['questions']:
-                    headers.append(f"A2.{q['id']}")
-            elif section['type'] == 'text_questions':
-                for q in section['questions']:
-                    headers.append(f"{q['id']} - {q['text']}")
-    else:
-        headers = ['Submission Time']
-        
-        for field in form['headerFields']:
-            headers.append(field['label'].replace(' (Optional)', ''))
-        
-        for section in form['sections']:
-            if section['type'] == 'rating':
-                for q in section['questions']:
-                    headers.append(q['id'])
-            elif section['type'] == 'instructor_rating':
-                # Up to 3 instructors
-                for i in range(1, 4):
-                    headers.append(f'Instructor {i} Name')
-                    for q in section['questions']:
-                        headers.append(f'B{i}-{q["id"]}')
-            elif section['type'] == 'assessor_rating':
-                # Up to 2 assessors
-                for i in range(1, 3):
-                    headers.append(f'Assessor {i} Name')
-                    for q in section['questions']:
-                        headers.append(f'A{i}-{q["id"]}')
-            elif section['type'] == 'text_questions':
-                for q in section['questions']:
-                    headers.append(q['id'])
-            elif section['type'] == 'multiple_choice':
-                for q in section['questions']:
-                    headers.append(q['id'])
-            elif section['type'] == 'yes_no':
-                for q in section['questions']:
-                    headers.append(q['id'])
-            elif section['type'] == 'scale_slider':
-                for q in section['questions']:
-                    headers.append(q['id'])
-
-    ws.append(headers)
-    wb.save(excel_path)
 
 def save_response(form_id, course_id, data):
-    """Save form response to Excel and database"""
-    excel_path = get_excel_path(form_id)
-    init_excel(form_id)
-    
+    """Save form response to AKC_FBS database."""
     config = load_config()
-    form = config['forms'].get(form_id)
-    
-    course = None
-    for c in config['courses']:
-        if c['id'] == course_id:
-            course = c
-            break
-    
-    # Save to Excel
-    wb = load_workbook(excel_path)
-    ws = wb.active
-    existing_headers = [cell.value for cell in ws[1]]
-    data_map = {}
-    
-    if form_id == 'form1':
-        instructors = course.get('instructors', []) if course else []
-        data_map['COURSE NAME'] = course['course_title'] if course else ''
-        data_map['DATE'] = course['course_date'] if course else ''
-        data_map['CLASSROOM'] = course.get('classroom', '') if course else ''
-        data_map['INSTRUCTOR 1'] = instructors[0] if len(instructors) > 0 else ''
-        data_map['INSTRUCTOR 2'] = instructors[1] if len(instructors) > 1 else ''
-        data_map['INSTRUCTOR 3'] = instructors[2] if len(instructors) > 2 else ''
-        data_map['LANGUAGE'] = ''
-        
-        for section in form['sections']:
-            if section['type'] == 'rating':
-                for q in section['questions']:
-                    data_map[q['id']] = data.get(q['id'], '')
-            elif section['type'] == 'instructor_rating':
-                for inst_num in range(1, 4):
-                    for q in section['questions']:
-                        key = f"B{inst_num}{q['id']}"
-                        data_map[key] = data.get(f'B{inst_num}_{q["id"]}', '')
-            elif section['type'] == 'text_questions':
-                for q in section['questions']:
-                    data_map[q['id']] = data.get(q['id'], '')
-                    
-    elif form_id == 'form2':
-        assessors = course.get('assessors', []) if course else []
-        data_map['COURSE NAME'] = course['course_title'] if course else ''
-        data_map['DATE'] = course['course_date'] if course else ''
-        data_map['CLASSROOM'] = course.get('classroom', '') if course else ''
-        data_map['ASSESSOR 1'] = assessors[0] if len(assessors) > 0 else ''
-        data_map['ASSESSOR 2'] = assessors[1] if len(assessors) > 1 else ''
-        data_map['LANGUAGE'] = ''
-        
-        for section in form['sections']:
-            if section['type'] == 'assessor_rating':
-                for i in range(1, 3):
-                    for q in section['questions']:
-                        key = f"A{i}.{q['id']}"
-                        data_map[key] = data.get(f'A{i}_{q["id"]}', '')
-            elif section['type'] == 'text_questions':
-                for q in section['questions']:
-                    data_map[q['id']] = data.get(q['id'], '')
-    else:
-        data_map['Submission Time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        for field in form.get('headerFields', []):
-            label = field['label'].replace(' (Optional)', '')
-            if field.get('prefilled') and course:
-                data_map[label] = course.get(field['id'], '')
-            else:
-                data_map[label] = data.get(field['id'], '')
-        for section in form.get('sections', []):
-            if section['type'] in ('rating', 'text_questions', 'multiple_choice', 'yes_no', 'scale_slider'):
-                for q in section['questions']:
-                    data_map[q['id']] = data.get(q['id'], '')
+    course = next((c for c in config['courses'] if c['id'] == course_id), None)
+    participant_name = data.get('name', '')
+    position         = data.get('position', '')
+    id_number        = data.get('id_number', '')
+    ok = db.save_response_to_db(
+        form_id, course_id, course or {},
+        participant_name, id_number, position, data)
+    if not ok:
+        print(f"Warning: Could not save response to AKC_FBS for form_id={form_id}")
 
-    row = []
-    for header in existing_headers:
-        if header is None or header.startswith('[REMOVED]'):
-            row.append('')
-        else:
-            if header in data_map:
-                row.append(data_map[header])
-            else:
-                header_id = header.split(' - ')[0].strip() if ' - ' in header else header
-                if header_id in data_map:
-                    row.append(data_map[header_id])
-                else:
-                    row.append('') 
-    
-    ws.append(row)
-    wb.save(excel_path)
-
-    try:
-        db.save_to_database(form_id, course_id, course, data)
-    except Exception as e:
-        print(f"Warning: Could not save to database: {e}")
 
 @app.route('/')
 def index():
@@ -781,69 +572,6 @@ def delete_question(form_id, section_id, question_id):
     save_config(config)
     return jsonify({'success': True})
 
-@app.route('/api/forms/<form_id>/update-excel', methods=['POST'])
-@api_login_required
-def update_excel_columns(form_id):
-    """Update Excel columns based on form changes"""
-    try:
-        excel_path = get_excel_path(form_id)
-        
-        if not os.path.exists(excel_path):
-            return jsonify({'success': True, 'message': 'Excel file does not exist yet, will be created on first response'})
-        
-        changes = request.json
-        added_questions = changes.get('addedQuestions', [])
-        deleted_questions = changes.get('deletedQuestions', [])
-        modified_questions = changes.get('modifiedQuestions', [])
-        wb = load_workbook(excel_path)
-        ws = wb.active
-        headers = [cell.value for cell in ws[1]]
-        
-        for mod in modified_questions:
-            q_id = mod['questionId']
-            new_text = mod['newText']
-            section_id = mod['sectionId']
-            for col_idx, header in enumerate(headers):
-                if header and header.startswith(f"{q_id} -"):
-                    ws.cell(row=1, column=col_idx + 1).value = f"{q_id} - {new_text}"
-                    headers[col_idx] = f"{q_id} - {new_text}"
-                    break
-    
-        for added in added_questions:
-            q_id = added['questionId']
-            q_text = added['questionText']
-            section_id = added['sectionId']
-            new_header = f"{q_id} - {q_text}"
-            new_col = len(headers) + 1
-            ws.cell(row=1, column=new_col).value = new_header
-            headers.append(new_header)
-        
-        columns_to_delete = []
-        for deleted in deleted_questions:
-            q_id = deleted['questionId']
-            delete_data = deleted.get('deleteData', False)
-            for col_idx, header in enumerate(headers):
-                if header and (header.startswith(f"{q_id} -") or header == q_id):
-                    if delete_data:
-                        columns_to_delete.append(col_idx + 1)  
-                    else:
-                        ws.cell(row=1, column=col_idx + 1).value = f"[REMOVED] {header}"
-                    break
-        
-        for col_idx in sorted(columns_to_delete, reverse=True):
-            ws.delete_cols(col_idx)
-        
-        wb.save(excel_path)
-        
-        return jsonify({
-            'success': True,
-            'message': f'Excel updated: {len(added_questions)} added, {len(modified_questions)} modified, {len(deleted_questions)} deleted'
-        })
-        
-    except Exception as e:
-        print(f"Error updating Excel: {e}")
-        return jsonify({'error': str(e)}), 500
-
 @app.route('/api/db/test', methods=['GET'])
 @api_login_required
 def test_db_connection():
@@ -865,7 +593,7 @@ def search_db_courses():
 def get_participants():
     """Get participants for a class with pagination.
     Enriches each participant with form_submitted: True/False by checking
-    submissions.json for any course whose course_title matches the class code.
+    FBS_Responses for any course whose course_title matches the class code.
     """
     class_code = request.args.get('class_code', '')
     offset = request.args.get('offset', 0, type=int)
@@ -879,28 +607,17 @@ def get_participants():
         return jsonify(result)
 
     config = load_config()
-    submissions = load_submissions()
     class_code_norm = class_code.strip().upper()
     matching_course_ids = [
         c['id'] for c in config.get('courses', [])
         if c.get('course_title', '').strip().upper() == class_code_norm
     ]
 
-    submitted_names = set()
-    submitted_ids = set()
-    for cid in matching_course_ids:
-        for s in submissions.get(cid, []):
-            submitted_names.add(_norm_name(s.get('name', '')))
-            if s.get('id_number'):
-                submitted_ids.add(_norm_id(s['id_number']))
+    submitted_ids = db.get_submitted_ids_for_courses(matching_course_ids)
 
     for p in result.get('participants', []):
-        name_norm = _norm_name(p.get('name', ''))
         id_norm = _norm_id(p.get('id_number', ''))
-        p['form_submitted'] = (
-            name_norm in submitted_names or
-            (bool(id_norm) and id_norm in submitted_ids)
-        )
+        p['form_submitted'] = bool(id_norm) and id_norm in submitted_ids
 
     return jsonify(result)
 
@@ -1150,7 +867,6 @@ def submit_form(course_id):
     
     data = request.json
     save_response(course['form_id'], course_id, data)
-    record_submission(course_id, student_name, student_id)
     form_config = config['forms'].get(course['form_id'], {})
     try:
         save_low_feedback_alerts(course['form_id'], course_id, course, data, form_config)
@@ -1364,21 +1080,12 @@ def batch_delete_alerts():
 def get_analysis_summary():
     """Return high-level collection stats: total responses per form + alert counts."""
     config = load_config()
+    counts = db.get_response_count_by_form()
     result = {}
     for form_id, form in config['forms'].items():
-        excel_path = get_excel_path(form_id)
-        row_count = 0
-        if os.path.exists(excel_path):
-            try:
-                wb = load_workbook(excel_path, read_only=True)
-                ws = wb.active
-                row_count = sum(1 for row in ws.iter_rows(min_row=2, values_only=True) if any(c for c in row))
-                wb.close()
-            except Exception:
-                row_count = 0
         result[form_id] = {
             'title': form.get('title', form_id),
-            'total_responses': row_count
+            'total_responses': counts.get(form_id, 0)
         }
     alerts = load_alerts()
     result['_alerts'] = {
@@ -1390,7 +1097,7 @@ def get_analysis_summary():
 @app.route('/api/analysis/ratings', methods=['GET'])
 @api_login_required
 def get_analysis_ratings():
-    """Read Excel data and compute per-question averages and rating distributions.
+    """Compute per-question averages and rating distributions from the database.
     Query params: form_id, date_from (YYYY-MM-DD), date_to (YYYY-MM-DD), course
     """
     form_id = request.args.get('form_id', 'form1')
@@ -1403,11 +1110,6 @@ def get_analysis_ratings():
     if not form:
         return jsonify({'error': 'Form not found'}), 404
 
-    excel_path = get_excel_path(form_id)
-    if not os.path.exists(excel_path):
-        return jsonify({'questions': [], 'text_responses': [], 'total_rows': 0,
-                        'filtered_rows': 0, 'courses_available': []})
-
     try:
         dt_from = datetime.strptime(date_from_str, '%Y-%m-%d') if date_from_str else None
     except ValueError:
@@ -1417,7 +1119,7 @@ def get_analysis_ratings():
     except ValueError:
         dt_to = None
 
-    rating_q_map = {}  
+    rating_q_map = {}
     text_q_map = {}
     for section in form.get('sections', []):
         s_type = section.get('type', '')
@@ -1427,94 +1129,19 @@ def get_analysis_ratings():
             elif s_type == 'text_questions':
                 text_q_map[q['id']] = q.get('text', q['id'])
 
-    try:
-        wb = load_workbook(excel_path, read_only=True)
-        ws = wb.active
-        all_rows = list(ws.iter_rows(values_only=True))
-        wb.close()
-    except Exception as e:
-        return jsonify({'error': f'Could not read Excel: {str(e)}'}), 500
+    rows = db.get_responses_for_analysis(form_id, dt_from, dt_to, course_filter)
 
-    if len(all_rows) < 2:
+    if not rows:
+        courses_available = db.get_distinct_courses_for_form(form_id)
         return jsonify({'questions': [], 'text_responses': [], 'total_rows': 0,
-                        'filtered_rows': 0, 'courses_available': []})
-
-    headers = all_rows[0]
-    data_rows = [r for r in all_rows[1:] if any(c for c in r)]
-    date_col_idx = None
-    course_col_idx = None
-    for i, h in enumerate(headers):
-        if h is None:
-            continue
-        h_upper = str(h).upper().strip()
-        if h_upper in ('DATE', 'COURSE DATE'):
-            date_col_idx = i
-        if h_upper in ('COURSE NAME', 'COURSE TITLE'):
-            course_col_idx = i
-
-    courses_set = set()
-    if course_col_idx is not None:
-        for row in data_rows:
-            if course_col_idx < len(row) and row[course_col_idx]:
-                courses_set.add(str(row[course_col_idx]).strip())
-
-    # Filter rows
-    filtered_rows = []
-    for row in data_rows:
-        if (dt_from or dt_to) and date_col_idx is not None and date_col_idx < len(row):
-            cell = row[date_col_idx]
-            if cell:
-                rd = None
-                try:
-                    if isinstance(cell, datetime):
-                        rd = cell
-                    elif isinstance(cell, str):
-                        for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%m/%d/%Y'):
-                            try:
-                                rd = datetime.strptime(cell, fmt)
-                                break
-                            except ValueError:
-                                continue
-                except Exception:
-                    pass
-                if rd:
-                    if dt_from and rd < dt_from:
-                        continue
-                    if dt_to and rd > dt_to:
-                        continue
-        if course_filter and course_col_idx is not None and course_col_idx < len(row):
-            cell_course = str(row[course_col_idx] or '').strip()
-            if course_filter.lower() not in cell_course.lower():
-                continue
-        filtered_rows.append(row)
-
-    rating_cols = {}
-    text_cols = {}
-    for i, h in enumerate(headers):
-        if h is None:
-            continue
-        h_str = str(h)
-        q_key = h_str.split(' - ')[0].strip()
-        if q_key in rating_q_map:
-            rating_cols[i] = (q_key, rating_q_map[q_key])
-        elif q_key in text_q_map:
-            text_cols[i] = (q_key, text_q_map[q_key])
-        else:
-            if len(q_key) >= 3 and q_key[0] == 'B' and q_key[1].isdigit():
-                candidate = q_key[2:]
-                if candidate in rating_q_map:
-                    rating_cols[i] = (candidate, rating_q_map[candidate])
-            elif '.' in q_key and q_key[0] in ('A', 'B'):
-                candidate = q_key.split('.')[-1]
-                if candidate in rating_q_map:
-                    rating_cols[i] = (candidate, rating_q_map[candidate])
+                        'filtered_rows': 0, 'courses_available': courses_available})
 
     stats = {}
-    for row in filtered_rows:
-        for col_idx, (qid, qtext) in rating_cols.items():
-            if col_idx >= len(row):
-                continue
-            val = row[col_idx]
+    text_agg = {}
+    for row in rows:
+        answers = row.get('answers', {})
+        for qid, qtext in rating_q_map.items():
+            val = answers.get(qid)
             try:
                 r = int(float(str(val))) if val is not None else None
             except (ValueError, TypeError):
@@ -1526,30 +1153,27 @@ def get_analysis_ratings():
             stats[qid]['count'] += 1
             stats[qid]['total'] += r
             stats[qid]['dist'][r] += 1
+        for qid, qtext in text_q_map.items():
+            val = str(answers.get(qid, '') or '').strip()
+            if val and val.lower() not in ('none', '-', ''):
+                if qid not in text_agg:
+                    text_agg[qid] = {'text': qtext, 'responses': []}
+                text_agg[qid]['responses'].append(val)
 
     questions_out = []
     for qid, s in stats.items():
         avg = round(s['total'] / s['count'], 2) if s['count'] else 0
         questions_out.append({'id': qid, 'text': s['text'], 'count': s['count'],
                               'avg': avg, 'dist': s['dist']})
-    questions_out.sort(key=lambda x: x['avg'])  
-    text_agg = {}
-    for row in filtered_rows:
-        for col_idx, (qid, qtext) in text_cols.items():
-            if col_idx >= len(row):
-                continue
-            val = str(row[col_idx] or '').strip()
-            if val and val.lower() not in ('none', '-', ''):
-                if qid not in text_agg:
-                    text_agg[qid] = {'text': qtext, 'responses': []}
-                text_agg[qid]['responses'].append(val)
+    questions_out.sort(key=lambda x: x['avg'])
 
+    courses_available = db.get_distinct_courses_for_form(form_id)
     return jsonify({
         'questions': questions_out,
         'text_responses': list(text_agg.values()),
-        'total_rows': len(data_rows),
-        'filtered_rows': len(filtered_rows),
-        'courses_available': sorted(courses_set)
+        'total_rows': len(rows),
+        'filtered_rows': len(rows),
+        'courses_available': courses_available
     })
 
 
@@ -1571,13 +1195,8 @@ def get_analysis_text():
     if not form:
         return jsonify({'error': 'Form not found'}), 404
 
-    excel_path = get_excel_path(form_id)
-    if not os.path.exists(excel_path):
-        return jsonify({'questions': [], 'total_rows': 0,
-                        'filtered_rows': 0, 'courses_available': []})
-
     TEXT_SECTION_TYPES = {'text_questions', 'multiple_choice', 'yes_no'}
-    text_q_map = {} 
+    text_q_map = {}
     for section in form.get('sections', []):
         s_type = section.get('type', '')
         if s_type in TEXT_SECTION_TYPES:
@@ -1597,80 +1216,15 @@ def get_analysis_text():
     except ValueError:
         dt_to = None
 
-    try:
-        wb = load_workbook(excel_path, read_only=True)
-        ws = wb.active
-        all_rows = list(ws.iter_rows(values_only=True))
-        wb.close()
-    except Exception as e:
-        return jsonify({'error': f'Could not read Excel: {str(e)}'}), 500
+    rows = db.get_responses_for_analysis(form_id, dt_from, dt_to, course_filter)
 
-    if len(all_rows) < 2:
-        return jsonify({'questions': [], 'total_rows': 0,
-                        'filtered_rows': 0, 'courses_available': []})
-
-    headers = all_rows[0]
-    data_rows = [r for r in all_rows[1:] if any(c for c in r)]
-
-    date_col_idx   = None
-    course_col_idx = None
-    for i, h in enumerate(headers):
-        if h is None:
-            continue
-        h_upper = str(h).upper().strip()
-        if h_upper in ('DATE', 'COURSE DATE'):
-            date_col_idx = i
-        if h_upper in ('COURSE NAME', 'COURSE TITLE'):
-            course_col_idx = i
-
-    courses_set = set()
-    if course_col_idx is not None:
-        for row in data_rows:
-            if course_col_idx < len(row) and row[course_col_idx]:
-                courses_set.add(str(row[course_col_idx]).strip())
-
-    filtered_rows = []
-    for row in data_rows:
-        if (dt_from or dt_to) and date_col_idx is not None and date_col_idx < len(row):
-            cell = row[date_col_idx]
-            if cell:
-                rd = None
-                try:
-                    if isinstance(cell, datetime):
-                        rd = cell
-                    elif isinstance(cell, str):
-                        for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%m/%d/%Y'):
-                            try:
-                                rd = datetime.strptime(cell, fmt); break
-                            except ValueError:
-                                continue
-                except Exception:
-                    pass
-                if rd:
-                    if dt_from and rd < dt_from: continue
-                    if dt_to   and rd > dt_to:   continue
-        if course_filter and course_col_idx is not None and course_col_idx < len(row):
-            cell_course = str(row[course_col_idx] or '').strip()
-            if course_filter.lower() not in cell_course.lower():
-                continue
-        filtered_rows.append(row)
-
-    text_cols = {} 
-    for i, h in enumerate(headers):
-        if h is None:
-            continue
-        q_key = str(h).split(' - ')[0].strip()
-        if q_key in text_q_map:
-            text_cols[i] = (q_key, text_q_map[q_key])
-
-    text_agg = {} 
-    for row in filtered_rows:
-        course_val = str(row[course_col_idx] or '').strip() if course_col_idx is not None and course_col_idx < len(row) else ''
-        date_val   = str(row[date_col_idx]   or '').strip() if date_col_idx   is not None and date_col_idx   < len(row) else ''
-        for col_idx, (qid, qtext) in text_cols.items():
-            if col_idx >= len(row):
-                continue
-            val = str(row[col_idx] or '').strip()
+    text_agg = {}
+    for row in rows:
+        answers = row.get('answers', {})
+        course_val = row.get('class_code', '')
+        date_val = str(row.get('course_date', '') or '')
+        for qid, qtext in text_q_map.items():
+            val = str(answers.get(qid, '') or '').strip()
             if not val or val.lower() in ('none', '-', 'n/a', ''):
                 continue
             if qid not in text_agg:
@@ -1678,33 +1232,45 @@ def get_analysis_text():
             text_agg[qid]['responses'].append({'value': val, 'course': course_val, 'date': date_val})
 
     questions_out = list(text_agg.values())
-    q_order = {q['id']: i for i, q in enumerate(q for sec in form.get('sections', []) for q in sec.get('questions', []))}
+    q_order = {q['id']: i for i, q in enumerate(
+        q for sec in form.get('sections', []) for q in sec.get('questions', [])
+    )}
     questions_out.sort(key=lambda x: q_order.get(x['id'], 9999))
 
+    courses_available = db.get_distinct_courses_for_form(form_id)
     return jsonify({
         'questions': questions_out,
-        'total_rows': len(data_rows),
-        'filtered_rows': len(filtered_rows),
-        'courses_available': sorted(courses_set)
+        'total_rows': len(rows),
+        'filtered_rows': len(rows),
+        'courses_available': courses_available
     })
 
 
 @app.route('/api/forms', methods=['POST'])
 @api_login_required
 def create_form():
-    """Create a new custom form"""
+    """Create a new custom form. Form ID is auto-generated from the title."""
     config = load_config()
     data = request.json
-    form_id = data.get('form_id', '').strip().lower().replace(' ', '_')
-    if not form_id:
-        return jsonify({'error': 'Form ID is required'}), 400
+    title = (data.get('title') or 'New Form').strip()
+    form_id = _slugify_form_id(title)
+
+    # Check the FBS database for an existing form with this title
+    existing = db.find_form_by_title(title)
+    if existing:
+        if not existing['is_deleted']:
+            return jsonify({'error': f'A form titled "{title}" already exists.'}), 400
+        # Reuse the old form_id so historical responses are reconnected
+        form_id = existing['form_id']
+
     if form_id in config['forms']:
-        return jsonify({'error': f'Form ID "{form_id}" already exists'}), 400
+        return jsonify({'error': f'Form ID "{form_id}" already exists in config.'}), 400
+
     template_id = data.get('copy_from', '')
     if template_id and template_id in config['forms']:
         new_form = copy.deepcopy(config['forms'][template_id])
         new_form['id'] = form_id
-        new_form['title'] = data.get('title', new_form['title'])
+        new_form['title'] = title
         new_form['formNumber'] = data.get('formNumber', new_form.get('formNumber', ''))
         new_form['description'] = data.get('description', new_form.get('description', ''))
     else:
@@ -1730,7 +1296,7 @@ def create_form():
         ]
         new_form = {
             'id': form_id,
-            'title': data.get('title', 'New Form'),
+            'title': title,
             'formNumber': data.get('formNumber', ''),
             'description': data.get('description', ''),
             'headerFields': header_fields,
@@ -1748,25 +1314,36 @@ def create_form():
 
     config['forms'][form_id] = new_form
     save_config(config)
+    db.register_form(form_id, title, new_form.get('formNumber', ''), new_form.get('description', ''), new_form)
     return jsonify({'success': True, 'form': new_form})
 
 @app.route('/api/forms/<form_id>', methods=['DELETE'])
 @api_login_required
 def delete_form(form_id):
-    """Delete a custom form (built-in form1/form2 are protected)"""
+    """Delete or archive a form. Forms with response data are archived (soft-deleted)
+    so that historical responses are never lost. Forms without data are hard-deleted."""
     if form_id in ('form1', 'form2'):
         return jsonify({'error': 'Cannot delete built-in forms'}), 400
     config = load_config()
     if form_id not in config['forms']:
         return jsonify({'error': 'Form not found'}), 404
-    del config['forms'][form_id]
-    save_config(config)
-    return jsonify({'success': True})
+
+    if db.form_has_responses(form_id):
+        db.soft_delete_form(form_id)
+        config['forms'][form_id]['is_archived'] = True
+        save_config(config)
+        return jsonify({
+            'success': True,
+            'archived': True,
+            'message': 'Form archived — all responses are preserved in the database.'
+        })
+    else:
+        del config['forms'][form_id]
+        save_config(config)
+        return jsonify({'success': True, 'archived': False})
 
 if __name__ == '__main__':
     print("Checking for expired course links...")
     clean_expired_courses()
-    config = load_config()
-    for form_id in config['forms']:
-        init_excel(form_id)
+    db.init_fbs_tables()
     app.run(debug=True, host='0.0.0.0', port=5000)
