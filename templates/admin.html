@@ -1862,7 +1862,6 @@
                 const result = await resp.json();
                 if (result.success) {
                     if (result.archived) {
-                        // Form has data — mark it as archived in the UI rather than removing it
                         ['editFormSelect', 'formSelect'].forEach(id => {
                             const sel = document.getElementById(id);
                             for (let i = sel.options.length - 1; i >= 0; i--) {

@@ -13,17 +13,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# -- Connection settings -------------------------------------------------------
 DB_SERVER   = os.getenv('DB_SERVER',   '10.64.2.18')
 DB_USERNAME = os.getenv('DB_USERNAME', 'moodleLMSAdmin')
 DB_PASSWORD = os.getenv('DB_PASSWORD', '')
 
-# AKC_NAV -- participant / course data
+# AKC_NAV - participant / course data
 DB_NAV_DATABASE  = os.getenv('DB_DATABASE',     'AKC_NAV')
 COURSE_TABLE      = '[Absolute Kinetics Consultancy$Course]'
 PARTICIPANT_TABLE = '[Absolute Kinetics Consultancy$Course Participant]'
 
-# AKC_FBS -- feedback storage
+# AKC_FBS - feedback storage
 DB_FBS_DATABASE = os.getenv('DB_FBS_DATABASE', 'AKC_FBS')
 
 _CONN_TMPL = (
@@ -70,9 +69,6 @@ def test_connection():
             results[label] = 'Could not connect'
     ok = all(v == 'OK' for v in results.values())
     return ok, ' | '.join(f'{k}: {v}' for k, v in results.items())
-
-
-# -- AKC_FBS table initialisation ---------------------------------------------
 
 def init_fbs_tables():
     """Create FBS_Forms and FBS_Responses tables if they do not exist."""
@@ -124,9 +120,6 @@ def init_fbs_tables():
         return True, "Tables ready"
     except Exception as e:
         return False, f"Error initialising tables: {e}"
-
-
-# -- FBS_Forms registry -------------------------------------------------------
 
 def register_form(form_id, form_title, form_number, description, config_dict):
     """
@@ -219,9 +212,6 @@ def form_has_responses(form_id):
         print(f"Error checking form responses: {e}")
         return False
 
-
-# -- Response storage ---------------------------------------------------------
-
 def has_submitted_db(course_id, id_number):
     """Return True if a response already exists for (course_id, id_number)."""
     conn = get_fbs_connection()
@@ -239,7 +229,6 @@ def has_submitted_db(course_id, id_number):
     except Exception as e:
         print(f"Error checking submission: {e}")
         return False
-
 
 def get_submitted_ids_for_courses(course_ids):
     """
@@ -314,9 +303,6 @@ def save_response_to_db(form_id, course_id, course, participant_name, id_number,
     except Exception as e:
         print(f"Error saving response to DB: {e}")
         return False
-
-
-# -- Analysis queries ---------------------------------------------------------
 
 def get_response_count_by_form():
     """Return {form_id: count} for all forms with at least one response."""
@@ -407,9 +393,6 @@ def get_distinct_courses_for_form(form_id):
     except Exception as e:
         print(f"Error fetching distinct courses: {e}")
         return []
-
-
-# -- AKC_NAV: course / participant functions -----------------------------------
 
 def get_courses_from_db(search_term=None, limit=50):
     """Fetch courses from AKC_NAV. Returns list of dicts with code and description."""

@@ -1254,13 +1254,10 @@ def create_form():
     data = request.json
     title = (data.get('title') or 'New Form').strip()
     form_id = _slugify_form_id(title)
-
-    # Check the FBS database for an existing form with this title
     existing = db.find_form_by_title(title)
     if existing:
         if not existing['is_deleted']:
             return jsonify({'error': f'A form titled "{title}" already exists.'}), 400
-        # Reuse the old form_id so historical responses are reconnected
         form_id = existing['form_id']
 
     if form_id in config['forms']:
