@@ -295,6 +295,7 @@
                             <button class="btn btn-danger btn-sm" onclick="deleteSelectedForm()" id="deleteFormBtn" title="Delete this custom form">Delete Form</button>
                         </div>
                     </div>
+                    <div id="formTableStatus" style="margin-bottom:10px; padding:8px 12px; border-radius:6px; font-size:13px; display:none;"></div>
                     <div id="formEditor"></div>
                 </div>
             </div>
@@ -1295,8 +1296,63 @@
                 currentFormData = await response.json();
                 originalFormData = JSON.parse(JSON.stringify(currentFormData));
                 renderFormEditor();
+                checkFormTableStatus(currentFormId);
             } catch (error) {
                 alert('Error loading form data');
+            }
+        }
+
+        async function checkFormTableStatus(formId) {
+            const statusDiv = document.getElementById('formTableStatus');
+            if (!statusDiv) return;
+            try {
+                const res = await fetch(`/api/forms/${formId}/table-status`);
+                const data = await res.json();
+                if (data.exists) {
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.background = '#eaffea';
+                    statusDiv.style.border = '1px solid #a3d9a3';
+                    statusDiv.style.color = '#2a6a2a';
+                    statusDiv.innerHTML = `&#9989; Response table exists: <code>${data.table}</code>`;
+                } else {
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.background = '#fff8e1';
+                    statusDiv.style.border = '1px solid #ffd54f';
+                    statusDiv.style.color = '#7a5c00';
+                    statusDiv.innerHTML = `&#9888;&#65039; Response table not created yet: <code>${data.table}</code>
+                        &nbsp;<button class="btn btn-sm" style="background:#ff9800;color:#fff;padding:3px 10px;font-size:12px;"
+                            onclick="createFormResponseTable('${formId}')">Create Response Table</button>`;
+                }
+            } catch(e) {
+                statusDiv.style.display = 'none';
+            }
+        }
+
+        async function createFormResponseTable(formId) {
+            const statusDiv = document.getElementById('formTableStatus');
+            if (statusDiv) {
+                statusDiv.style.background = '#f0f4ff';
+                statusDiv.style.border = '1px solid #bbd0ff';
+                statusDiv.style.color = '#333';
+                statusDiv.innerHTML = '&#8987; Creating response table...';
+            }
+            try {
+                const res = await fetch(`/api/forms/${formId}/create-table`, {method: 'POST'});
+                const data = await res.json();
+                if (data.success) {
+                    if (statusDiv) {
+                        statusDiv.style.background = '#eaffea';
+                        statusDiv.style.border = '1px solid #a3d9a3';
+                        statusDiv.style.color = '#2a6a2a';
+                        statusDiv.innerHTML = `&#9989; ${data.message} &nbsp;<code>${data.table}</code>`;
+                    }
+                } else {
+                    alert('Error: ' + (data.message || 'Could not create table'));
+                    checkFormTableStatus(formId);
+                }
+            } catch(e) {
+                alert('Network error creating table');
+                checkFormTableStatus(formId);
             }
         }
 

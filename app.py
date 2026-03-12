@@ -283,7 +283,12 @@ def _norm_id(id_number):
 
 def has_submitted(course_id, identifier):
     """Check if a student (by ID number) has already submitted for this course."""
-    return db.has_submitted_db(course_id, identifier)
+    config = load_config()
+    course = next((c for c in config.get('courses', []) if c['id'] == course_id), None)
+    form_id = (course or {}).get('form_id', '')
+    form_config = config['forms'].get(form_id, {})
+    form_title = form_config.get('title', form_id)
+    return db.has_submitted_db(course_id, identifier, form_title)
 
 def load_config():
     """Load configuration from JSON file"""
@@ -340,12 +345,14 @@ def save_response(form_id, course_id, data):
     """Save form response to AKC_FBS database."""
     config = load_config()
     course = next((c for c in config['courses'] if c['id'] == course_id), None)
+    form_config = config['forms'].get(form_id, {})
+    form_title  = form_config.get('title', form_id)
     participant_name = data.get('name', '')
     position         = data.get('position', '')
     id_number        = data.get('id_number', '')
     ok = db.save_response_to_db(
         form_id, course_id, course or {},
-        participant_name, id_number, position, data)
+        participant_name, id_number, position, data, form_title, form_config)
     if not ok:
         print(f"Warning: Could not save response to AKC_FBS for form_id={form_id}")
 
@@ -608,12 +615,17 @@ def get_participants():
 
     config = load_config()
     class_code_norm = class_code.strip().upper()
-    matching_course_ids = [
-        c['id'] for c in config.get('courses', [])
+    matching_courses = [
+        c for c in config.get('courses', [])
         if c.get('course_title', '').strip().upper() == class_code_norm
     ]
+    matching_course_ids = [c['id'] for c in matching_courses]
+    form_titles = list({
+        config['forms'].get(c.get('form_id', ''), {}).get('title', c.get('form_id', ''))
+        for c in matching_courses
+    })
 
-    submitted_ids = db.get_submitted_ids_for_courses(matching_course_ids)
+    submitted_ids = db.get_submitted_ids_for_courses(matching_course_ids, form_titles)
 
     for p in result.get('participants', []):
         id_norm = _norm_id(p.get('id_number', ''))
@@ -638,9 +650,44 @@ def update_survey_sent():
 @app.route('/api/db/create-tables', methods=['POST'])
 @api_login_required
 def create_tables():
-    """Create feedback tables in database"""
-    success, message = db.create_feedback_tables()
-    return jsonify({'success': success, 'message': message})
+    """Ensure FBS_Forms and per-form response tables exist in AKC_FBS."""
+    config = load_config()
+    ok_base, msg_base = db.init_fbs_tables()
+    results = {'FBS_Forms': msg_base}
+    for form_id, form in config['forms'].items():
+        if not form.get('is_archived'):
+            ok, msg = db.create_form_response_table(form.get('title', form_id), form)
+            results[form_id] = msg
+    all_ok = ok_base and all('Error' not in m for m in results.values())
+    return jsonify({'success': all_ok, 'message': ' | '.join(f"{k}: {v}" for k, v in results.items())})
+
+
+@app.route('/api/forms/<form_id>/create-table', methods=['POST'])
+@api_login_required
+def create_form_table(form_id):
+    """Create (or verify) the per-form response table for the given form."""
+    config = load_config()
+    form = config['forms'].get(form_id)
+    if not form:
+        return jsonify({'error': 'Form not found'}), 404
+    form_title = form.get('title', form_id)
+    ok, message = db.create_form_response_table(form_title, form)
+    return jsonify({'success': ok, 'message': message,
+                    'table': db._get_table_name(form_title)})
+
+
+@app.route('/api/forms/<form_id>/table-status', methods=['GET'])
+@api_login_required
+def form_table_status(form_id):
+    """Return whether the per-form response table already exists."""
+    config = load_config()
+    form = config['forms'].get(form_id)
+    if not form:
+        return jsonify({'error': 'Form not found'}), 404
+    form_title = form.get('title', form_id)
+    table_name = db._get_table_name(form_title)
+    exists = db.form_table_exists(form_title)
+    return jsonify({'exists': exists, 'table': table_name})
 
 @app.route('/api/db/course-dates', methods=['GET'])
 @api_login_required
@@ -1080,7 +1127,7 @@ def batch_delete_alerts():
 def get_analysis_summary():
     """Return high-level collection stats: total responses per form + alert counts."""
     config = load_config()
-    counts = db.get_response_count_by_form()
+    counts = db.get_response_count_by_form(config['forms'])
     result = {}
     for form_id, form in config['forms'].items():
         result[form_id] = {
@@ -1123,16 +1170,30 @@ def get_analysis_ratings():
     text_q_map = {}
     for section in form.get('sections', []):
         s_type = section.get('type', '')
-        for q in section.get('questions', []):
-            if s_type in ('rating', 'instructor_rating', 'assessor_rating'):
+        questions = section.get('questions', [])
+        if s_type == 'instructor_rating':
+            max_inst = section.get('maxInstructors', 3)
+            for i in range(1, max_inst + 1):
+                for q in questions:
+                    col = f"B{i}_{q['id']}"
+                    rating_q_map[col] = f"Instructor {i}: {q.get('text', q['id'])}"
+        elif s_type == 'assessor_rating':
+            max_assess = section.get('maxAssessors', 2)
+            for i in range(1, max_assess + 1):
+                for q in questions:
+                    col = f"A{i}_{q['id']}"
+                    rating_q_map[col] = f"Assessor {i}: {q.get('text', q['id'])}"
+        elif s_type == 'rating':
+            for q in questions:
                 rating_q_map[q['id']] = q.get('text', q['id'])
-            elif s_type == 'text_questions':
+        elif s_type == 'text_questions':
+            for q in questions:
                 text_q_map[q['id']] = q.get('text', q['id'])
 
-    rows = db.get_responses_for_analysis(form_id, dt_from, dt_to, course_filter)
+    rows = db.get_responses_for_analysis(form_id, form, dt_from, dt_to, course_filter)
 
     if not rows:
-        courses_available = db.get_distinct_courses_for_form(form_id)
+        courses_available = db.get_distinct_courses_for_form(form_id, form)
         return jsonify({'questions': [], 'text_responses': [], 'total_rows': 0,
                         'filtered_rows': 0, 'courses_available': courses_available})
 
@@ -1167,7 +1228,7 @@ def get_analysis_ratings():
                               'avg': avg, 'dist': s['dist']})
     questions_out.sort(key=lambda x: x['avg'])
 
-    courses_available = db.get_distinct_courses_for_form(form_id)
+    courses_available = db.get_distinct_courses_for_form(form_id, form)
     return jsonify({
         'questions': questions_out,
         'text_responses': list(text_agg.values()),
@@ -1216,7 +1277,7 @@ def get_analysis_text():
     except ValueError:
         dt_to = None
 
-    rows = db.get_responses_for_analysis(form_id, dt_from, dt_to, course_filter)
+    rows = db.get_responses_for_analysis(form_id, form, dt_from, dt_to, course_filter)
 
     text_agg = {}
     for row in rows:
@@ -1237,7 +1298,7 @@ def get_analysis_text():
     )}
     questions_out.sort(key=lambda x: q_order.get(x['id'], 9999))
 
-    courses_available = db.get_distinct_courses_for_form(form_id)
+    courses_available = db.get_distinct_courses_for_form(form_id, form)
     return jsonify({
         'questions': questions_out,
         'total_rows': len(rows),
@@ -1325,7 +1386,8 @@ def delete_form(form_id):
     if form_id not in config['forms']:
         return jsonify({'error': 'Form not found'}), 404
 
-    if db.form_has_responses(form_id):
+    form_title = config['forms'].get(form_id, {}).get('title', form_id)
+    if db.form_has_responses(form_id, form_title):
         db.soft_delete_form(form_id)
         config['forms'][form_id]['is_archived'] = True
         save_config(config)
@@ -1343,4 +1405,9 @@ if __name__ == '__main__':
     print("Checking for expired course links...")
     clean_expired_courses()
     db.init_fbs_tables()
+    _cfg = load_config()
+    for _fid, _form in _cfg['forms'].items():
+        if not _form.get('is_archived'):
+            _ok, _msg = db.create_form_response_table(_form.get('title', _fid), _form)
+            print(f"  [{_form.get('title', _fid)}]: {_msg}")
     app.run(debug=True, host='0.0.0.0', port=5000)

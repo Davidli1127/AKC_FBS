@@ -6,6 +6,7 @@ AKC_FBS  -- feedback form registry (FBS_Forms) and responses (FBS_Responses).
 """
 
 import os
+import re
 import json
 import pyodbc
 from datetime import datetime, timedelta
@@ -70,8 +71,120 @@ def test_connection():
     ok = all(v == 'OK' for v in results.values())
     return ok, ' | '.join(f'{k}: {v}' for k, v in results.items())
 
+# ---------------------------------------------------------------------------
+# Per-form response table helpers
+# ---------------------------------------------------------------------------
+
+def _get_table_name(form_title):
+    """Convert form title to a SQL table name.
+    e.g. 'TRAINER EVALUATION FORM' -> 'trainer_evaluation_form_response'
+    """
+    slug = re.sub(r'[^a-zA-Z0-9]+', '_', form_title.strip().lower()).strip('_')
+    return f"{slug}_response"
+
+
+_FIXED_COLUMNS_SQL = """\
+    [id]               INT           IDENTITY(1,1) NOT NULL,
+    [submission_time]  DATETIME      NOT NULL DEFAULT GETDATE(),
+    [course_id]        NVARCHAR(100) NULL,
+    [course_title]     NVARCHAR(500) NULL,
+    [course_date]      NVARCHAR(50)  NULL,
+    [venue]            NVARCHAR(200) NULL,
+    [participant_name] NVARCHAR(200) NULL,
+    [id_number]        NVARCHAR(100) NULL,
+    [position_title]   NVARCHAR(200) NULL,
+    [instructor1_name] NVARCHAR(200) NULL,
+    [instructor2_name] NVARCHAR(200) NULL,
+    [instructor3_name] NVARCHAR(200) NULL,
+    [assessor1_name]   NVARCHAR(200) NULL,
+    [assessor2_name]   NVARCHAR(200) NULL"""
+
+
+def _get_form_columns(form_config):
+    """
+    Return list of (col_name, sql_type) for all question columns derived from
+    the form config sections.
+
+    instructor_rating  -> B{n}_{q_id} INT, B{n}_{q_id}_comment NVARCHAR(500)
+    assessor_rating    -> A{n}_{q_id} INT, A{n}_{q_id}_comment NVARCHAR(500)
+    rating             -> {q_id} INT,      {q_id}_comment NVARCHAR(500)
+    text/mc/yes_no     -> {q_id} NVARCHAR(MAX)
+    """
+    cols = []
+    for section in form_config.get('sections', []):
+        s_type    = section.get('type', '')
+        questions = section.get('questions', [])
+        if s_type == 'instructor_rating':
+            max_inst = section.get('maxInstructors', 3)
+            for i in range(1, max_inst + 1):
+                for q in questions:
+                    col = f"B{i}_{q['id']}"
+                    cols.append((col, 'INT NULL'))
+                    cols.append((f"{col}_comment", 'NVARCHAR(500) NULL'))
+        elif s_type == 'assessor_rating':
+            max_assess = section.get('maxAssessors', 2)
+            for i in range(1, max_assess + 1):
+                for q in questions:
+                    col = f"A{i}_{q['id']}"
+                    cols.append((col, 'INT NULL'))
+                    cols.append((f"{col}_comment", 'NVARCHAR(500) NULL'))
+        elif s_type == 'rating':
+            for q in questions:
+                cols.append((q['id'], 'INT NULL'))
+                cols.append((f"{q['id']}_comment", 'NVARCHAR(500) NULL'))
+        elif s_type in ('text_questions', 'multiple_choice', 'yes_no'):
+            for q in questions:
+                cols.append((q['id'], 'NVARCHAR(MAX) NULL'))
+    return cols
+
+
+def create_form_response_table(form_title, form_config):
+    """Create the per-form response table in AKC_FBS if it does not already exist."""
+    table = _get_table_name(form_title)
+    conn  = get_fbs_connection()
+    if not conn:
+        return False, "Could not connect to AKC_FBS"
+    try:
+        cur    = conn.cursor()
+        q_cols = _get_form_columns(form_config)
+        q_col_sql = '\n'.join(
+            f'    [{col}] {sql_type},' for col, sql_type in q_cols
+        )
+        sql = f"""IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='{table}' AND xtype='U')
+CREATE TABLE [{table}] (
+{_FIXED_COLUMNS_SQL},
+{q_col_sql}
+    CONSTRAINT [PK_{table}] PRIMARY KEY ([id])
+)"""
+        cur.execute(sql)
+        conn.commit()
+        conn.close()
+        return True, f"Table [{table}] is ready."
+    except Exception as e:
+        print(f"Error creating table {table}: {e}")
+        return False, str(e)
+
+
+def form_table_exists(form_title):
+    """Return True if the per-form response table exists in AKC_FBS."""
+    table = _get_table_name(form_title)
+    conn  = get_fbs_connection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT COUNT(*) FROM sysobjects WHERE name=? AND xtype='U'",
+            (table,))
+        exists = cur.fetchone()[0] > 0
+        conn.close()
+        return exists
+    except Exception:
+        return False
+
+
 def init_fbs_tables():
-    """Create FBS_Forms and FBS_Responses tables if they do not exist."""
+    """Create the FBS_Forms registry table if it does not exist."""
     conn = get_fbs_connection()
     if not conn:
         return False, "Could not connect to AKC_FBS"
@@ -92,34 +205,11 @@ def init_fbs_tables():
                 CONSTRAINT PK_FBS_Forms PRIMARY KEY (form_id)
             )
         """)
-        cur.execute("""
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='FBS_Responses' AND xtype='U')
-            CREATE TABLE FBS_Responses (
-                response_id      INT IDENTITY(1,1) NOT NULL,
-                form_id          NVARCHAR(100) NOT NULL,
-                course_id        NVARCHAR(100) NOT NULL,
-                class_code       NVARCHAR(100) NULL,
-                course_title     NVARCHAR(500) NULL,
-                course_date      NVARCHAR(50)  NULL,
-                venue            NVARCHAR(200) NULL,
-                submitted_at     DATETIME NOT NULL DEFAULT GETDATE(),
-                participant_name NVARCHAR(200) NULL,
-                id_number        NVARCHAR(100) NULL,
-                position_title   NVARCHAR(200) NULL,
-                instructor1_name NVARCHAR(200) NULL,
-                instructor2_name NVARCHAR(200) NULL,
-                instructor3_name NVARCHAR(200) NULL,
-                assessor1_name   NVARCHAR(200) NULL,
-                assessor2_name   NVARCHAR(200) NULL,
-                answers_json     NVARCHAR(MAX) NULL,
-                CONSTRAINT PK_FBS_Responses PRIMARY KEY (response_id)
-            )
-        """)
         conn.commit()
         conn.close()
-        return True, "Tables ready"
+        return True, "FBS_Forms ready."
     except Exception as e:
-        return False, f"Error initialising tables: {e}"
+        return False, f"Error initialising FBS_Forms: {e}"
 
 def register_form(form_id, form_title, form_number, description, config_dict):
     """
@@ -197,72 +287,83 @@ def find_form_by_title(form_title):
         return None
 
 
-def form_has_responses(form_id):
-    """Return True if FBS_Responses has at least one row for this form_id."""
-    conn = get_fbs_connection()
+def form_has_responses(form_id, form_title):
+    """Return True if the per-form response table has at least one row."""
+    table = _get_table_name(form_title)
+    conn  = get_fbs_connection()
     if not conn:
         return False
     try:
         cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM FBS_Responses WHERE form_id = ?", (form_id,))
-        row = cur.fetchone()
+        cur.execute(f"SELECT TOP 1 1 FROM [{table}]")
+        has_row = cur.fetchone() is not None
         conn.close()
-        return bool(row and row[0] > 0)
-    except Exception as e:
-        print(f"Error checking form responses: {e}")
+        return has_row
+    except Exception:
         return False
 
-def has_submitted_db(course_id, id_number):
-    """Return True if a response already exists for (course_id, id_number)."""
-    conn = get_fbs_connection()
+def has_submitted_db(course_id, id_number, form_title):
+    """Return True if a response already exists in the form's per-form table."""
+    table = _get_table_name(form_title)
+    conn  = get_fbs_connection()
     if not conn:
         return False
     try:
         cur = conn.cursor()
         cur.execute(
-            "SELECT COUNT(*) FROM FBS_Responses "
+            f"SELECT COUNT(*) FROM [{table}] "
             "WHERE course_id = ? AND UPPER(LTRIM(RTRIM(id_number))) = ?",
             (course_id, id_number.strip().upper()))
         row = cur.fetchone()
         conn.close()
         return bool(row and row[0] > 0)
     except Exception as e:
-        print(f"Error checking submission: {e}")
+        print(f"Error checking submission in [{table}]: {e}")
         return False
 
-def get_submitted_ids_for_courses(course_ids):
+def get_submitted_ids_for_courses(course_ids, form_titles):
     """
     Return a set of normalised id_numbers that have already submitted
-    for any of the given course_ids.
+    for any of the given course_ids, checking all relevant per-form tables.
     """
-    if not course_ids:
+    if not course_ids or not form_titles:
         return set()
     conn = get_fbs_connection()
     if not conn:
         return set()
+    ids = set()
     try:
         cur = conn.cursor()
         ph  = ','.join('?' for _ in course_ids)
-        cur.execute(
-            f"SELECT UPPER(LTRIM(RTRIM(id_number))) FROM FBS_Responses "
-            f"WHERE course_id IN ({ph})",
-            list(course_ids))
-        ids = {r[0] for r in cur.fetchall() if r[0]}
+        for form_title in set(form_titles):
+            table = _get_table_name(form_title)
+            try:
+                cur.execute(
+                    f"SELECT UPPER(LTRIM(RTRIM(id_number))) FROM [{table}] "
+                    f"WHERE course_id IN ({ph})",
+                    list(course_ids))
+                ids.update(r[0] for r in cur.fetchall() if r[0])
+            except Exception:
+                pass  # Table may not exist yet
         conn.close()
         return ids
     except Exception as e:
         print(f"Error fetching submitted IDs: {e}")
-        return set()
+        return ids
 
 
-def save_response_to_db(form_id, course_id, course, participant_name, id_number, position, data):
+def save_response_to_db(form_id, course_id, course, participant_name,
+                        id_number, position, data, form_title, form_config):
     """
-    Insert one response row into FBS_Responses.
-    course  : dict from config courses -- provides course_title, course_date,
-              classroom / assessment_location, instructors, assessors.
-    data    : dict of all submitted answers {question_id: value}.
+    Insert one response into the per-form response table.
+    course      : course dict (course_title, course_date, classroom/venue,
+                  instructors, assessors).
+    data        : raw submitted dict from the form.
+    form_title  : used to derive the table name.
+    form_config : used to build the column list.
     """
-    conn = get_fbs_connection()
+    table = _get_table_name(form_title)
+    conn  = get_fbs_connection()
     if not conn:
         return False
     try:
@@ -272,21 +373,18 @@ def save_response_to_db(form_id, course_id, course, participant_name, id_number,
         venue       = (course.get('classroom') or
                        course.get('assessment_location') or
                        course.get('venue') or '')
-        cur.execute("""
-            INSERT INTO FBS_Responses (
-                form_id, course_id, class_code, course_title, course_date,
-                venue, submitted_at, participant_name, id_number, position_title,
-                instructor1_name, instructor2_name, instructor3_name,
-                assessor1_name, assessor2_name, answers_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            form_id,
+
+        fixed_col_names = [
+            'course_id', 'course_title', 'course_date', 'venue',
+            'participant_name', 'id_number', 'position_title',
+            'instructor1_name', 'instructor2_name', 'instructor3_name',
+            'assessor1_name',   'assessor2_name',
+        ]
+        fixed_vals = [
             course_id,
-            course.get('course_title', ''),
             course.get('course_title', ''),
             course.get('course_date', ''),
             venue,
-            datetime.now(),
             participant_name or '',
             (id_number or '').strip().upper(),
             position or '',
@@ -295,103 +393,141 @@ def save_response_to_db(form_id, course_id, course, participant_name, id_number,
             instructors[2] if len(instructors) > 2 else None,
             assessors[0]   if len(assessors)   > 0 else None,
             assessors[1]   if len(assessors)   > 1 else None,
-            json.dumps(data, ensure_ascii=False),
-        ))
+        ]
+
+        q_cols      = _get_form_columns(form_config)
+        q_col_names = [col for col, _ in q_cols]
+        q_vals      = []
+        for col, sql_type in q_cols:
+            val = data.get(col)
+            if val is not None and 'INT' in sql_type:
+                try:
+                    val = int(val)
+                except (ValueError, TypeError):
+                    val = None
+            elif val is not None:
+                val = str(val)
+            q_vals.append(val)
+
+        all_col_names = fixed_col_names + q_col_names
+        all_vals      = fixed_vals + q_vals
+        cols_sql      = ', '.join(f'[{c}]' for c in all_col_names)
+        params_sql    = ', '.join('?' for _ in all_vals)
+
+        cur.execute(
+            f"INSERT INTO [{table}] ({cols_sql}) VALUES ({params_sql})",
+            all_vals)
         conn.commit()
         conn.close()
         return True
     except Exception as e:
-        print(f"Error saving response to DB: {e}")
+        print(f"Error saving response to [{table}]: {e}")
         return False
 
-def get_response_count_by_form():
-    """Return {form_id: count} for all forms with at least one response."""
-    conn = get_fbs_connection()
+def get_response_count_by_form(forms_dict):
+    """Return {form_id: count} by querying each form's per-form response table."""
+    result = {}
+    conn   = get_fbs_connection()
     if not conn:
-        return {}
+        return result
     try:
         cur = conn.cursor()
-        cur.execute("SELECT form_id, COUNT(*) FROM FBS_Responses GROUP BY form_id")
-        result = {r[0]: r[1] for r in cur.fetchall()}
+        for form_id, form_config in forms_dict.items():
+            table = _get_table_name(form_config.get('title', form_id))
+            try:
+                cur.execute(f"SELECT COUNT(*) FROM [{table}]")
+                result[form_id] = cur.fetchone()[0]
+            except Exception:
+                result[form_id] = 0
         conn.close()
         return result
     except Exception as e:
         print(f"Error counting responses: {e}")
-        return {}
+        return result
 
 
-def get_responses_for_analysis(form_id, date_from=None, date_to=None, course_filter=None):
+def get_responses_for_analysis(form_id, form_config, date_from=None, date_to=None, course_filter=None):
     """
-    Return a list of response dicts for analysis.
-    Each dict: class_code, course_date, submitted_at, instructor1-3, assessor1-2, answers.
+    Return response rows from the per-form table for analysis.
+    Each row: class_code, course_title, course_date, submitted_at,
+              instructor1..3_name, assessor1..2_name, answers (col→val dict).
     """
-    conn = get_fbs_connection()
+    table  = _get_table_name(form_config.get('title', form_id))
+    conn   = get_fbs_connection()
     if not conn:
         return []
     try:
         cur    = conn.cursor()
-        where  = ["form_id = ?"]
-        params = [form_id]
+        where  = ['1=1']
+        params = []
         if date_from:
-            where.append("submitted_at >= ?")
+            where.append('submission_time >= ?')
             params.append(date_from)
         if date_to:
-            where.append("submitted_at < ?")
+            where.append('submission_time < ?')
             params.append(date_to + timedelta(days=1))
         if course_filter:
-            where.append("(class_code LIKE ? OR course_title LIKE ?)")
+            where.append('(course_id LIKE ? OR course_title LIKE ?)')
             params.extend([f'%{course_filter}%', f'%{course_filter}%'])
+
+        q_cols      = _get_form_columns(form_config)
+        q_col_names = [col for col, _ in q_cols]
+        q_col_sql   = (', ' + ', '.join(f'[{c}]' for c in q_col_names)) if q_col_names else ''
+
         cur.execute(f"""
-            SELECT class_code, course_title, course_date, submitted_at,
+            SELECT course_id, course_title, course_date, submission_time,
                    instructor1_name, instructor2_name, instructor3_name,
-                   assessor1_name, assessor2_name, answers_json
-            FROM FBS_Responses
+                   assessor1_name, assessor2_name{q_col_sql}
+            FROM [{table}]
             WHERE {' AND '.join(where)}
-            ORDER BY submitted_at DESC
+            ORDER BY submission_time DESC
         """, params)
+
+        fixed_keys = ['course_id', 'course_title', 'course_date', 'submission_time',
+                      'instructor1_name', 'instructor2_name', 'instructor3_name',
+                      'assessor1_name', 'assessor2_name']
+        all_keys   = fixed_keys + q_col_names
         rows = []
         for r in cur.fetchall():
-            try:
-                answers = json.loads(r[9]) if r[9] else {}
-            except (json.JSONDecodeError, TypeError):
-                answers = {}
-            raw = r[3]
+            row_dict = dict(zip(all_keys, r))
+            answers  = {col: row_dict.pop(col) for col in q_col_names}
+            raw      = row_dict.get('submission_time')
             date_str = raw.strftime('%Y-%m-%d') if isinstance(raw, datetime) else str(raw or '')[:10]
             rows.append({
-                'class_code':   str(r[0] or '').strip(),
-                'course_title': str(r[1] or '').strip(),
-                'course_date':  str(r[2] or '').strip() or date_str,
+                'class_code':   str(row_dict.get('course_id',    '') or '').strip(),
+                'course_title': str(row_dict.get('course_title', '') or '').strip(),
+                'course_date':  str(row_dict.get('course_date',  '') or '').strip() or date_str,
                 'submitted_at': date_str,
-                'instructor1':  str(r[4] or ''),
-                'instructor2':  str(r[5] or ''),
-                'instructor3':  str(r[6] or ''),
-                'assessor1':    str(r[7] or ''),
-                'assessor2':    str(r[8] or ''),
+                'instructor1':  str(row_dict.get('instructor1_name') or ''),
+                'instructor2':  str(row_dict.get('instructor2_name') or ''),
+                'instructor3':  str(row_dict.get('instructor3_name') or ''),
+                'assessor1':    str(row_dict.get('assessor1_name')   or ''),
+                'assessor2':    str(row_dict.get('assessor2_name')   or ''),
                 'answers':      answers,
             })
         conn.close()
         return rows
     except Exception as e:
-        print(f"Error fetching responses for analysis: {e}")
+        print(f"Error fetching responses from [{table}]: {e}")
         return []
 
 
-def get_distinct_courses_for_form(form_id):
-    """Return sorted list of distinct class_code values for a form."""
-    conn = get_fbs_connection()
+def get_distinct_courses_for_form(form_id, form_config):
+    """Return sorted list of distinct course_id values in the per-form table."""
+    table = _get_table_name(form_config.get('title', form_id))
+    conn  = get_fbs_connection()
     if not conn:
         return []
     try:
         cur = conn.cursor()
         cur.execute(
-            "SELECT DISTINCT class_code FROM FBS_Responses "
-            "WHERE form_id = ? AND class_code IS NOT NULL ORDER BY class_code",
-            (form_id,))
+            f"SELECT DISTINCT course_id FROM [{table}] "
+            "WHERE course_id IS NOT NULL ORDER BY course_id")
         codes = [str(r[0]).strip() for r in cur.fetchall() if r[0]]
         conn.close()
-        return codes
+        return sorted(codes)
     except Exception as e:
-        print(f"Error fetching distinct courses: {e}")
+        print(f"Error fetching distinct courses from [{table}]: {e}")
         return []
 
 def get_courses_from_db(search_term=None, limit=50):

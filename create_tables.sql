@@ -1,11 +1,3 @@
--- ============================================================
--- AKC_FBS Database Setup Script
--- Run this ENTIRE script inside the AKC_FBS database in SSMS
--- (Right-click AKC_FBS → New Query, paste, then Execute)
--- ============================================================
-
--- FBS_Forms: Registry of all feedback forms, including deleted ones.
--- Deleting a form from the UI only sets is_deleted = 1; data is never removed.
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name = 'FBS_Forms' AND xtype = 'U')
 CREATE TABLE FBS_Forms (
     form_id      NVARCHAR(100) NOT NULL,
@@ -20,8 +12,6 @@ CREATE TABLE FBS_Forms (
     CONSTRAINT PK_FBS_Forms PRIMARY KEY (form_id)
 );
 
--- FBS_Responses: All participant feedback, structured with common columns
--- plus answers_json for question-specific data (supports any dynamic form).
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name = 'FBS_Responses' AND xtype = 'U')
 CREATE TABLE FBS_Responses (
     response_id      INT           IDENTITY(1,1) NOT NULL,
@@ -48,12 +38,6 @@ CREATE INDEX IX_FBS_Responses_form_id    ON FBS_Responses (form_id);
 CREATE INDEX IX_FBS_Responses_course_id  ON FBS_Responses (course_id);
 CREATE INDEX IX_FBS_Responses_submitted  ON FBS_Responses (submitted_at);
 CREATE INDEX IX_FBS_Responses_id_number  ON FBS_Responses (id_number);
-
--- ============================================================
--- Legacy tables below are kept for reference only.
--- New responses go into FBS_Responses above, not these tables.
--- ============================================================
-
 CREATE TABLE Feedback_Form1 (
     id INT IDENTITY(1,1) PRIMARY KEY,
     submission_time DATETIME DEFAULT GETDATE(),
