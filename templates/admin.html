@@ -1278,8 +1278,6 @@
                 const res = await fetch(`/api/courses/${courseId}`, { method: 'DELETE' });
                 const result = await res.json();
                 if (result.success) {
-                    const li = document.getElementById(`course-${courseId}`);
-                    if (li) li.remove();
                     document.getElementById('courseList').innerHTML = '<li class="course-item" id="noCourses" style="display:none;"><p>No QR codes generated yet.</p></li>';
                     loadCoursesOnStartup();
                 }
@@ -1378,8 +1376,8 @@
                 html += `
                     <div class="card" style="margin-top: 20px;">
                         <div class="card-header">
-                            ${section.id} - ${section.title || 'Questions'}
-                            <span style="font-size: 12px; margin-left: 10px;">(${section.type})</span>
+                            ${escHtml(section.id)} - ${escHtml(section.title || 'Questions')}
+                            <span style="font-size: 12px; margin-left: 10px;">(${escHtml(section.type)})</span>
                         </div>
                         <div class="card-body">
                             <div class="question-editor">
@@ -1387,9 +1385,9 @@
                 
                 for (const question of section.questions) {
                     html += `
-                        <div class="question-item" id="q-${section.id}-${question.id}">
-                            <strong style="min-width: 50px;">${question.id}</strong>
-                            <input type="text" value="${question.text}" 
+                        <div class="question-item" id="q-${escHtml(section.id)}-${escHtml(question.id)}">
+                            <strong style="min-width: 50px;">${escHtml(question.id)}</strong>
+                            <input type="text" value="${escHtml(question.text)}" 
                                    onchange="updateQuestion('${section.id}', '${question.id}', this.value)">
                             <button class="btn btn-danger btn-sm" 
                                     onclick="deleteQuestion('${section.id}', '${question.id}')">Delete</button>
@@ -1538,7 +1536,7 @@
             } else {
                 if (changes.addedQuestions.length > 0) {
                     html += '<div style="margin-bottom: 15px;"><h4 style="color: #28a745;">➕ Questions to Add:</h4>';
-                    html += '<p style="color: #666; font-size: 12px;">New columns will be added to the Excel file.</p>';
+                    html += '<p style="color: #666; font-size: 12px;">A new database column will be added for each of these questions.</p>';
                     html += '<ul>';
                     for (const q of changes.addedQuestions) {
                         html += `<li><strong>${q.questionId}</strong> (Section ${q.sectionId}): ${q.questionText}</li>`;
@@ -1548,7 +1546,7 @@
                 
                 if (changes.modifiedQuestions.length > 0) {
                     html += '<div style="margin-bottom: 15px;"><h4 style="color: #ffc107;">✏️ Questions Modified:</h4>';
-                    html += '<p style="color: #666; font-size: 12px;">Excel column headers will be updated.</p>';
+                    html += '<p style="color: #666; font-size: 12px;">Question text changes will be saved to the form config. Existing response data is not affected.</p>';
                     html += '<ul>';
                     for (const q of changes.modifiedQuestions) {
                         html += `<li><strong>${q.questionId}</strong>: "${q.oldText}" → "${q.newText}"</li>`;
@@ -1557,29 +1555,13 @@
                 }
                 
                 if (changes.deletedQuestions.length > 0) {
-                    html += '<div style="margin-bottom: 15px;"><h4 style="color: #dc3545;">🗑️ Questions to Delete:</h4>';
-                    html += '<p style="color: #666; font-size: 12px;">Choose whether to delete existing data for each question:</p>';
-                    for (let i = 0; i < changes.deletedQuestions.length; i++) {
-                        const q = changes.deletedQuestions[i];
-                        html += `
-                            <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 5px;">
-                                <strong>${q.questionId}</strong> (Section ${q.sectionId}): ${q.questionText}
-                                <div style="margin-top: 8px;">
-                                    <label style="margin-right: 15px;">
-                                        <input type="radio" name="deleteData_${i}" value="keep" checked 
-                                               onchange="pendingChanges.deletedQuestions[${i}].deleteData = false">
-                                        Keep existing data in Excel
-                                    </label>
-                                    <label style="color: #dc3545;">
-                                        <input type="radio" name="deleteData_${i}" value="delete"
-                                               onchange="pendingChanges.deletedQuestions[${i}].deleteData = true">
-                                        Delete column and data from Excel
-                                    </label>
-                                </div>
-                            </div>
-                        `;
+                    html += '<div style="margin-bottom: 15px;"><h4 style="color: #dc3545;">🗑️ Questions to Remove:</h4>';
+                    html += '<p style="color: #666; font-size: 12px;">These questions will be removed from the form. Their database columns and all collected response data will be <strong>preserved</strong>.</p>';
+                    html += '<ul>';
+                    for (const q of changes.deletedQuestions) {
+                        html += `<li><strong>${q.questionId}</strong> (Section ${q.sectionId}): ${q.questionText}</li>`;
                     }
-                    html += '</div>';
+                    html += '</ul></div>';
                 }
             }
             

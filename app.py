@@ -512,6 +512,7 @@ def add_section(form_id):
     return jsonify({'success': True})
 
 @app.route('/api/forms/<form_id>/sections/<section_id>/questions', methods=['POST'])
+@api_login_required
 def add_question(form_id, section_id):
     """Add a question to a section"""
     config = load_config()
@@ -530,6 +531,7 @@ def add_question(form_id, section_id):
     return jsonify({'success': True})
 
 @app.route('/api/forms/<form_id>/sections/<section_id>/questions/<question_id>', methods=['DELETE'])
+@api_login_required
 def delete_question(form_id, section_id, question_id):
     """Delete a question from a section"""
     config = load_config()
