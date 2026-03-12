@@ -1036,58 +1036,6 @@ def batch_update_alerts():
     save_alerts_data(alerts)
     return jsonify({'success': True, 'updated': updated})
 
-@app.route('/api/alerts/ai-summary', methods=['GET'])
-@api_login_required
-def get_alerts_ai_summary():
-    """Generate an AI summary of top flagged questions using Google Gemini (free tier).
-    Requires: pip install google-generativeai  and  GEMINI_API_KEY in .env
-    """
-    try:
-        import google.generativeai as genai
-    except ImportError:
-        return jsonify({'error': 'Package not installed. Run: pip install google-generativeai'}), 501
-    api_key = os.environ.get('GEMINI_API_KEY', '')
-    if not api_key:
-        return jsonify({'error': 'No GEMINI_API_KEY found in .env file. Add it to enable this feature.'}), 501
-
-    alerts = load_alerts()
-    active = [a for a in alerts if a.get('status') != 'resolved']
-    if not active:
-        return jsonify({'summary': 'No unresolved alerts to analyze. All clear!'})
-
-    groups = defaultdict(lambda: {'count': 0, 'ratings': [], 'comments': [], 'question_text': ''})
-    for a in active:
-        qid = a.get('question_id', '')
-        groups[qid]['count'] += 1
-        groups[qid]['ratings'].append(a.get('rating', 0))
-        groups[qid]['question_text'] = groups[qid]['question_text'] or a.get('question_text', qid)
-        if a.get('comment'):
-            groups[qid]['comments'].append(a['comment'])
-
-    top = sorted(groups.items(), key=lambda x: x[1]['count'], reverse=True)[:10]
-    lines = []
-    for qid, g in top:
-        avg = sum(g['ratings']) / len(g['ratings']) if g['ratings'] else 0
-        lines.append(f"- Question [{qid}]: \"{g['question_text']}\" — flagged {g['count']} times, avg rating {avg:.1f}")
-        for c in g['comments'][:3]:
-            lines.append(f'  Comment: "{c}"')
-
-    prompt = (
-        "You are an analyst for a professional training company. "
-        "Below are the most-flagged evaluation questions from participant feedback surveys, "
-        "along with participant comments. Provide a concise, actionable summary in 3-5 bullet points "
-        "highlighting the main concerns and specific recommendations for improvement. "
-        "Be constructive and professional.\n\n" + "\n".join(lines)
-    )
-    try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(prompt)
-        return jsonify({'summary': response.text})
-    except Exception as e:
-        return jsonify({'error': f'Gemini API error: {str(e)}'}), 500
-
-
 @app.route('/api/alerts/<alert_id>', methods=['DELETE'])
 @api_login_required
 def delete_alert(alert_id):
