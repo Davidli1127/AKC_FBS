@@ -492,7 +492,11 @@ def update_form(form_id):
     data = request.json
     config['forms'][form_id] = data
     save_config(config)
-    return jsonify({'success': True})
+    form_title = data.get('title', form_id)
+    ok, msg = db.sync_form_response_table(form_title, data)
+    if not ok:
+        print(f"Warning: Could not sync response table for {form_id}: {msg}")
+    return jsonify({'success': True, 'db_sync': msg})
 
 @app.route('/api/forms/<form_id>/sections', methods=['POST'])
 @api_login_required

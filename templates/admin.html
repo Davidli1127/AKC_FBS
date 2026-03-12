@@ -1599,32 +1599,18 @@
 
         async function confirmAndSave() {
             try {
-                if (pendingChanges.addedQuestions.length > 0 || 
-                    pendingChanges.deletedQuestions.length > 0 ||
-                    pendingChanges.modifiedQuestions.length > 0) {
-                    
-                    const excelResponse = await fetch(`/api/forms/${currentFormId}/update-excel`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(pendingChanges)
-                    });
-                    
-                    if (!excelResponse.ok) {
-                        const error = await excelResponse.json();
-                        alert('Error updating Excel: ' + (error.error || 'Unknown error'));
-                        return;
-                    }
-                }
                 const response = await fetch(`/api/forms/${currentFormId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(currentFormData)
                 });
-                
+
                 if (response.ok) {
+                    const result = await response.json();
                     closeConfirmModal();
                     originalFormData = JSON.parse(JSON.stringify(currentFormData));
-                    alert('Form and Excel updated successfully!');
+                    const syncNote = result.db_sync ? '\n\nDB: ' + result.db_sync : '';
+                    alert('Form saved successfully!' + syncNote);
                 } else {
                     alert('Error saving form');
                 }

@@ -17,20 +17,15 @@ load_dotenv()
 DB_SERVER   = os.getenv('DB_SERVER',   '10.64.2.18')
 DB_USERNAME = os.getenv('DB_USERNAME', 'moodleLMSAdmin')
 DB_PASSWORD = os.getenv('DB_PASSWORD', '')
-
-# AKC_NAV - participant / course data
 DB_NAV_DATABASE  = os.getenv('DB_DATABASE',     'AKC_NAV')
 COURSE_TABLE      = '[Absolute Kinetics Consultancy$Course]'
 PARTICIPANT_TABLE = '[Absolute Kinetics Consultancy$Course Participant]'
-
-# AKC_FBS - feedback storage
 DB_FBS_DATABASE = os.getenv('DB_FBS_DATABASE', 'AKC_FBS')
 
 _CONN_TMPL = (
     'DRIVER={{ODBC Driver 18 for SQL Server}};'
     'SERVER={server};DATABASE={db};UID={uid};PWD={pwd};TrustServerCertificate=yes'
 )
-
 
 def get_connection():
     """Return a connection to AKC_NAV."""
@@ -70,10 +65,6 @@ def test_connection():
             results[label] = 'Could not connect'
     ok = all(v == 'OK' for v in results.values())
     return ok, ' | '.join(f'{k}: {v}' for k, v in results.items())
-
-# ---------------------------------------------------------------------------
-# Per-form response table helpers
-# ---------------------------------------------------------------------------
 
 def _get_table_name(form_title):
     """Convert form title to a SQL table name.
@@ -181,6 +172,51 @@ def form_table_exists(form_title):
         return exists
     except Exception:
         return False
+
+
+def sync_form_response_table(form_title, form_config):
+    """Sync the per-form response table schema with the current form config.
+
+    - New question columns are ADDED via ALTER TABLE.
+    - Removed question columns are KEPT (data is preserved).
+    Returns (True, summary_message) or (False, error_message).
+    """
+    table = _get_table_name(form_title)
+    conn  = get_fbs_connection()
+    if not conn:
+        return False, "Could not connect to AKC_FBS"
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT COUNT(*) FROM sysobjects WHERE name=? AND xtype='U'",
+            (table,))
+        if cur.fetchone()[0] == 0:
+            conn.close()
+            return create_form_response_table(form_title, form_config)
+
+        cur.execute(
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS "
+            "WHERE TABLE_NAME = ? AND TABLE_CATALOG = DB_NAME()",
+            (table,))
+        existing_cols = {row[0].lower() for row in cur.fetchall()}
+
+        desired_cols = _get_form_columns(form_config)
+        added = []
+        for col, sql_type in desired_cols:
+            if col.lower() not in existing_cols:
+                cur.execute(f"ALTER TABLE [{table}] ADD [{col}] {sql_type}")
+                added.append(col)
+
+        conn.commit()
+        conn.close()
+        if added:
+            msg = f"Table [{table}] synced. Added {len(added)} column(s): {', '.join(added)}."
+        else:
+            msg = f"Table [{table}] is up to date (no new columns needed)."
+        return True, msg
+    except Exception as e:
+        print(f"Error syncing table {table}: {e}")
+        return False, str(e)
 
 
 def init_fbs_tables():
@@ -513,7 +549,7 @@ def get_submitted_ids_for_courses(course_ids, form_titles):
                     list(course_ids))
                 ids.update(r[0] for r in cur.fetchall() if r[0])
             except Exception:
-                pass  # Table may not exist yet
+                pass
         conn.close()
         return ids
     except Exception as e:
