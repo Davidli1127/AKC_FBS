@@ -50,8 +50,6 @@ CONFIG_PATH = os.path.join(BASE_DIR, 'config.json')
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 
 # QR code expiration time
-COURSE_EXPIRY_HOURS = 24 # Default 24 hours, can adjust if needed
-
 os.makedirs(DATA_DIR, exist_ok=True)
 
 ALERTS_FILE = os.path.join(DATA_DIR, 'low_feedback_alerts.json')
@@ -283,9 +281,9 @@ def _norm_id(id_number):
 
 def has_submitted(course_id, identifier):
     """Check if a student (by ID number) has already submitted for this course."""
-    config = load_config()
-    course = next((c for c in config.get('courses', []) if c['id'] == course_id), None)
+    course = db.get_course_by_id(course_id)
     form_id = (course or {}).get('form_id', '')
+    config = load_config()
     form_config = config['forms'].get(form_id, {})
     form_title = form_config.get('title', form_id)
     return db.has_submitted_db(course_id, identifier, form_title)
@@ -300,38 +298,6 @@ def save_config(config):
     with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
 
-def clean_expired_courses():
-    """Remove courses that are older than COURSE_EXPIRY_HOURS (default 24 hours)"""
-    config = load_config()
-    now = datetime.now()
-    original_count = len(config['courses'])
-    valid_courses = []
-    
-    for course in config['courses']:
-        created_at = course.get('created_at', '')
-        if created_at:
-            try:
-                created_time = datetime.strptime(created_at, '%Y-%m-%d %H:%M:%S')
-                age_hours = (now - created_time).total_seconds() / 3600
-                
-                if age_hours < COURSE_EXPIRY_HOURS:
-                    valid_courses.append(course)
-                else:
-                    print(f"Removing expired course: {course.get('course_title', 'Unknown')} (created {age_hours:.1f} hours ago)")
-            except ValueError:
-                valid_courses.append(course)
-        else:
-            valid_courses.append(course)
-    
-    removed_count = original_count - len(valid_courses)
-    
-    if removed_count > 0:
-        config['courses'] = valid_courses
-        save_config(config)
-        print(f"Cleaned up {removed_count} expired course(s)")
-    
-    return removed_count
-
 def _slugify_form_id(title):
     """Convert a form title to a stable lowercase slug used as form_id.
     e.g. 'TRAINER EVALUATION FORM' -> 'trainer_evaluation_form'
@@ -343,8 +309,8 @@ def _slugify_form_id(title):
 
 def save_response(form_id, course_id, data):
     """Save form response to AKC_FBS database."""
+    course = db.get_course_by_id(course_id)
     config = load_config()
-    course = next((c for c in config['courses'] if c['id'] == course_id), None)
     form_config = config['forms'].get(form_id, {})
     form_title  = form_config.get('title', form_id)
     participant_name = data.get('name', '')
@@ -391,8 +357,7 @@ def scan_lookup():
     if not participant_name:
         return jsonify({'error': 'Identification number not found for that class code. Please check and try again.'}), 404
 
-    config = load_config()
-    matches = [c for c in config['courses'] if c['course_title'] == class_code]
+    matches = db.get_active_courses_by_title(class_code)
 
     if not matches:
         return jsonify({'error': 'No active QR session found for that class code. Please ask your instructor.'}), 404
@@ -433,8 +398,7 @@ def scan_select():
     if not course_id or not id_number:
         return jsonify({'error': 'Missing parameters.'}), 400
 
-    config = load_config()
-    course = next((c for c in config['courses'] if c['id'] == course_id), None)
+    course = db.get_course_by_id(course_id)
     if not course:
         return jsonify({'error': 'Session not found.'}), 404
 
@@ -478,7 +442,6 @@ def logout():
 @login_required
 def admin():
     """Admin dashboard"""
-    clean_expired_courses()
     config = load_config()
     def _detect_personnel(sections):
         types = {s.get('type') for s in sections}
@@ -615,10 +578,8 @@ def get_participants():
 
     config = load_config()
     class_code_norm = class_code.strip().upper()
-    matching_courses = [
-        c for c in config.get('courses', [])
-        if c.get('course_title', '').strip().upper() == class_code_norm
-    ]
+    # Check ALL courses (including closed) so responses from closed sessions are counted
+    matching_courses = db.get_courses_by_title(class_code_norm)
     matching_course_ids = [c['id'] for c in matching_courses]
     form_titles = list({
         config['forms'].get(c.get('form_id', ''), {}).get('title', c.get('form_id', ''))
@@ -709,9 +670,8 @@ def get_class_codes():
 @app.route('/api/courses', methods=['GET'])
 @api_login_required
 def get_courses():
-    """Get all courses"""
-    config = load_config()
-    return jsonify(config['courses'])
+    """Get all course sessions from the database."""
+    return jsonify(db.get_all_courses_from_db())
 
 @app.route('/api/courses', methods=['POST'])
 @api_login_required
@@ -767,8 +727,7 @@ def create_course():
         course['num_instructors'] = 0
         course['instructors'] = []
 
-    config['courses'].append(course)
-    save_config(config)
+    db.create_course_in_db(course)
 
     # Generate QR code
     qr_data = None
@@ -788,19 +747,24 @@ def create_course():
 
 @app.route('/api/courses/<course_id>', methods=['DELETE'])
 @api_login_required
-def delete_course(course_id):
-    """Delete a course"""
-    config = load_config()
-    config['courses'] = [c for c in config['courses'] if c['id'] != course_id]
-    save_config(config)
-    return jsonify({'success': True})
+def close_course(course_id):
+    """Close a course QR session. The record is kept in the database."""
+    ok = db.deactivate_course(course_id)
+    return jsonify({'success': ok})
+
+
+@app.route('/api/courses/<course_id>/reactivate', methods=['PATCH'])
+@api_login_required
+def reactivate_course(course_id):
+    """Re-open a previously closed QR session."""
+    ok = db.reactivate_course(course_id)
+    return jsonify({'success': ok})
 
 @app.route('/api/courses/<course_id>/qrcode', methods=['GET'])
 @api_login_required
 def get_course_qrcode(course_id):
     """Get QR code image for a course"""
-    config = load_config()
-    course = next((c for c in config['courses'] if c['id'] == course_id), None)
+    course = db.get_course_by_id(course_id)
     if not course:
         return jsonify({'error': 'Course not found'}), 404
     if not QR_AVAILABLE:
@@ -841,10 +805,11 @@ def get_universal_qrcode():
 @app.route('/student-login/<course_id>', methods=['GET', 'POST'])
 def student_login(course_id):
     """Student login page - verifies the student by identification number"""
-    config = load_config()
-    course = next((c for c in config['courses'] if c['id'] == course_id), None)
+    course = db.get_course_by_id(course_id)
     if not course:
-        return "Course not found. The QR code may be invalid or expired.", 404
+        return "Course not found. The QR code may be invalid.", 404
+    if not course.get('is_active'):
+        return "This QR session has been closed by the administrator.", 403
 
     error = None
     if request.method == 'POST':
@@ -873,16 +838,13 @@ def form_page(course_id):
     if session.get('student_course_id') != course_id:
         return redirect(url_for('student_login', course_id=course_id))
 
-    config = load_config()
-    course = None
-    for c in config['courses']:
-        if c['id'] == course_id:
-            course = c
-            break
-    
+    course = db.get_course_by_id(course_id)
     if not course:
-        return "Course not found. The link may be invalid or expired.", 404
-    
+        return "Course not found. The link may be invalid.", 404
+    if not course.get('is_active'):
+        return "This QR session has been closed by the administrator.", 403
+
+    config = load_config()
     form = config['forms'].get(course['form_id'])
     if not form:
         return "Form not found", 404
@@ -902,18 +864,13 @@ def submit_form(course_id):
     if has_submitted(course_id, student_id or student_name):
         return jsonify({'error': 'You have already submitted feedback for this class.'}), 400
 
-    config = load_config()
-    course = None
-    for c in config['courses']:
-        if c['id'] == course_id:
-            course = c
-            break
-    
+    course = db.get_course_by_id(course_id)
     if not course:
         return jsonify({'error': 'Course not found'}), 404
-    
+
     data = request.json
     save_response(course['form_id'], course_id, data)
+    config = load_config()
     form_config = config['forms'].get(course['form_id'], {})
     try:
         save_low_feedback_alerts(course['form_id'], course_id, course, data, form_config)
@@ -1350,8 +1307,6 @@ def delete_form(form_id):
         return jsonify({'success': True, 'archived': False})
 
 if __name__ == '__main__':
-    print("Checking for expired course links...")
-    clean_expired_courses()
     db.init_fbs_tables()
     _cfg = load_config()
     for _fid, _form in _cfg['forms'].items():

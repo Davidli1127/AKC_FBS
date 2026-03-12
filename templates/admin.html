@@ -340,29 +340,9 @@
                 <div class="card-header">Generated QR Codes</div>
                 <div class="card-body">
                     <ul class="course-list" id="courseList">
-                        {% for course in config.courses %}
-                        <li class="course-item" id="course-{{ course.id }}">
-                            <div class="course-info">
-                                <h4>{{ course.course_title }} <span style="font-size: 12px; color: #666;">({% if course.form_id == 'form1' %}Trainer Evaluation{% elif course.form_id == 'form2' %}Assessor Evaluation{% else %}{{ course.form_id }}{% endif %})</span></h4>
-                                {% if course.form_id == 'form2' %}
-                                <p>Date: {{ course.course_date }} | Location: {{ course.assessment_location }}</p>
-                                <p>Assessors: {{ course.assessors | join(', ') }}</p>
-                                {% else %}
-                                <p>Date: {{ course.course_date }} | Classroom: {{ course.classroom }}</p>
-                                <p>Instructors: {{ course.instructors | join(', ') }}</p>
-                                {% endif %}
-                            </div>
-                            <div class="course-actions">
-                                <button class="btn btn-primary btn-sm" onclick="showQRCode('{{ course.id }}', '{{ course.course_title }}', '{{ course.course_date }}')">Show QR Code</button>
-                                <a class="btn btn-secondary btn-sm" href="/api/courses/{{ course.id }}/qrcode" download>⬇ Download QR</a>
-                                <button class="btn btn-danger btn-sm" onclick="deleteCourse('{{ course.id }}')">Delete</button>
-                            </div>
-                        </li>
-                        {% else %}
-                        <li class="course-item" id="noCourses">
+                        <li class="course-item" id="noCourses" style="display:none;">
                             <p>No QR codes generated yet.</p>
                         </li>
-                        {% endfor %}
                     </ul>
                 </div>
             </div>
@@ -1021,6 +1001,7 @@
             document.getElementById(tabId).classList.add('active');
             
             if (tabId === 'forms') loadFormForEdit();
+            if (tabId === 'existing') loadCoursesOnStartup();
             if (tabId === 'alerts') loadAlertsAll();
             if (tabId === 'analysis') loadAnalysisOverview();
         }
@@ -1226,13 +1207,14 @@
             document.getElementById('qrModalImage').src = '';
         }
 
-        function addCourseToList(course) {
+        function addCourseToList(course, prepend = true) {
             const list = document.getElementById('courseList');
             const noCourses = document.getElementById('noCourses');
-            if (noCourses) noCourses.remove();
+            if (noCourses) noCourses.style.display = 'none';
             const li = document.createElement('li');
             li.className = 'course-item';
             li.id = `course-${course.id}`;
+            if (!course.is_active) li.style.opacity = '0.6';
 
             const qf = FORM_QR_FIELDS[course.form_id];
             let locationInfo, personnelInfo;
@@ -1248,42 +1230,74 @@
                 personnelInfo = perParts.join(' | ') || '';
             } else if (FORM_PERSONNEL[course.form_id] === 'assessor') {
                 locationInfo = `Date: ${course.course_date} | Location: ${course.assessment_location}`;
-                personnelInfo = `Assessors: ${course.assessors.join(', ')}`;
+                personnelInfo = `Assessors: ${(course.assessors || []).join(', ')}`;
             } else {
-                locationInfo = `Date: ${course.course_date} | Classroom: ${course.classroom}`;
+                locationInfo = `Date: ${course.course_date} | Classroom: ${course.classroom || ''}`;
                 personnelInfo = `Instructors: ${(course.instructors || []).join(', ')}`;
             }
-            
+
             const title = course.course_title.replace(/'/g, "\\'");
             const date = course.course_date;
-            
+            const statusBadge = course.is_active
+                ? `<span style="background:#28a745;color:white;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:600;margin-left:6px;">Active</span>`
+                : `<span style="background:#6c757d;color:white;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:600;margin-left:6px;">Closed</span>`;
+            const actionBtns = course.is_active
+                ? `<button class="btn btn-secondary btn-sm" onclick="showQRCode('${course.id}', '${title}', '${date}')">Show QR</button>
+                   <a class="btn btn-secondary btn-sm" href="/api/courses/${course.id}/qrcode" download="QR_${course.course_title}_${date}.png">&#11015; Download QR</a>
+                   <button class="btn btn-danger btn-sm" onclick="closeCourse('${course.id}')">Close</button>`
+                : `<button class="btn btn-sm" style="background:#28a745;color:white;" onclick="reopenCourse('${course.id}')">Reopen</button>`;
+
             li.innerHTML = `
                 <div class="course-info">
-                    <h4>${course.course_title} <span style="font-size: 12px; color: #666;">(${course.form_id === 'form1' ? 'Trainer Evaluation' : course.form_id === 'form2' ? 'Assessor Evaluation' : course.form_id})</span></h4>
+                    <h4>${course.course_title}${statusBadge} <span style="font-size:12px;color:#666;">(${course.form_id === 'form1' ? 'Trainer Evaluation' : course.form_id === 'form2' ? 'Assessor Evaluation' : course.form_id})</span></h4>
                     <p>${locationInfo}</p>
-                    <p>${personnelInfo}</p>
+                    ${personnelInfo ? `<p>${personnelInfo}</p>` : ''}
                 </div>
-                <div class="course-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="showQRCode('${course.id}', '${title}', '${date}')">Show QR Code</button>
-                    <a class="btn btn-secondary btn-sm" href="/api/courses/${course.id}/qrcode" download="QR_${course.course_title}_${date}.png">Download QR</a>
-                    <button class="btn btn-danger btn-sm" onclick="deleteCourse('${course.id}')">Delete</button>
-                </div>
+                <div class="course-actions">${actionBtns}</div>
             `;
-            list.prepend(li);
+            if (prepend) list.prepend(li); else list.append(li);
         }
 
-        async function deleteCourse(courseId) {
-            if (!confirm('Are you sure you want to delete this course link?')) return;
-            
+        async function loadCoursesOnStartup() {
             try {
-                const response = await fetch(`/api/courses/${courseId}`, {
-                    method: 'DELETE'
-                });
-                const result = await response.json();
-                if (result.success) {
-                    document.getElementById(`course-${courseId}`).remove();
+                const res = await fetch('/api/courses');
+                const courses = await res.json();
+                if (courses.length === 0) {
+                    document.getElementById('noCourses').style.display = '';
+                } else {
+                    courses.forEach(c => addCourseToList(c, false));
                 }
-            } catch (error) {
+            } catch(e) {
+                console.error('Could not load courses:', e);
+            }
+        }
+
+        async function closeCourse(courseId) {
+            if (!confirm('Close this QR session? Participants will no longer be able to submit.\nThe course record will be kept in the database.')) return;
+            try {
+                const res = await fetch(`/api/courses/${courseId}`, { method: 'DELETE' });
+                const result = await res.json();
+                if (result.success) {
+                    const li = document.getElementById(`course-${courseId}`);
+                    if (li) li.remove();
+                    document.getElementById('courseList').innerHTML = '<li class="course-item" id="noCourses" style="display:none;"><p>No QR codes generated yet.</p></li>';
+                    loadCoursesOnStartup();
+                }
+            } catch(e) {
+                alert('An error occurred. Please try again.');
+            }
+        }
+
+        async function reopenCourse(courseId) {
+            if (!confirm('Reopen this QR session? Participants will be able to submit again.')) return;
+            try {
+                const res = await fetch(`/api/courses/${courseId}/reactivate`, { method: 'PATCH' });
+                const result = await res.json();
+                if (result.success) {
+                    document.getElementById('courseList').innerHTML = '<li class="course-item" id="noCourses" style="display:none;"><p>No QR codes generated yet.</p></li>';
+                    loadCoursesOnStartup();
+                }
+            } catch(e) {
                 alert('An error occurred. Please try again.');
             }
         }

@@ -205,11 +205,180 @@ def init_fbs_tables():
                 CONSTRAINT PK_FBS_Forms PRIMARY KEY (form_id)
             )
         """)
+        cur.execute("""
+            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='FBS_Courses' AND xtype='U')
+            CREATE TABLE FBS_Courses (
+                course_id      NVARCHAR(20)  NOT NULL,
+                form_id        NVARCHAR(100) NOT NULL,
+                course_title   NVARCHAR(500) NOT NULL,
+                course_date    NVARCHAR(50)  NULL,
+                created_at     DATETIME      NOT NULL DEFAULT GETDATE(),
+                is_active      BIT           NOT NULL DEFAULT 1,
+                deactivated_at DATETIME      NULL,
+                extra_fields   NVARCHAR(MAX) NULL,
+                CONSTRAINT PK_FBS_Courses PRIMARY KEY (course_id)
+            )
+        """)
         conn.commit()
         conn.close()
-        return True, "FBS_Forms ready."
+        return True, "FBS_Forms and FBS_Courses ready."
     except Exception as e:
-        return False, f"Error initialising FBS_Forms: {e}"
+        return False, f"Error initialising FBS tables: {e}"
+
+def _course_row_to_dict(row):
+    """Convert a FBS_Courses DB row to a plain dict identical to the old config format."""
+    d = {
+        'id':           row[0],
+        'form_id':      row[1],
+        'course_title': row[2],
+        'course_date':  row[3] or '',
+        'created_at':   row[4].strftime('%Y-%m-%d %H:%M:%S') if isinstance(row[4], datetime) else str(row[4] or ''),
+        'is_active':    bool(row[5]),
+        'deactivated_at': row[6].strftime('%Y-%m-%d %H:%M:%S') if isinstance(row[6], datetime) else None,
+    }
+    if row[7]:
+        try:
+            d.update(json.loads(row[7]))
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return d
+
+
+def create_course_in_db(course_dict):
+    """Insert a new course session into FBS_Courses."""
+    conn = get_fbs_connection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        extra = {k: v for k, v in course_dict.items()
+                 if k not in ('id', 'form_id', 'course_title', 'course_date', 'created_at', 'is_active')}
+        cur.execute(
+            "INSERT INTO FBS_Courses (course_id, form_id, course_title, course_date, extra_fields) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (course_dict['id'], course_dict['form_id'],
+             course_dict['course_title'], course_dict.get('course_date', ''),
+             json.dumps(extra, ensure_ascii=False)))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error creating course in DB: {e}")
+        return False
+
+
+def get_course_by_id(course_id):
+    """Return a single course dict, or None if not found."""
+    conn = get_fbs_connection()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT course_id, form_id, course_title, course_date, created_at, "
+            "is_active, deactivated_at, extra_fields "
+            "FROM FBS_Courses WHERE course_id = ?", (course_id,))
+        row = cur.fetchone()
+        conn.close()
+        return _course_row_to_dict(row) if row else None
+    except Exception as e:
+        print(f"Error getting course {course_id}: {e}")
+        return None
+
+
+def get_all_courses_from_db():
+    """Return all course sessions (active and closed), newest first."""
+    conn = get_fbs_connection()
+    if not conn:
+        return []
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT course_id, form_id, course_title, course_date, created_at, "
+            "is_active, deactivated_at, extra_fields "
+            "FROM FBS_Courses ORDER BY created_at DESC")
+        rows = cur.fetchall()
+        conn.close()
+        return [_course_row_to_dict(r) for r in rows]
+    except Exception as e:
+        print(f"Error getting all courses: {e}")
+        return []
+
+
+def get_active_courses_by_title(course_title):
+    """Return all ACTIVE course sessions matching the given course_title."""
+    conn = get_fbs_connection()
+    if not conn:
+        return []
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT course_id, form_id, course_title, course_date, created_at, "
+            "is_active, deactivated_at, extra_fields "
+            "FROM FBS_Courses WHERE is_active = 1 AND course_title = ?",
+            (course_title,))
+        rows = cur.fetchall()
+        conn.close()
+        return [_course_row_to_dict(r) for r in rows]
+    except Exception as e:
+        print(f"Error getting active courses by title: {e}")
+        return []
+
+
+def get_courses_by_title(course_title):
+    """Return ALL (active + closed) course sessions matching the given course_title."""
+    conn = get_fbs_connection()
+    if not conn:
+        return []
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT course_id, form_id, course_title, course_date, created_at, "
+            "is_active, deactivated_at, extra_fields "
+            "FROM FBS_Courses WHERE course_title = ?",
+            (course_title,))
+        rows = cur.fetchall()
+        conn.close()
+        return [_course_row_to_dict(r) for r in rows]
+    except Exception as e:
+        print(f"Error getting courses by title: {e}")
+        return []
+
+
+def deactivate_course(course_id):
+    """Close a QR session (is_active → 0). The record is kept for data integrity."""
+    conn = get_fbs_connection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE FBS_Courses SET is_active = 0, deactivated_at = GETDATE() "
+            "WHERE course_id = ?", (course_id,))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error deactivating course {course_id}: {e}")
+        return False
+
+
+def reactivate_course(course_id):
+    """Re-open a previously closed QR session."""
+    conn = get_fbs_connection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE FBS_Courses SET is_active = 1, deactivated_at = NULL "
+            "WHERE course_id = ?", (course_id,))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error reactivating course {course_id}: {e}")
+        return False
 
 def register_form(form_id, form_title, form_number, description, config_dict):
     """
