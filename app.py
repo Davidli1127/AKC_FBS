@@ -720,7 +720,6 @@ def create_course():
     config = load_config()
     data = request.json
     course = {
-        'id': str(uuid.uuid4())[:8],
         'form_id': data['form_id'],
         'course_title': data['course_title'],
         'course_date': data['course_date'],
@@ -767,7 +766,15 @@ def create_course():
         course['num_instructors'] = 0
         course['instructors'] = []
 
-    db.create_course_in_db(course)
+    # Insert with retry so we only continue when a unique course_id is persisted.
+    inserted = False
+    for _ in range(5):
+        course['id'] = str(uuid.uuid4())[:8]
+        if db.create_course_in_db(course):
+            inserted = True
+            break
+    if not inserted:
+        return jsonify({'success': False, 'error': 'Could not create course session in database. Please try again.'}), 500
 
     # Generate QR code
     qr_data = None
