@@ -1342,6 +1342,7 @@ def delete_form(form_id):
             'message': 'Form archived — all responses are preserved in the database.'
         })
     else:
+        db.soft_delete_form(form_id)
         del config['forms'][form_id]
         save_config(config)
         return jsonify({'success': True, 'archived': False})
