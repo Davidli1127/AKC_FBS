@@ -339,6 +339,28 @@
             <div class="card">
                 <div class="card-header">Generated QR Codes</div>
                 <div class="card-body">
+                    <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:14px; padding:10px; border:1px solid #e6ecf5; border-radius:8px; background:#f9fbff;">
+                        <div>
+                            <label style="display:block; font-size:12px; color:#555; margin-bottom:4px;">Session Date</label>
+                            <input type="date" id="sessionDateFilter" onchange="applyCourseFilters()" style="padding:6px 8px; border:1px solid #c7d7ff; border-radius:6px;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:12px; color:#555; margin-bottom:4px;">Class Code</label>
+                            <input type="text" id="sessionClassCodeFilter" placeholder="e.g. CL-2026-001"
+                                   oninput="applyCourseFilters()"
+                                   style="padding:6px 10px; border:1px solid #c7d7ff; border-radius:6px; min-width:220px;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:12px; color:#555; margin-bottom:4px;">Status</label>
+                            <select id="sessionStatusFilter" onchange="applyCourseFilters()" style="padding:6px 10px; border:1px solid #c7d7ff; border-radius:6px;">
+                                <option value="all">Both (Active + Closed)</option>
+                                <option value="active">Active Only</option>
+                                <option value="closed">Closed Only</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="clearCourseFilters()">Clear Filters</button>
+                        <span id="sessionFilterSummary" style="font-size:12px; color:#666; margin-left:auto;"></span>
+                    </div>
                     <ul class="course-list" id="courseList">
                         <li class="course-item" id="noCourses" style="display:none;">
                             <p>No QR codes generated yet.</p>
@@ -607,6 +629,7 @@
         let analysisFormsList = [];
         let analysisCoursesAvailable = [];
         let textCoursesAvailable = [];
+        let allCoursesCache = [];
         let lastTextResponseData = null;
         let lastTextCourseFilter = '';
 
@@ -1184,7 +1207,7 @@
                     } else {
                         alert('QR code generated but image could not be displayed. Please check the "Generated QR Codes" tab.');
                     }
-                    addCourseToList(result.course);
+                    await loadCoursesOnStartup();
                 } else {
                     alert('Error: ' + result.error);
                 }
@@ -1258,15 +1281,53 @@
             if (prepend) list.prepend(li); else list.append(li);
         }
 
+        function getCourseFilterValues() {
+            const dateVal = (document.getElementById('sessionDateFilter')?.value || '').trim();
+            const classCodeVal = (document.getElementById('sessionClassCodeFilter')?.value || '').trim().toLowerCase();
+            const statusVal = (document.getElementById('sessionStatusFilter')?.value || 'all').trim();
+            return { dateVal, classCodeVal, statusVal };
+        }
+
+        function applyCourseFilters() {
+            const { dateVal, classCodeVal, statusVal } = getCourseFilterValues();
+            const filtered = allCoursesCache.filter(c => {
+                const matchesDate = !dateVal || String(c.course_date || '') === dateVal;
+                const matchesClass = !classCodeVal || String(c.course_title || '').toLowerCase().includes(classCodeVal);
+                const isActive = !!c.is_active;
+                const matchesStatus = statusVal === 'all' || (statusVal === 'active' && isActive) || (statusVal === 'closed' && !isActive);
+                return matchesDate && matchesClass && matchesStatus;
+            });
+            renderCourseList(filtered, allCoursesCache.length);
+        }
+
+        function clearCourseFilters() {
+            document.getElementById('sessionDateFilter').value = '';
+            document.getElementById('sessionClassCodeFilter').value = '';
+            document.getElementById('sessionStatusFilter').value = 'all';
+            applyCourseFilters();
+        }
+
+        function renderCourseList(courses, totalCount = null) {
+            const list = document.getElementById('courseList');
+            list.innerHTML = '<li class="course-item" id="noCourses" style="display:none;"><p>No QR codes generated yet.</p></li>';
+
+            if (!courses.length) {
+                document.getElementById('noCourses').style.display = '';
+            } else {
+                courses.forEach(c => addCourseToList(c, false));
+            }
+
+            const summary = document.getElementById('sessionFilterSummary');
+            const base = totalCount === null ? courses.length : totalCount;
+            summary.textContent = `Showing ${courses.length} of ${base} sessions`;
+        }
+
         async function loadCoursesOnStartup() {
             try {
                 const res = await fetch('/api/courses');
                 const courses = await res.json();
-                if (courses.length === 0) {
-                    document.getElementById('noCourses').style.display = '';
-                } else {
-                    courses.forEach(c => addCourseToList(c, false));
-                }
+                allCoursesCache = Array.isArray(courses) ? courses : [];
+                applyCourseFilters();
             } catch(e) {
                 console.error('Could not load courses:', e);
             }

@@ -298,6 +298,24 @@ def save_config(config):
     with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
 
+
+def sync_forms_registry_with_config(config):
+    """Upsert non-archived forms from config into FBS_Forms."""
+    results = {}
+    for form_id, form in config.get('forms', {}).items():
+        if form.get('is_archived'):
+            continue
+        ok = db.register_form(
+            form_id,
+            form.get('title', form_id),
+            form.get('formNumber', ''),
+            form.get('description', ''),
+            form,
+        )
+        results[form_id] = ok
+    all_ok = all(results.values()) if results else True
+    return all_ok, results
+
 def _slugify_form_id(title):
     """Convert a form title to a stable lowercase slug used as form_id.
     e.g. 'TRAINER EVALUATION FORM' -> 'trainer_evaluation_form'
@@ -492,6 +510,17 @@ def update_form(form_id):
     data = request.json
     config['forms'][form_id] = data
     save_config(config)
+
+    form_ok = db.register_form(
+        form_id,
+        data.get('title', form_id),
+        data.get('formNumber', ''),
+        data.get('description', ''),
+        data,
+    )
+    if not form_ok:
+        print(f"Warning: Could not sync FBS_Forms registry for {form_id}")
+
     form_title = data.get('title', form_id)
     ok, msg = db.sync_form_response_table(form_title, data)
     if not ok:
@@ -621,11 +650,16 @@ def create_tables():
     config = load_config()
     ok_base, msg_base = db.init_fbs_tables()
     results = {'FBS_Forms': msg_base}
+
+    forms_ok, forms_sync = sync_forms_registry_with_config(config)
+    synced_count = sum(1 for ok in forms_sync.values() if ok)
+    results['FBS_Forms_sync'] = f"Synced {synced_count}/{len(forms_sync)} forms"
+
     for form_id, form in config['forms'].items():
         if not form.get('is_archived'):
             ok, msg = db.create_form_response_table(form.get('title', form_id), form)
             results[form_id] = msg
-    all_ok = ok_base and all('Error' not in m for m in results.values())
+    all_ok = ok_base and forms_ok and all('Error' not in m for m in results.values())
     return jsonify({'success': all_ok, 'message': ' | '.join(f"{k}: {v}" for k, v in results.items())})
 
 
@@ -1315,6 +1349,8 @@ def delete_form(form_id):
 if __name__ == '__main__':
     db.init_fbs_tables()
     _cfg = load_config()
+    _forms_ok, _forms_sync = sync_forms_registry_with_config(_cfg)
+    print(f"[FBS_Forms sync] {sum(1 for ok in _forms_sync.values() if ok)}/{len(_forms_sync)} forms synced")
     for _fid, _form in _cfg['forms'].items():
         if not _form.get('is_archived'):
             _ok, _msg = db.create_form_response_table(_form.get('title', _fid), _form)
