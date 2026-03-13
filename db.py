@@ -507,6 +507,42 @@ def form_has_responses(form_id, form_title):
     except Exception:
         return False
 
+
+def drop_form_response_table_if_empty(form_title):
+    """Drop the per-form response table only when it exists and has zero rows.
+
+    Returns (ok, dropped, message):
+      - ok=True, dropped=True  : table dropped
+      - ok=True, dropped=False : table not dropped (not found or contains rows)
+      - ok=False, dropped=False: unexpected DB error
+    """
+    table = _get_table_name(form_title)
+    conn = get_fbs_connection()
+    if not conn:
+        return False, False, "Could not connect to AKC_FBS"
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT COUNT(*) FROM sysobjects WHERE name=? AND xtype='U'",
+            (table,))
+        if cur.fetchone()[0] == 0:
+            conn.close()
+            return True, False, f"Table [{table}] does not exist."
+
+        cur.execute(f"SELECT COUNT(*) FROM [{table}]")
+        row_count = int(cur.fetchone()[0] or 0)
+        if row_count > 0:
+            conn.close()
+            return True, False, f"Table [{table}] contains {row_count} row(s); keeping table."
+
+        cur.execute(f"DROP TABLE [{table}]")
+        conn.commit()
+        conn.close()
+        return True, True, f"Table [{table}] dropped (empty table)."
+    except Exception as e:
+        print(f"Error dropping empty response table [{table}]: {e}")
+        return False, False, str(e)
+
 def has_submitted_db(course_id, id_number, form_title):
     """Return True if a response already exists in the form's per-form table."""
     table = _get_table_name(form_title)

@@ -766,10 +766,9 @@ def create_course():
         course['num_instructors'] = 0
         course['instructors'] = []
 
-    # Insert with retry so we only continue when a unique course_id is persisted.
     inserted = False
     for _ in range(5):
-        course['id'] = str(uuid.uuid4())[:8]
+        course['id'] = uuid.uuid4().hex[:20]
         if db.create_course_in_db(course):
             inserted = True
             break
@@ -1331,7 +1330,8 @@ def create_form():
 @api_login_required
 def delete_form(form_id):
     """Delete or archive a form. Forms with response data are archived (soft-deleted)
-    so that historical responses are never lost. Forms without data are hard-deleted."""
+    so that historical responses are never lost. Forms without data are hard-deleted
+    and their empty response tables are removed."""
     if form_id in ('form1', 'form2'):
         return jsonify({'error': 'Cannot delete built-in forms'}), 400
     config = load_config()
@@ -1349,10 +1349,28 @@ def delete_form(form_id):
             'message': 'Form archived — all responses are preserved in the database.'
         })
     else:
+        drop_ok, dropped, drop_msg = db.drop_form_response_table_if_empty(form_title)
+
+        # If drop failed unexpectedly, keep everything unchanged to avoid inconsistent state.
+        if not drop_ok:
+            return jsonify({'error': f'Could not remove response table: {drop_msg}'}), 500
+
+        # A late submission could make the table non-empty after the first check.
+        # In that case, preserve data by archiving the form instead of hard-deleting.
+        if not dropped and db.form_has_responses(form_id, form_title):
+            db.soft_delete_form(form_id)
+            config['forms'][form_id]['is_archived'] = True
+            save_config(config)
+            return jsonify({
+                'success': True,
+                'archived': True,
+                'message': 'Form archived — responses were detected, table/data preserved.'
+            })
+
         db.soft_delete_form(form_id)
         del config['forms'][form_id]
         save_config(config)
-        return jsonify({'success': True, 'archived': False})
+        return jsonify({'success': True, 'archived': False, 'message': drop_msg})
 
 if __name__ == '__main__':
     db.init_fbs_tables()
