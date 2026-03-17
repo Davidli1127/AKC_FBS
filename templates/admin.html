@@ -162,7 +162,6 @@
                                    oninput="searchParticipantCourses(this.value)">
                             <div id="participantCourseSuggestions" class="suggestions-dropdown" style="display: none;"></div>
                         </div>
-                        <small style="color: #666;">Class code is the same as the Course Title</small>
                     </div>
                     
                     <button class="btn btn-primary" onclick="loadParticipants()" id="loadParticipantsBtn">
@@ -170,7 +169,6 @@
                     </button>
                     
                     <div id="participantsResult" style="margin-top: 20px;">
-                        <p style="color: #666;">Enter a CLass Code and click Load Participants.</p>
                     </div>
                 </div>
             </div>
@@ -895,7 +893,7 @@
                         const statusClass = submitted ? 'status-sent' : 'status-pending';
                         html += `<tr>
                             <td>${p.name || '-'}</td>
-                            <td style="font-family:monospace; font-size:13px;">${p.id_number || '-'}</td>
+                            <td>${p.id_number || '-'}</td>
                             <td>${p.email || '-'}</td>
                             <td class="${statusClass}">${surveyStatus}</td>
                         </tr>`;
@@ -955,7 +953,7 @@
                     const statusClass = p.survey_sent ? 'status-sent' : 'status-pending';
                     html += `<tr>
                         <td>${p.name || '-'}</td>
-                        <td style="font-family:monospace; font-size:13px;">${p.id_number || '-'}</td>
+                        <td>${p.id_number || '-'}</td>
                         <td>${p.email || '-'}</td>
                         <td>${p.designation || '-'}</td>
                         <td class="${statusClass}">${surveyStatus}</td>
