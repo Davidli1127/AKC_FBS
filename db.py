@@ -501,6 +501,54 @@ def find_form_by_title(form_title):
         return None
 
 
+def get_active_forms_map():
+    """Return active (not soft-deleted) forms as {form_id: config_dict}."""
+    conn = get_fbs_connection()
+    if not conn:
+        return {}
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT form_id, form_title, form_number, description, config_json "
+            "FROM FBS_Forms WHERE is_deleted = 0"
+        )
+        rows = cur.fetchall()
+        conn.close()
+
+        forms = {}
+        for row in rows:
+            form_id = row[0]
+            form_title = row[1] or form_id
+            form_number = row[2] or ''
+            description = row[3] or ''
+            config_json = row[4]
+
+            cfg = {}
+            if config_json:
+                try:
+                    cfg = json.loads(config_json)
+                except Exception:
+                    cfg = {}
+
+            if not isinstance(cfg, dict):
+                cfg = {}
+
+            cfg['id'] = cfg.get('id', form_id)
+            cfg['title'] = cfg.get('title', form_title)
+            cfg['formNumber'] = cfg.get('formNumber', form_number)
+            cfg['description'] = cfg.get('description', description)
+            cfg['sections'] = cfg.get('sections', [])
+            cfg['headerFields'] = cfg.get('headerFields', [])
+            cfg['ratingOptions'] = cfg.get('ratingOptions', [])
+
+            forms[form_id] = cfg
+
+        return forms
+    except Exception as e:
+        print(f"Error getting active forms: {e}")
+        return {}
+
+
 def form_has_responses(form_id, form_title):
     """Return True if the per-form response table has at least one row."""
     table = _get_table_name(form_title)

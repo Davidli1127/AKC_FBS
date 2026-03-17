@@ -27,36 +27,23 @@ ADMIN_ACCOUNT = os.environ.get('ADMIN_ACCOUNT', 'admin')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'akc2026')
 
 def _get_default_instructor_section(max_instructors=3):
-    """Generate a default instructor_rating section."""
+    """Generate an empty instructor_rating section scaffold."""
     return {
         'id': 'B',
         'title': 'Instructors',
         'type': 'instructor_rating',
         'maxInstructors': max_instructors,
-        'questions': [
-            {'id': '1', 'text': 'The Instructor has knowledge and practical understanding of the subject'},
-            {'id': '2', 'text': 'The Instructor is able to communicate and generate participation and interest'},
-            {'id': '3', 'text': 'The Instructor uses relevant examples and case studies'},
-            {'id': '4', 'text': 'The Instructor was helpful and attentive to individuals / guidance during the course'},
-            {'id': '5', 'text': 'The Instructor was well prepared and organized'},
-            {'id': '6', 'text': 'The Instructor was effective and had covered the subject well'},
-        ]
+        'questions': []
     }
 
 def _get_default_assessor_section(max_assessors=2):
-    """Generate a default assessor_rating section."""
+    """Generate an empty assessor_rating section scaffold."""
     return {
         'id': 'A',
         'title': 'Assessors',
         'type': 'assessor_rating',
         'maxAssessors': max_assessors,
-        'questions': [
-            {'id': '1', 'text': 'The assessor has briefed the assessment requirements'},
-            {'id': '2', 'text': 'The assessor is fair'},
-            {'id': '3', 'text': 'The assessor records all assessment results'},
-            {'id': '4', 'text': 'The assessor ensure the equipment are prepared'},
-            {'id': '5', 'text': 'The assessor ensure the assessment area is safe'},
-        ]
+        'questions': []
     }
 
 def _get_unique_section_id(sections, preferred_id):
@@ -335,14 +322,29 @@ def has_submitted(course_id, identifier):
     return db.has_submitted_db(course_id, identifier, form_title)
 
 def load_config():
-    """Load configuration from JSON file"""
-    with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    """Load app config from JSON and forms from FBS_Forms (database source of truth)."""
+    base = {}
+    if os.path.exists(CONFIG_PATH):
+        try:
+            with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+                base = json.load(f)
+        except Exception:
+            base = {}
+
+    if not isinstance(base, dict):
+        base = {}
+
+    base['courses'] = base.get('courses', [])
+    base['forms'] = db.get_active_forms_map()
+    return base
 
 def save_config(config):
-    """Save configuration to JSON file"""
+    """Save only non-form local config. Form definitions are DB-only."""
+    local_cfg = {
+        'courses': config.get('courses', [])
+    }
     with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
-        json.dump(config, f, indent=2, ensure_ascii=False)
+        json.dump(local_cfg, f, indent=2, ensure_ascii=False)
 
 
 def sync_forms_registry_with_config(config):
@@ -554,8 +556,6 @@ def update_form(form_id):
         return jsonify({'error': 'Form not found'}), 404
     
     data = request.json
-    config['forms'][form_id] = data
-    save_config(config)
 
     form_ok = db.register_form(
         form_id,
@@ -565,12 +565,12 @@ def update_form(form_id):
         data,
     )
     if not form_ok:
-        print(f"Warning: Could not sync FBS_Forms registry for {form_id}")
+        return jsonify({'error': 'Could not save form to FBS_Forms'}), 500
 
     form_title = data.get('title', form_id)
     ok, msg = db.sync_form_response_table(form_title, data)
     if not ok:
-        print(f"Warning: Could not sync response table for {form_id}: {msg}")
+        return jsonify({'error': f'Form saved, but response table sync failed: {msg}'}), 500
     return jsonify({'success': True, 'db_sync': msg})
 
 @app.route('/api/forms/<form_id>/sections', methods=['POST'])
@@ -583,8 +583,20 @@ def add_section(form_id):
     
     data = request.json
     config['forms'][form_id]['sections'].append(data)
-    save_config(config)
-    return jsonify({'success': True})
+
+    form = config['forms'][form_id]
+    ok = db.register_form(
+        form_id,
+        form.get('title', form_id),
+        form.get('formNumber', ''),
+        form.get('description', ''),
+        form,
+    )
+    if not ok:
+        return jsonify({'error': 'Could not save form changes to database'}), 500
+
+    table_ok, table_msg = db.sync_form_response_table(form.get('title', form_id), form)
+    return jsonify({'success': True, 'db_sync': table_msg if table_ok else 'table sync failed'})
 
 @app.route('/api/forms/<form_id>/sections/<section_id>/questions', methods=['POST'])
 @api_login_required
@@ -601,9 +613,19 @@ def add_question(form_id, section_id):
         if section['id'] == section_id:
             section['questions'].append(data)
             break
-    
-    save_config(config)
-    return jsonify({'success': True})
+
+    ok = db.register_form(
+        form_id,
+        form.get('title', form_id),
+        form.get('formNumber', ''),
+        form.get('description', ''),
+        form,
+    )
+    if not ok:
+        return jsonify({'error': 'Could not save form changes to database'}), 500
+
+    table_ok, table_msg = db.sync_form_response_table(form.get('title', form_id), form)
+    return jsonify({'success': True, 'db_sync': table_msg if table_ok else 'table sync failed'})
 
 @app.route('/api/forms/<form_id>/sections/<section_id>/questions/<question_id>', methods=['DELETE'])
 @api_login_required
@@ -619,9 +641,19 @@ def delete_question(form_id, section_id, question_id):
         if section['id'] == section_id:
             section['questions'] = [q for q in section['questions'] if q['id'] != question_id]
             break
-    
-    save_config(config)
-    return jsonify({'success': True})
+
+    ok = db.register_form(
+        form_id,
+        form.get('title', form_id),
+        form.get('formNumber', ''),
+        form.get('description', ''),
+        form,
+    )
+    if not ok:
+        return jsonify({'error': 'Could not save form changes to database'}), 500
+
+    table_ok, table_msg = db.sync_form_response_table(form.get('title', form_id), form)
+    return jsonify({'success': True, 'db_sync': table_msg if table_ok else 'table sync failed'})
 
 @app.route('/api/db/test', methods=['GET'])
 @api_login_required
@@ -1319,7 +1351,7 @@ def create_form():
         form_id = existing['form_id']
 
     if form_id in config['forms']:
-        return jsonify({'error': f'Form ID "{form_id}" already exists in config.'}), 400
+        return jsonify({'error': f'Form ID "{form_id}" already exists.'}), 400
 
     template_id = data.get('copy_from', '')
     qr_fields = data.get('qr_fields')
@@ -1331,12 +1363,10 @@ def create_form():
         new_form['formNumber'] = data.get('formNumber', new_form.get('formNumber', ''))
         new_form['description'] = data.get('description', new_form.get('description', ''))
         
-        # Update QR fields and sections if new QR configuration is provided
         if qr_fields:
             new_form['qr_fields'] = qr_fields
             sections = new_form.get('sections', [])
             
-            # Update instructor section based on QR configuration
             if qr_fields.get('instructors', {}).get('show'):
                 has_instructor = any(s.get('type') == 'instructor_rating' for s in sections)
                 if not has_instructor:
@@ -1345,10 +1375,8 @@ def create_form():
                     inst_section['id'] = _get_unique_section_id(sections, 'B')
                     sections.insert(0, inst_section)
             else:
-                # Remove instructor section if it exists and show is false
                 sections = [s for s in sections if s.get('type') != 'instructor_rating']
             
-            # Update assessor section based on QR configuration
             if qr_fields.get('assessors', {}).get('show'):
                 has_assessor = any(s.get('type') == 'assessor_rating' for s in sections)
                 if not has_assessor:
@@ -1357,7 +1385,6 @@ def create_form():
                     assess_section['id'] = _get_unique_section_id(sections, 'A')
                     sections.insert(0, assess_section)
             else:
-                # Remove assessor section if it exists and show is false
                 sections = [s for s in sections if s.get('type') != 'assessor_rating']
             
             new_form['sections'] = sections
@@ -1418,9 +1445,15 @@ def create_form():
             new_form['sections'] = sections
             new_form['qr_fields'] = qr_fields
 
-    config['forms'][form_id] = new_form
-    save_config(config)
-    db.register_form(form_id, title, new_form.get('formNumber', ''), new_form.get('description', ''), new_form)
+    form_ok = db.register_form(
+        form_id,
+        title,
+        new_form.get('formNumber', ''),
+        new_form.get('description', ''),
+        new_form,
+    )
+    if not form_ok:
+        return jsonify({'error': 'Could not save new form to FBS_Forms'}), 500
     return jsonify({'success': True, 'form': new_form})
 
 @app.route('/api/forms/<form_id>', methods=['DELETE'])
@@ -1437,9 +1470,8 @@ def delete_form(form_id):
 
     form_title = config['forms'].get(form_id, {}).get('title', form_id)
     if db.form_has_responses(form_id, form_title):
-        db.soft_delete_form(form_id)
-        config['forms'][form_id]['is_archived'] = True
-        save_config(config)
+        if not db.soft_delete_form(form_id):
+            return jsonify({'error': 'Could not archive form in FBS_Forms'}), 500
         return jsonify({
             'success': True,
             'archived': True,
@@ -1448,25 +1480,20 @@ def delete_form(form_id):
     else:
         drop_ok, dropped, drop_msg = db.drop_form_response_table_if_empty(form_title)
 
-        # If drop failed unexpectedly, keep everything unchanged to avoid inconsistent state.
         if not drop_ok:
             return jsonify({'error': f'Could not remove response table: {drop_msg}'}), 500
 
-        # A late submission could make the table non-empty after the first check.
-        # In that case, preserve data by archiving the form instead of hard-deleting.
         if not dropped and db.form_has_responses(form_id, form_title):
-            db.soft_delete_form(form_id)
-            config['forms'][form_id]['is_archived'] = True
-            save_config(config)
+            if not db.soft_delete_form(form_id):
+                return jsonify({'error': 'Could not archive form in FBS_Forms'}), 500
             return jsonify({
                 'success': True,
                 'archived': True,
                 'message': 'Form archived — responses were detected, table/data preserved.'
             })
 
-        db.soft_delete_form(form_id)
-        del config['forms'][form_id]
-        save_config(config)
+        if not db.soft_delete_form(form_id):
+            return jsonify({'error': 'Could not mark form deleted in FBS_Forms'}), 500
         return jsonify({'success': True, 'archived': False, 'message': drop_msg})
 
 if __name__ == '__main__':
