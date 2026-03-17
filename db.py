@@ -75,20 +75,15 @@ def _get_table_name(form_title):
 
 
 _FIXED_COLUMNS_SQL = """\
-    [id]               INT           IDENTITY(1,1) NOT NULL,
-    [submission_time]  DATETIME      NOT NULL DEFAULT GETDATE(),
-    [course_id]        NVARCHAR(100) NULL,
+    [id]               UNIQUEIDENTIFIER NOT NULL,
+    [submission_time]  DATETIME2(7) NOT NULL,
+    [course_id]        NVARCHAR(20) NOT NULL,
     [course_title]     NVARCHAR(500) NULL,
-    [course_date]      NVARCHAR(50)  NULL,
+    [course_date]      DATE NULL,
     [venue]            NVARCHAR(200) NULL,
     [participant_name] NVARCHAR(200) NULL,
     [id_number]        NVARCHAR(100) NULL,
-    [position_title]   NVARCHAR(200) NULL,
-    [instructor1_name] NVARCHAR(200) NULL,
-    [instructor2_name] NVARCHAR(200) NULL,
-    [instructor3_name] NVARCHAR(200) NULL,
-    [assessor1_name]   NVARCHAR(200) NULL,
-    [assessor2_name]   NVARCHAR(200) NULL"""
+    [position_title]   NVARCHAR(200) NULL"""
 
 
 def _get_form_columns(form_config):
@@ -102,6 +97,20 @@ def _get_form_columns(form_config):
     text/mc/yes_no     -> {q_id} NVARCHAR(MAX)
     """
     cols = []
+    
+    has_instructor_section = any(s.get('type') == 'instructor_rating' for s in form_config.get('sections', []))
+    has_assessor_section = any(s.get('type') == 'assessor_rating' for s in form_config.get('sections', []))
+
+    if has_instructor_section:
+        max_inst = 3
+        for i in range(1, max_inst + 1):
+            cols.append((f'instructor{i}_name', 'NVARCHAR(200) NULL'))
+            
+    if has_assessor_section:
+        max_assess = 2 
+        for i in range(1, max_assess + 1):
+            cols.append((f'assessor{i}_name', 'NVARCHAR(200) NULL'))
+
     for section in form_config.get('sections', []):
         s_type    = section.get('type', '')
         questions = section.get('questions', [])
