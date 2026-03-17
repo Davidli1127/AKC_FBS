@@ -1005,3 +1005,244 @@ def update_survey_sent(course_code, participant_name, sent=True):
     except Exception as e:
         print(f"Error updating survey sent: {e}")
         return False
+
+
+def init_rectification_log_table():
+    """Create the FBS_Rectification_Log table if it does not exist."""
+    conn = get_fbs_connection()
+    if not conn:
+        return False, "Could not connect to AKC_FBS"
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='FBS_Rectification_Log' AND xtype='U')
+            CREATE TABLE FBS_Rectification_Log (
+                log_id              UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+                form_id             NVARCHAR(100) NOT NULL,
+                response_id         UNIQUEIDENTIFIER NOT NULL,
+                participant_name    NVARCHAR(200) NOT NULL,
+                participant_email   NVARCHAR(200) NOT NULL,
+                question_id         NVARCHAR(100) NOT NULL,
+                question_text       NVARCHAR(MAX) NOT NULL,
+                rating_value        INT NOT NULL,
+                rectification_text  NVARCHAR(MAX) NOT NULL,
+                implementation_date DATE NULL,
+                status              NVARCHAR(50) NOT NULL DEFAULT 'Pending',
+                email_sent_at       DATETIME NOT NULL DEFAULT GETDATE(),
+                created_at          DATETIME NOT NULL DEFAULT GETDATE()
+            )
+        """)
+        conn.commit()
+        conn.close()
+        return True, "FBS_Rectification_Log ready."
+    except Exception as e:
+        print(f"Error initializing FBS_Rectification_Log: {e}")
+        return False, str(e)
+
+
+def get_low_rating_responses(form_id, form_config, rating_threshold=2):
+    """
+    Get all low-rated responses (rating <= rating_threshold) from a form.
+    
+    Returns list of dicts with:
+    {
+        'response_id': UUID,
+        'participant_name': str,
+        'participant_email': str,
+        'form_title': str,
+        'course_id': str,
+        'submission_time': datetime,
+        'ratings': [{
+            'question_id': str,
+            'question_text': str,
+            'rating_value': int,
+            'section_type': str (rating, instructor_rating, assessor_rating)
+        }, ...]
+    }
+    """
+    table = _get_table_name(form_config.get('title', form_id))
+    conn = get_fbs_connection()
+    if not conn:
+        return []
+    
+    try:
+        cur = conn.cursor()
+        
+        # Get allcolumns from response table
+        cur.execute(f"""
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_NAME = ? AND TABLE_CATALOG = DB_NAME()
+        """, (table,))
+        all_cols = [row[0] for row in cur.fetchall()]
+        
+        # Map question IDs to their section type and text
+        question_map = {}
+        for section in form_config.get('sections', []):
+            section_type = section.get('type', '')
+            if section_type in ('rating', 'instructor_rating', 'assessor_rating'):
+                for q in section.get('questions', []):
+                    q_id = q.get('id')
+                    question_map[q_id] = {
+                        'text': q.get('text', ''),
+                        'section_type': section_type
+                    }
+        
+        # Build query for rating columns
+        rating_cols = list(question_map.keys())
+        if not rating_cols:
+            return []
+        
+        rating_col_sql = ', '.join(f'[{col}]' for col in rating_cols)
+        
+        # Query responses where any rating <= threshold
+        where_clauses = ' OR '.join(f'[{col}] <= {rating_threshold}' for col in rating_cols)
+        
+        cur.execute(f"""
+            SELECT 
+                [id], 
+                [participant_name], 
+                [id_number],
+                [submission_time],
+                [course_id],
+                {rating_col_sql}
+            FROM [{table}]
+            WHERE ({where_clauses})
+            ORDER BY [submission_time] DESC
+        """)
+        
+        responses = []
+        for row in cur.fetchall():
+            row_list = list(row)
+            response_id = row_list[0]
+            participant_name = row_list[1]
+            id_number = row_list[2]
+            submission_time = row_list[3]
+            course_id = row_list[4]
+            ratings_values = row_list[5:]
+            
+            # Get participant email from AKC_NAV if possible
+            participant_email = _get_participant_email(course_id, id_number, participant_name) or "N/A"
+            
+            # Build ratings list with only those <= threshold
+            low_ratings = []
+            for i, q_id in enumerate(rating_cols):
+                rating_val = ratings_values[i]
+                if rating_val is not None and rating_val <= rating_threshold:
+                    q_info = question_map.get(q_id, {})
+                    low_ratings.append({
+                        'question_id': q_id,
+                        'question_text': q_info.get('text', ''),
+                        'rating_value': rating_val,
+                        'section_type': q_info.get('section_type', '')
+                    })
+            
+            if low_ratings:  # Only include if there are low ratings
+                responses.append({
+                    'response_id': response_id,
+                    'participant_name': participant_name or '',
+                    'participant_email': participant_email,
+                    'id_number': id_number or '',
+                    'form_id': form_id,
+                    'form_title': form_config.get('title', form_id),
+                    'course_id': course_id or '',
+                    'submission_time': submission_time,
+                    'ratings': low_ratings
+                })
+        
+        conn.close()
+        return responses
+    except Exception as e:
+        print(f"Error getting low rating responses: {e}")
+        return []
+
+
+def _get_participant_email(course_id, id_number, participant_name):
+    """Look up participant email from AKC_NAV using course_id and id_number."""
+    try:
+        conn = get_connection()
+        if not conn:
+            return None
+        cur = conn.cursor()
+        if id_number and id_number.strip():
+            cur.execute(f"""
+                SELECT [Email Address]
+                FROM {PARTICIPANT_TABLE}
+                WHERE [Class Code] = ? AND LTRIM(RTRIM(UPPER([Identification Number]))) = ?
+            """, (course_id, id_number.strip().upper()))
+        else:
+            cur.execute(f"""
+                SELECT [Email Address]
+                FROM {PARTICIPANT_TABLE}
+                WHERE [Class Code] = ? AND [Participant Name] = ?
+            """, (course_id, participant_name))
+        row = cur.fetchone()
+        conn.close()
+        return str(row[0]).strip() if row and row[0] else None
+    except Exception as e:
+        print(f"Error getting participant email: {e}")
+        return None
+
+
+def get_all_rating_questions_by_form(forms_dict):
+    """
+    Return {form_id: [{'id': str, 'text': str, 'type': str}]}
+    for all rating-type questions across all forms.
+    """
+    result = {}
+    for form_id, form_config in forms_dict.items():
+        questions = []
+        for section in form_config.get('sections', []):
+            if section.get('type') in ('rating', 'instructor_rating', 'assessor_rating'):
+                section_type = section.get('type')
+                for q in section.get('questions', []):
+                    questions.append({
+                        'id': q.get('id'),
+                        'text': q.get('text', ''),
+                        'type': section_type
+                    })
+        if questions:
+            result[form_id] = questions
+    return result
+
+
+def log_rectification_sent(form_id, response_id, participant_name, participant_email,
+                           question_id, question_text, rating_value, rectification_text,
+                           implementation_date, status):
+    """Log a sent rectification to prevent duplicates."""
+    conn = get_fbs_connection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO FBS_Rectification_Log 
+            (form_id, response_id, participant_name, participant_email, question_id,
+             question_text, rating_value, rectification_text, implementation_date, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (form_id, response_id, participant_name, participant_email, question_id,
+              question_text, rating_value, rectification_text, implementation_date, status))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error logging rectification: {e}")
+        return False
+
+
+def check_rectification_already_sent(form_id, response_id, question_id):
+    """Check if a rectification has already been sent for this low rating."""
+    conn = get_fbs_connection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT COUNT(*) FROM FBS_Rectification_Log
+            WHERE form_id = ? AND response_id = ? AND question_id = ?
+        """, (form_id, response_id, question_id))
+        count = cur.fetchone()[0]
+        conn.close()
+        return count > 0
+    except Exception:
+        return False

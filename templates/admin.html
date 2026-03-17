@@ -13,7 +13,10 @@
                 <img src="{{ url_for('static', filename='logo.png') }}" alt="AKC Logo" class="logo" style="max-height: 50px; margin-right: 15px;">
                 <h1>AKC Feedback Management System</h1>
             </div>
-            <a href="{{ url_for('logout') }}" class="logout-btn" style="background: #dc3545; color: white; padding: 8px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; transition: background 0.3s;">Logout</a>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <a href="{{ url_for('low_ratings_page') }}" class="logout-btn" style="background: #17a2b8; color: white; padding: 8px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; transition: background 0.3s;">📊 Low Rating Feedback</a>
+                <a href="{{ url_for('logout') }}" class="logout-btn" style="background: #dc3545; color: white; padding: 8px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; transition: background 0.3s;">Logout</a>
+            </div>
         </div>
 
         <div class="tabs">

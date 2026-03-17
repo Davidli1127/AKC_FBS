@@ -728,6 +728,9 @@ def create_tables():
     config = load_config()
     ok_base, msg_base = db.init_fbs_tables()
     results = {'FBS_Forms': msg_base}
+    
+    ok_rect, msg_rect = db.init_rectification_log_table()
+    results['FBS_Rectification_Log'] = msg_rect
 
     forms_ok, forms_sync = sync_forms_registry_with_config(config)
     synced_count = sum(1 for ok in forms_sync.values() if ok)
@@ -1496,8 +1499,192 @@ def delete_form(form_id):
             return jsonify({'error': 'Could not mark form deleted in FBS_Forms'}), 500
         return jsonify({'success': True, 'archived': False, 'message': drop_msg})
 
+
+# ============== LOW RATING FEEDBACK & RECTIFICATION ROUTES ==============
+
+@app.route('/low-ratings')
+@api_login_required
+def low_ratings_page():
+    """Render the low ratings feedback page."""
+    config = load_config()
+    forms_dict = db.get_active_forms_map()
+    
+    return render_template('low_ratings.html', forms=forms_dict)
+
+
+@app.route('/api/low-ratings-data')
+@api_login_required
+def get_low_ratings_data():
+    """
+    Fetch low-rated responses for specified forms.
+    
+    Query params:
+    - forms: comma-separated list of form_ids (mandatory)
+    - rating_threshold: max rating to include (default: 2)
+    - question_id: filter by specific question (optional)
+    """
+    forms_str = request.args.get('forms', '').strip()
+    rating_threshold = int(request.args.get('rating_threshold', 2))
+    question_filter = request.args.get('question_id', '').strip()
+    
+    if not forms_str:
+        return jsonify({'error': 'No forms specified'}), 400
+    
+    form_ids = [f.strip() for f in forms_str.split(',') if f.strip()]
+    forms_dict = db.get_active_forms_map()
+    
+    all_low_ratings = []
+    for form_id in form_ids:
+        if form_id in forms_dict:
+            form_config = forms_dict[form_id]
+            responses = db.get_low_rating_responses(form_id, form_config, rating_threshold)
+            
+            # Filter by question if specified
+            if question_filter:
+                responses = [
+                    {**r, 'ratings': [rat for rat in r['ratings'] if rat['question_id'] == question_filter]}
+                    for r in responses
+                ]
+                responses = [r for r in responses if r['ratings']]  # Remove empty
+            
+            all_low_ratings.extend(responses)
+    
+    # Convert datetime objects to strings for JSON serialization
+    for item in all_low_ratings:
+        if isinstance(item.get('submission_time'), datetime):
+            item['submission_time'] = item['submission_time'].strftime('%Y-%m-%d %H:%M:%S')
+    
+    return jsonify(all_low_ratings)
+
+
+@app.route('/api/rating-questions')
+@api_login_required
+def get_rating_questions():
+    """Get all rating questions for filtering."""
+    forms_str = request.args.get('forms', '').strip()
+    
+    if not forms_str:
+        return jsonify({}), 400
+    
+    form_ids = [f.strip() for f in forms_str.split(',') if f.strip()]
+    forms_dict = db.get_active_forms_map()
+    
+    # Filter forms dict by requested form_ids
+    filtered_forms = {fid: forms_dict[fid] for fid in form_ids if fid in forms_dict}
+    
+    questions_by_form = db.get_all_rating_questions_by_form(filtered_forms)
+    return jsonify(questions_by_form)
+
+
+@app.route('/api/send-rectification', methods=['POST'])
+@api_login_required
+def send_rectification():
+    """
+    Send rectification email to participant.
+    
+    Body JSON:
+    {
+        'form_id': str,
+        'response_id': UUID,
+        'participant_name': str,
+        'participant_email': str,
+        'question_id': str,
+        'question_text': str,
+        'rating_value': int,
+        'rectification_text': str,
+        'implementation_date': 'YYYY-MM-DD',
+        'status': 'Pending|In Progress|Completed|Resolved'
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        form_id = data.get('form_id', '').strip()
+        response_id = data.get('response_id', '').strip()
+        question_id = data.get('question_id', '').strip()
+        participant_email = data.get('participant_email', '').strip()
+        rectification_text = data.get('rectification_text', '').strip()
+        implementation_date = data.get('implementation_date', '').strip()
+        status = data.get('status', 'Pending').strip()
+        
+        if not all([form_id, response_id, question_id, participant_email]):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        # Check if rectification already sent for this low rating
+        if db.check_rectification_already_sent(form_id, response_id, question_id):
+            return jsonify({'error': 'Rectification already sent for this low rating'}), 409
+        
+        # Prepare email data
+        question_text = data.get('question_text', '')
+        rating_value = data.get('rating_value', 0)
+        participant_name = data.get('participant_name', '')
+        
+        # Generate email preview URL for Microsoft365
+        email_subject = f"Response to Your Feedback"
+        email_body = f"""Dear {participant_name},
+
+Thank you for completing the feedback form. We appreciate your valuable input.
+
+Question: {question_text}
+Your Rating: {rating_value}/5
+
+Rectification / Response:
+{rectification_text}
+
+Implementation Date: {implementation_date}
+Status: {status}
+
+We take your feedback seriously and will work to improve our services.
+
+Best regards,
+AKC Training Team
+postcourse.enquiries@SG-AKC.com"""
+        
+        # Generate mailto link for Outlook Web Access
+        # Encode special characters for URL
+        from urllib.parse import quote
+        subject_encoded = quote(email_subject)
+        body_encoded = quote(email_body)
+        mailto_link = f"mailto:{participant_email}?subject={subject_encoded}&body={body_encoded}"
+        
+        # Log the rectification before returning
+        import uuid
+        try:
+            response_uuid = uuid.UUID(response_id)
+        except ValueError:
+            return jsonify({'error': 'Invalid response_id format'}), 400
+        
+        log_ok = db.log_rectification_sent(
+            form_id=form_id,
+            response_id=response_uuid,
+            participant_name=participant_name,
+            participant_email=participant_email,
+            question_id=question_id,
+            question_text=question_text,
+            rating_value=rating_value,
+            rectification_text=rectification_text,
+            implementation_date=implementation_date if implementation_date else None,
+            status=status
+        )
+        
+        if not log_ok:
+            return jsonify({'error': 'Could not log rectification'}), 500
+        
+        return jsonify({
+            'success': True,
+            'message': 'Rectification logged successfully',
+            'mailto_link': mailto_link,
+            'email_body': email_body
+        })
+    
+    except Exception as e:
+        print(f"Error sending rectification: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     db.init_fbs_tables()
+    db.init_rectification_log_table()
     _cfg = load_config()
     _forms_ok, _forms_sync = sync_forms_registry_with_config(_cfg)
     print(f"[FBS_Forms sync] {sum(1 for ok in _forms_sync.values() if ok)}/{len(_forms_sync)} forms synced")
