@@ -26,6 +26,52 @@ app.secret_key = os.environ.get('SECRET_KEY', 'akc-feedback-secret-key-2026')
 ADMIN_ACCOUNT = os.environ.get('ADMIN_ACCOUNT', 'admin')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'akc2026')
 
+def _get_default_instructor_section(max_instructors=3):
+    """Generate a default instructor_rating section."""
+    return {
+        'id': 'B',
+        'title': 'Instructors',
+        'type': 'instructor_rating',
+        'maxInstructors': max_instructors,
+        'questions': [
+            {'id': '1', 'text': 'The Instructor has knowledge and practical understanding of the subject'},
+            {'id': '2', 'text': 'The Instructor is able to communicate and generate participation and interest'},
+            {'id': '3', 'text': 'The Instructor uses relevant examples and case studies'},
+            {'id': '4', 'text': 'The Instructor was helpful and attentive to individuals / guidance during the course'},
+            {'id': '5', 'text': 'The Instructor was well prepared and organized'},
+            {'id': '6', 'text': 'The Instructor was effective and had covered the subject well'},
+        ]
+    }
+
+def _get_default_assessor_section(max_assessors=2):
+    """Generate a default assessor_rating section."""
+    return {
+        'id': 'A',
+        'title': 'Assessors',
+        'type': 'assessor_rating',
+        'maxAssessors': max_assessors,
+        'questions': [
+            {'id': '1', 'text': 'The assessor has briefed the assessment requirements'},
+            {'id': '2', 'text': 'The assessor is fair'},
+            {'id': '3', 'text': 'The assessor records all assessment results'},
+            {'id': '4', 'text': 'The assessor ensure the equipment are prepared'},
+            {'id': '5', 'text': 'The assessor ensure the assessment area is safe'},
+        ]
+    }
+
+def _get_unique_section_id(sections, preferred_id):
+    """Get a unique section ID, using preferred_id if available, else find alternative."""
+    existing_ids = set(s.get('id') for s in sections)
+    if preferred_id not in existing_ids:
+        return preferred_id
+    # Try to find an alternative letter ID
+    for i in range(ord('A'), ord('Z') + 1):
+        alt_id = chr(i)
+        if alt_id not in existing_ids:
+            return alt_id
+    # Fallback: use numeric suffix
+    return f"{preferred_id}_1"
+
 def login_required(f):
     """Decorator to require login for admin routes"""
     @wraps(f)
@@ -1276,14 +1322,46 @@ def create_form():
         return jsonify({'error': f'Form ID "{form_id}" already exists in config.'}), 400
 
     template_id = data.get('copy_from', '')
+    qr_fields = data.get('qr_fields')
+    
     if template_id and template_id in config['forms']:
         new_form = copy.deepcopy(config['forms'][template_id])
         new_form['id'] = form_id
         new_form['title'] = title
         new_form['formNumber'] = data.get('formNumber', new_form.get('formNumber', ''))
         new_form['description'] = data.get('description', new_form.get('description', ''))
+        
+        # Update QR fields and sections if new QR configuration is provided
+        if qr_fields:
+            new_form['qr_fields'] = qr_fields
+            sections = new_form.get('sections', [])
+            
+            # Update instructor section based on QR configuration
+            if qr_fields.get('instructors', {}).get('show'):
+                has_instructor = any(s.get('type') == 'instructor_rating' for s in sections)
+                if not has_instructor:
+                    max_inst = qr_fields.get('instructors', {}).get('max', 3)
+                    inst_section = _get_default_instructor_section(max_inst)
+                    inst_section['id'] = _get_unique_section_id(sections, 'B')
+                    sections.insert(0, inst_section)
+            else:
+                # Remove instructor section if it exists and show is false
+                sections = [s for s in sections if s.get('type') != 'instructor_rating']
+            
+            # Update assessor section based on QR configuration
+            if qr_fields.get('assessors', {}).get('show'):
+                has_assessor = any(s.get('type') == 'assessor_rating' for s in sections)
+                if not has_assessor:
+                    max_assess = qr_fields.get('assessors', {}).get('max', 2)
+                    assess_section = _get_default_assessor_section(max_assess)
+                    assess_section['id'] = _get_unique_section_id(sections, 'A')
+                    sections.insert(0, assess_section)
+            else:
+                # Remove assessor section if it exists and show is false
+                sections = [s for s in sections if s.get('type') != 'assessor_rating']
+            
+            new_form['sections'] = sections
     else:
-        qr_fields = data.get('qr_fields')
         header_fields = [
             {'id': 'course_title', 'label': 'Course Title', 'type': 'text', 'required': True, 'prefilled': True},
             {'id': 'course_date', 'label': 'Course Date', 'type': 'date', 'required': True, 'prefilled': True},
@@ -1319,6 +1397,25 @@ def create_form():
             'sections': data.get('sections', [])
         }
         if qr_fields:
+            sections = new_form.get('sections', [])
+            
+            if qr_fields.get('instructors', {}).get('show'):
+                has_instructor = any(s.get('type') == 'instructor_rating' for s in sections)
+                if not has_instructor:
+                    max_inst = qr_fields.get('instructors', {}).get('max', 3)
+                    inst_section = _get_default_instructor_section(max_inst)
+                    inst_section['id'] = _get_unique_section_id(sections, 'B')
+                    sections.insert(0, inst_section)
+            
+            if qr_fields.get('assessors', {}).get('show'):
+                has_assessor = any(s.get('type') == 'assessor_rating' for s in sections)
+                if not has_assessor:
+                    max_assess = qr_fields.get('assessors', {}).get('max', 2)
+                    assess_section = _get_default_assessor_section(max_assess)
+                    assess_section['id'] = _get_unique_section_id(sections, 'A')
+                    sections.insert(0, assess_section)
+            
+            new_form['sections'] = sections
             new_form['qr_fields'] = qr_fields
 
     config['forms'][form_id] = new_form
