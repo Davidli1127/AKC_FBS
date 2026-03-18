@@ -1304,7 +1304,7 @@ def get_analysis_text():
     except ValueError:
         dt_to = None
 
-    rows = db.get_responses_for_analysis(form_id, form, dt_from, dt_to, course_filter)
+    rows = db.get_responses_for_analysis(form_id, form, dt_from,  dt_to, course_filter)
 
     text_agg = {}
     for row in rows:
@@ -1494,9 +1494,6 @@ def delete_form(form_id):
             return jsonify({'error': 'Could not mark form deleted in FBS_Forms'}), 500
         return jsonify({'success': True, 'archived': False, 'message': drop_msg})
 
-
-# ============== LOW RATING FEEDBACK & RECTIFICATION ROUTES ==============
-
 @app.route('/low-ratings')
 @api_login_required
 def low_ratings_page():
@@ -1534,17 +1531,15 @@ def get_low_ratings_data():
             form_config = forms_dict[form_id]
             responses = db.get_low_rating_responses(form_id, form_config, rating_threshold)
             
-            # Filter by question if specified
             if question_filter:
                 responses = [
                     {**r, 'ratings': [rat for rat in r['ratings'] if rat['question_id'] == question_filter]}
                     for r in responses
                 ]
-                responses = [r for r in responses if r['ratings']]  # Remove empty
+                responses = [r for r in responses if r['ratings']]  
             
             all_low_ratings.extend(responses)
-    
-    # Convert datetime objects to strings for JSON serialization
+
     for item in all_low_ratings:
         if isinstance(item.get('submission_time'), datetime):
             item['submission_time'] = item['submission_time'].strftime('%Y-%m-%d %H:%M:%S')
@@ -1563,10 +1558,7 @@ def get_rating_questions():
     
     form_ids = [f.strip() for f in forms_str.split(',') if f.strip()]
     forms_dict = db.get_active_forms_map()
-    
-    # Filter forms dict by requested form_ids
     filtered_forms = {fid: forms_dict[fid] for fid in form_ids if fid in forms_dict}
-    
     questions_by_form = db.get_all_rating_questions_by_form(filtered_forms)
     return jsonify(questions_by_form)
 
@@ -1605,16 +1597,12 @@ def send_rectification():
         if not all([form_id, response_id, question_id, participant_email]):
             return jsonify({'error': 'Missing required fields'}), 400
         
-        # Check if rectification already sent for this low rating
         if db.check_rectification_already_sent(form_id, response_id, question_id):
             return jsonify({'error': 'Rectification already sent for this low rating'}), 409
         
-        # Prepare email data
         question_text = data.get('question_text', '')
         rating_value = data.get('rating_value', 0)
         participant_name = data.get('participant_name', '')
-        
-        # Generate email preview URL for Microsoft365
         email_subject = f"Response to Your Feedback"
         email_body = f"""Dear {participant_name},
 
@@ -1635,14 +1623,11 @@ Best regards,
 AKC Training Team
 postcourse.enquiries@SG-AKC.com"""
         
-        # Generate mailto link for Outlook Web Access
-        # Encode special characters for URL
         from urllib.parse import quote
         subject_encoded = quote(email_subject)
         body_encoded = quote(email_body)
         mailto_link = f"mailto:{participant_email}?subject={subject_encoded}&body={body_encoded}"
         
-        # Log the rectification before returning
         import uuid
         try:
             response_uuid = uuid.UUID(response_id)

@@ -1067,16 +1067,12 @@ def get_low_rating_responses(form_id, form_config, rating_threshold=2):
     
     try:
         cur = conn.cursor()
-        
-        # Get allcolumns from response table
         cur.execute(f"""
             SELECT COLUMN_NAME 
             FROM INFORMATION_SCHEMA.COLUMNS 
             WHERE TABLE_NAME = ? AND TABLE_CATALOG = DB_NAME()
         """, (table,))
         all_cols = [row[0] for row in cur.fetchall()]
-        
-        # Map question IDs to their section type and text
         question_map = {}
         for section in form_config.get('sections', []):
             section_type = section.get('type', '')
@@ -1088,14 +1084,11 @@ def get_low_rating_responses(form_id, form_config, rating_threshold=2):
                         'section_type': section_type
                     }
         
-        # Build query for rating columns
         rating_cols = list(question_map.keys())
         if not rating_cols:
             return []
         
         rating_col_sql = ', '.join(f'[{col}]' for col in rating_cols)
-        
-        # Query responses where any rating <= threshold
         where_clauses = ' OR '.join(f'[{col}] <= {rating_threshold}' for col in rating_cols)
         
         cur.execute(f"""
@@ -1120,11 +1113,9 @@ def get_low_rating_responses(form_id, form_config, rating_threshold=2):
             submission_time = row_list[3]
             course_id = row_list[4]
             ratings_values = row_list[5:]
-            
-            # Get participant email from AKC_NAV if possible
+
             participant_email = _get_participant_email(course_id, id_number, participant_name) or "N/A"
             
-            # Build ratings list with only those <= threshold
             low_ratings = []
             for i, q_id in enumerate(rating_cols):
                 rating_val = ratings_values[i]
@@ -1137,7 +1128,7 @@ def get_low_rating_responses(form_id, form_config, rating_threshold=2):
                         'section_type': q_info.get('section_type', '')
                     })
             
-            if low_ratings:  # Only include if there are low ratings
+            if low_ratings:
                 responses.append({
                     'response_id': response_id,
                     'participant_name': participant_name or '',
