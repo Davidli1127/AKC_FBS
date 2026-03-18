@@ -383,8 +383,8 @@
 <body>
     <div class="low-ratings-container">
         <div class="low-ratings-header">
-            <h2>📊 Low Rating Feedback Management</h2>
-            <a href="/admin" class="btn btn-secondary" style="padding: 8px 16px; text-decoration: none;">← Back to Admin</a>
+            <h2>Low Rating Feedback Management</h2>
+            <a href="/admin" class="btn btn-secondary" style="padding: 8px 16px; text-decoration: none;">← Back to Admin Site</a>
         </div>
 
         <div class="form-selector">
@@ -424,7 +424,6 @@
         <div id="messageContainer"></div>
 
         <div class="main-content">
-            <!-- LEFT PANEL: Low Ratings List -->
             <div class="left-panel">
                 <div class="panel-header">Low-Rated Responses</div>
                 <div class="panel-body">
@@ -432,7 +431,6 @@
                 </div>
             </div>
 
-            <!-- RIGHT PANEL: Chart & Questions Filter -->
             <div class="right-panel">
                 <div class="panel-header">Rating Distribution & Question Filter</div>
                 <div class="panel-body">
@@ -447,7 +445,6 @@
             </div>
         </div>
 
-        <!-- DETAIL FORM -->
         <div class="detail-form">
             <div class="detail-form-header">Rectification Form</div>
             <div class="detail-form-body">
@@ -523,7 +520,6 @@
         let ratingChart = null;
         let allRatingQuestions = {};
 
-        // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             loadLowRatings();
         });
@@ -544,12 +540,10 @@
             loadingDiv.innerHTML = '<div class="loading"><div class="spinner"></div> Loading low ratings...</div>';
 
             try {
-                // Get selected forms
                 let formsToFetch = [];
                 if (formSelect) {
                     formsToFetch = [formSelect];
                 } else {
-                    // All forms
                     const formSelect = document.getElementById('formFilterSelect');
                     formsToFetch = Array.from(formSelect.options)
                         .filter(opt => opt.value !== '')
@@ -557,14 +551,11 @@
                 }
 
                 const formsStr = formsToFetch.join(',');
-                
-                // Fetch low ratings
                 const response = await fetch(`/api/low-ratings-data?forms=${formsStr}&rating_threshold=${threshold}`);
                 if (!response.ok) throw new Error('Failed to load low ratings');
                 
                 allLowRatings = await response.json();
 
-                // Fetch rating questions for filtering
                 const qResponse = await fetch(`/api/rating-questions?forms=${formsStr}`);
                 if (qResponse.ok) {
                     allRatingQuestions = await qResponse.json();
@@ -632,13 +623,11 @@
             const [idx, qIdx] = uniqueId.split('-').map(Number);
             selectedRating = { idx, qIdx, id: uniqueId };
 
-            // Update UI
             document.querySelectorAll('.rating-row').forEach(row => row.classList.remove('selected'));
             event.target.closest('tr').classList.add('selected');
 
             populateDetailForm();
 
-            // Show detail form
             document.getElementById('detailFormContainer').style.display = 'none';
             document.getElementById('detailFormContent').style.display = 'block';
         }
@@ -760,7 +749,6 @@ postcourse.enquiries@SG-AKC.com`;
                 document.getElementById('messageContainer').innerHTML = 
                     '<div class="message success">✓ Rectification logged successfully! Email preview should open in your default email client.</div>';
 
-                // Open email preview in Outlook
                 if (result.mailto_link) {
                     window.open(result.mailto_link, '_blank');
                 }
@@ -816,7 +804,6 @@ postcourse.enquiries@SG-AKC.com`;
             if (checkedBoxes.length === 0) {
                 displayLowRatings();
             } else {
-                // Filter display
                 const filtered = allLowRatings.map(rating => ({
                     ...rating,
                     ratings: rating.ratings.filter(r => checkedBoxes.includes(r.question_id))
@@ -864,7 +851,6 @@ postcourse.enquiries@SG-AKC.com`;
                     ratings: r.ratings.filter(rat => checkedBoxes.includes(rat.question_id))
                 })).filter(r => r.ratings.length > 0);
 
-            // Build chart data
             const ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
             filtered.forEach(rating => {
                 rating.ratings.forEach(r => {

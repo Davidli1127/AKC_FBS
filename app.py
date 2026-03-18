@@ -51,12 +51,11 @@ def _get_unique_section_id(sections, preferred_id):
     existing_ids = set(s.get('id') for s in sections)
     if preferred_id not in existing_ids:
         return preferred_id
-    # Try to find an alternative letter ID
+    
     for i in range(ord('A'), ord('Z') + 1):
         alt_id = chr(i)
         if alt_id not in existing_ids:
             return alt_id
-    # Fallback: use numeric suffix
     return f"{preferred_id}_1"
 
 def login_required(f):
@@ -82,11 +81,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, 'config.json')
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 
-# QR code expiration time
 os.makedirs(DATA_DIR, exist_ok=True)
 
 ALERTS_FILE = os.path.join(DATA_DIR, 'low_feedback_alerts.json')
-
 
 _NEGATIVE_FEEDBACK_RE = re.compile(
     r'(?:'
@@ -691,7 +688,6 @@ def get_participants():
 
     config = load_config()
     class_code_norm = class_code.strip().upper()
-    # Check ALL courses (including closed) so responses from closed sessions are counted
     matching_courses = db.get_courses_by_title(class_code_norm)
     matching_course_ids = [c['id'] for c in matching_courses]
     form_titles = list({
@@ -756,7 +752,6 @@ def create_form_table(form_id):
     ok, message = db.create_form_response_table(form_title, form)
     return jsonify({'success': ok, 'message': message,
                     'table': db._get_table_name(form_title)})
-
 
 @app.route('/api/forms/<form_id>/table-status', methods=['GET'])
 @api_login_required
