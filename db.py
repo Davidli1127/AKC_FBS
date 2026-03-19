@@ -1270,8 +1270,6 @@ def get_text_question_responses(form_id, form_config):
     
     try:
         cur = conn.cursor()
-        
-        # Get all columns from response table
         cur.execute(f"""
             SELECT COLUMN_NAME 
             FROM INFORMATION_SCHEMA.COLUMNS 
@@ -1279,7 +1277,6 @@ def get_text_question_responses(form_id, form_config):
         """, (table,))
         all_cols = [row[0] for row in cur.fetchall()]
         
-        # Map question IDs to their section type and text (for text-type Qs only)
         question_map = {}
         text_question_cols = []
         for section in form_config.get('sections', []):
@@ -1291,14 +1288,12 @@ def get_text_question_responses(form_id, form_config):
                         'text': q.get('text', ''),
                         'section_type': section_type
                     }
-                    # Only add if column exists in table
                     if q_id in all_cols:
                         text_question_cols.append(q_id)
         
         if not text_question_cols:
             return []
         
-        # Query all responses
         text_col_sql = ', '.join(f'[{col}]' for col in text_question_cols)
         
         cur.execute(f"""
@@ -1322,11 +1317,8 @@ def get_text_question_responses(form_id, form_config):
             submission_time = row_list[3]
             course_id = row_list[4]
             text_values = row_list[5:]
-            
-            # Get participant email
             participant_email = _get_participant_email(course_id, id_number, participant_name) or "N/A"
             
-            # Build text responses list (only non-empty)
             text_responses = []
             for i, q_id in enumerate(text_question_cols):
                 text_val = text_values[i]

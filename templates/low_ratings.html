@@ -537,7 +537,6 @@
         <div id="messageContainer"></div>
 
         <div class="main-content">
-            <!-- LEFT PANEL: Low Ratings & Text Feedback List -->
             <div class="left-panel">
                 <div class="panel-header">Low-Rated & Text Feedback Responses</div>
                 <div class="panel-body">
@@ -545,24 +544,20 @@
                 </div>
             </div>
 
-            <!-- RIGHT PANEL: Chart & Analysis -->
             <div class="right-panel">
                 <div class="panel-header">Rating Distribution & Hotspot Analysis</div>
                 <div class="panel-body">
-                    <!-- Rating Chart Section -->
                     <div id="chartSection">
                         <div style="font-size: 12px; font-weight: 600; color: #333; margin-bottom: 10px;">Total Count of Rating by Rating Score</div>
                         <div class="chart-container">
                             <canvas id="ratingChart"></canvas>
                         </div>
 
-                        <!-- Rating Checkbox Filter -->
                         <div style="font-size: 12px; font-weight: 600; color: #333; margin-bottom: 8px;">Questions</div>
                         <div class="rating-checkbox-group" id="ratingCheckboxes" style="margin: 0; padding: 0; background: transparent; flex-direction: column;">
                         </div>
                     </div>
 
-                    <!-- Top Priority Issues Section -->
                     <div class="hotspot-section">
                         <div class="hotspot-header" onclick="toggleHotspot()" title="Click to see the most frequently reported issues">
                             <span class="hotspot-toggle">▶</span>
@@ -579,7 +574,6 @@
             </div>
         </div>
 
-        <!-- DETAIL FORM -->
         <div id="detailForm" class="detail-form" style="display: none;">
             <div id="detailFormHeader" class="detail-form-header">Feedback Response</div>
             <div class="detail-form-body">
@@ -587,7 +581,6 @@
                     Select an item from the left to view details and manage alerts.
                 </div>
                 <div id="detailFormContent" style="display: none;">
-                    <!-- Rating Feedback Form -->
                     <div id="ratingForm" style="display: none;">
                         <div class="detail-field">
                             <label>Participant Name:</label>
@@ -643,13 +636,12 @@
                         </div>
 
                         <div class="form-actions">
-                            <button class="btn-preview" onclick="previewEmail()">👁️ Preview Email</button>
-                            <button class="btn-submit" id="submitBtn" onclick="submitRectification()">✉️ Submit & Send</button>
+                            <button class="btn-preview" onclick="previewEmail()">Preview Email</button>
+                            <button class="btn-submit" id="submitBtn" onclick="submitRectification()">Submit & Send</button>
                             <button class="btn-clear" onclick="clearForm()">Clear</button>
                         </div>
                     </div>
 
-                    <!-- Text Feedback Form (Alerts only) -->
                     <div id="textForm" style="display: none;">
                         <div class="detail-field">
                             <label>Participant Name:</label>
@@ -714,7 +706,6 @@
         let ratingChart = null;
         let allHotspots = [];
 
-        // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             loadFeedback();
         });
@@ -746,14 +737,11 @@
                 }
 
                 const formsStr = formsToFetch.join(',');
-                
-                // Fetch feedback (ratings + text)
                 const response = await fetch(`/api/low-ratings-data?forms=${formsStr}&rating_threshold=${threshold}`);
                 if (!response.ok) throw new Error('Failed to load feedback');
                 
                 allFeedback = await response.json();
 
-                // Load hotspot analysis
                 const hotspotResponse = await fetch(`/api/hotspot-analysis?forms=${formsStr}`);
                 if (hotspotResponse.ok) {
                     allHotspots = await hotspotResponse.json();
@@ -795,7 +783,6 @@
                 const isRating = item.ratings && item.ratings.length > 0;
                 
                 if (isRating) {
-                    // Rating feedback rows
                     item.ratings.forEach((r, qIdx) => {
                         html += `<tr class="feedback-row" onclick="selectFeedback(${idx}, ${qIdx}, true)">
                             <td><span class="item-type rating">RATING</span></td>
@@ -809,7 +796,6 @@
                         </tr>`;
                     });
                 } else if (item.text_responses && item.text_responses.length > 0) {
-                    // Text feedback rows
                     item.text_responses.forEach((t, qIdx) => {
                         html += `<tr class="feedback-row" onclick="selectFeedback(${idx}, ${qIdx}, false)">
                             <td><span class="item-type text">TEXT</span></td>
@@ -833,7 +819,6 @@
             const item = allFeedback[itemIdx];
             selectedItem = { itemIdx, dataIdx, isRating };
 
-            // Update UI
             document.querySelectorAll('.feedback-row').forEach(row => row.classList.remove('selected'));
             if (event && event.target) {
                 event.target.closest('tr').classList.add('selected');
@@ -852,7 +837,7 @@
         function populateRatingForm(item, qIdx) {
             const rating = item.ratings[qIdx];
 
-            document.getElementById('detailFormHeader').textContent = '✉️ Rating Rectification';
+            document.getElementById('detailFormHeader').textContent = 'Rating Rectification';
             document.getElementById('detailFormHeader').className = 'detail-form-header';
 
             document.getElementById('ratingForm').style.display = 'block';
@@ -874,7 +859,7 @@
         function populateTextForm(item, qIdx) {
             const text = item.text_responses[qIdx];
 
-            document.getElementById('detailFormHeader').textContent = '📝 Text Feedback Alert';
+            document.getElementById('detailFormHeader').textContent = '📝Text Feedback Alert';
             document.getElementById('detailFormHeader').className = 'detail-form-header text';
 
             document.getElementById('ratingForm').style.display = 'none';
@@ -1024,7 +1009,7 @@ postcourse.enquiries@SG-AKC.com`;
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        alert_ids: [''], // Will need alert ID from data
+                        alert_ids: [''],
                         status: status,
                         notes: notes
                     })
@@ -1052,7 +1037,6 @@ postcourse.enquiries@SG-AKC.com`;
             const allQuestions = new Map();
             const seen = new Set();
 
-            // Collect all rating questions
             allFeedback.forEach(item => {
                 if (item.ratings) {
                     item.ratings.forEach(r => {
@@ -1065,13 +1049,11 @@ postcourse.enquiries@SG-AKC.com`;
                 }
             });
 
-            // Add "Select All" checkbox
             let html = `<div class="rating-checkbox">
                 <input type="checkbox" id="selectAll" onchange="toggleAllQuestions(this.checked)">
                 <label for="selectAll">Select All</label>
             </div>`;
 
-            // Add individual questions
             allQuestions.forEach((text, id) => {
                 html += `<div class="rating-checkbox">
                     <input type="checkbox" id="q-${id}" value="${id}" onchange="filterByQuestion()">
@@ -1094,7 +1076,6 @@ postcourse.enquiries@SG-AKC.com`;
         }
 
         function updateChart() {
-            // Collect rating values for chart
             const ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
             
             allFeedback.forEach(item => {
@@ -1171,7 +1152,6 @@ postcourse.enquiries@SG-AKC.com`;
             content.classList.toggle('open');
             toggle.classList.toggle('open');
             
-            // Show explanation when expanded
             if (content.classList.contains('open')) {
                 infoText.style.display = 'block';
             } else {

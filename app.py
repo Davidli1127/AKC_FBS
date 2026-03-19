@@ -1527,7 +1527,6 @@ def get_low_ratings_data():
     form_ids = [f.strip() for f in forms_str.split(',') if f.strip()]
     forms_dict = db.get_active_forms_map()
     
-    # Load alerts if requested
     alerts_by_qid = {}
     if include_alerts:
         alerts = load_alerts()
@@ -1537,14 +1536,13 @@ def get_low_ratings_data():
                 alerts_by_qid[qid] = []
             alerts_by_qid[qid].append(alert)
     
-    # Get low ratings (rating questions)
+    # Get low ratings
     all_low_ratings = []
     for form_id in form_ids:
         if form_id in forms_dict:
             form_config = forms_dict[form_id]
             responses = db.get_low_rating_responses(form_id, form_config, rating_threshold)
             
-            # Add alert status to each rating
             for r in responses:
                 for rating in r.get('ratings', []):
                     q_id = rating['question_id']
@@ -1561,7 +1559,6 @@ def get_low_ratings_data():
             
             all_low_ratings.extend(responses)
     
-    # Get text question responses (for alerts)
     all_text_responses = []
     for form_id in form_ids:
         if form_id in forms_dict:
@@ -1578,7 +1575,6 @@ def get_low_ratings_data():
             
             all_text_responses.extend(responses)
     
-    # Combine and convert datetimes
     all_feedback = all_low_ratings + all_text_responses
     for item in all_feedback:
         if isinstance(item.get('submission_time'), datetime):
@@ -1615,16 +1611,13 @@ def get_hotspot_analysis():
     """
     forms_str = request.args.get('forms', '').strip()
     
-    # Get all unresolved alerts
     alerts = load_alerts()
     active = [a for a in alerts if a.get('status') != 'resolved']
     
-    # If forms specified, filter by those forms
     if forms_str:
         form_ids = {f.strip() for f in forms_str.split(',') if f.strip()}
         active = [a for a in active if a.get('form_id') in form_ids]
     
-    # Group by question
     groups = defaultdict(lambda: {
         'question_id': '', 'question_text': '', 'question_type': '', 'forms': set(),
         'alert_count': 0, 'avg_rating': 0, 'alert_ids': [], 'comments': []
@@ -1641,22 +1634,20 @@ def get_hotspot_analysis():
         g['alert_ids'].append(a.get('id'))
         g['alert_count'] += 1
         
-        # For ratings, include in priority calculation
         if alert_type == 'rating' and 'rating' in a:
             if not hasattr(g, '_ratings'):
                 g['_ratings'] = []
             g['_ratings'].append(a.get('rating', 0))
         
-        # Collect comments
         if a.get('comment'):
             g['comments'].append(a['comment'])
     
     result = []
     for qid, g in groups.items():
         # Calculate priority score
-        ratings = g.get('_ratings', [3])  # Default to 3 if no ratings
+        ratings = g.get('_ratings', [3])
         avg_rating = sum(ratings) / len(ratings) if ratings else 3
-        urgency = max(0, 3 - avg_rating) + 1  # Urgency: 1-4 scale
+        urgency = max(0, 3 - avg_rating) + 1 
         priority = round(g['alert_count'] * urgency, 2)
         
         result.append({
