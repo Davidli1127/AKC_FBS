@@ -1237,3 +1237,119 @@ def check_rectification_already_sent(form_id, response_id, question_id):
         return count > 0
     except Exception:
         return False
+
+
+def get_text_question_responses(form_id, form_config):
+    """
+    Get all text/short-answer question responses for alert management.
+    
+    Returns list of dicts with:
+    {
+        'response_id': UUID,
+        'participant_name': str,
+        'participant_email': str,
+        'form_title': str,
+        'course_id': str,
+        'submission_time': datetime,
+        'text_responses': [{
+            'question_id': str,
+            'question_text': str,
+            'question_type': str (text_questions, multiple_choice, yes_no),
+            'response_text': str
+        }, ...]
+    }
+    """
+    table = _get_table_name(form_config.get('title', form_id))
+    conn = get_fbs_connection()
+    if not conn:
+        return []
+    
+    try:
+        cur = conn.cursor()
+        
+        # Get all columns from response table
+        cur.execute(f"""
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_NAME = ? AND TABLE_CATALOG = DB_NAME()
+        """, (table,))
+        all_cols = [row[0] for row in cur.fetchall()]
+        
+        # Map question IDs to their section type and text (for text-type Qs only)
+        question_map = {}
+        text_question_cols = []
+        for section in form_config.get('sections', []):
+            section_type = section.get('type', '')
+            if section_type in ('text_questions', 'multiple_choice', 'yes_no'):
+                for q in section.get('questions', []):
+                    q_id = q.get('id')
+                    question_map[q_id] = {
+                        'text': q.get('text', ''),
+                        'section_type': section_type
+                    }
+                    # Only add if column exists in table
+                    if q_id in all_cols:
+                        text_question_cols.append(q_id)
+        
+        if not text_question_cols:
+            return []
+        
+        # Query all responses
+        text_col_sql = ', '.join(f'[{col}]' for col in text_question_cols)
+        
+        cur.execute(f"""
+            SELECT 
+                [id], 
+                [participant_name], 
+                [id_number],
+                [submission_time],
+                [course_id],
+                {text_col_sql}
+            FROM [{table}]
+            ORDER BY [submission_time] DESC
+        """)
+        
+        responses = []
+        for row in cur.fetchall():
+            row_list = list(row)
+            response_id = row_list[0]
+            participant_name = row_list[1]
+            id_number = row_list[2]
+            submission_time = row_list[3]
+            course_id = row_list[4]
+            text_values = row_list[5:]
+            
+            # Get participant email
+            participant_email = _get_participant_email(course_id, id_number, participant_name) or "N/A"
+            
+            # Build text responses list (only non-empty)
+            text_responses = []
+            for i, q_id in enumerate(text_question_cols):
+                text_val = text_values[i]
+                if text_val and str(text_val).strip():
+                    q_info = question_map.get(q_id, {})
+                    text_responses.append({
+                        'question_id': q_id,
+                        'question_text': q_info.get('text', ''),
+                        'question_type': q_info.get('section_type', ''),
+                        'response_text': str(text_val).strip()
+                    })
+            
+            if text_responses:
+                responses.append({
+                    'response_id': response_id,
+                    'participant_name': participant_name or '',
+                    'participant_email': participant_email,
+                    'id_number': id_number or '',
+                    'form_id': form_id,
+                    'form_title': form_config.get('title', form_id),
+                    'course_id': course_id or '',
+                    'submission_time': submission_time,
+                    'text_responses': text_responses
+                })
+        
+        conn.close()
+        return responses
+    except Exception as e:
+        print(f"Error getting text question responses: {e}")
+        return []

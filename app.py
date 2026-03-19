@@ -1508,16 +1508,18 @@ def low_ratings_page():
 @api_login_required
 def get_low_ratings_data():
     """
-    Fetch low-rated responses for specified forms.
+    Fetch low-rated responses + text responses for specified forms.
     
     Query params:
     - forms: comma-separated list of form_ids (mandatory)
     - rating_threshold: max rating to include (default: 2)
     - question_id: filter by specific question (optional)
+    - include_alerts: include alert status data (default: true)
     """
     forms_str = request.args.get('forms', '').strip()
     rating_threshold = int(request.args.get('rating_threshold', 2))
     question_filter = request.args.get('question_id', '').strip()
+    include_alerts = request.args.get('include_alerts', 'true').lower() == 'true'
     
     if not forms_str:
         return jsonify({'error': 'No forms specified'}), 400
@@ -1525,26 +1527,64 @@ def get_low_ratings_data():
     form_ids = [f.strip() for f in forms_str.split(',') if f.strip()]
     forms_dict = db.get_active_forms_map()
     
+    # Load alerts if requested
+    alerts_by_qid = {}
+    if include_alerts:
+        alerts = load_alerts()
+        for alert in alerts:
+            qid = alert.get('question_id', '')
+            if qid not in alerts_by_qid:
+                alerts_by_qid[qid] = []
+            alerts_by_qid[qid].append(alert)
+    
+    # Get low ratings (rating questions)
     all_low_ratings = []
     for form_id in form_ids:
         if form_id in forms_dict:
             form_config = forms_dict[form_id]
             responses = db.get_low_rating_responses(form_id, form_config, rating_threshold)
             
+            # Add alert status to each rating
+            for r in responses:
+                for rating in r.get('ratings', []):
+                    q_id = rating['question_id']
+                    related_alerts = alerts_by_qid.get(q_id, [])
+                    rating['alert_status'] = related_alerts[0].get('status', 'new') if related_alerts else 'new'
+                    rating['alert_notes'] = related_alerts[0].get('action_notes', '') if related_alerts else ''
+            
             if question_filter:
                 responses = [
                     {**r, 'ratings': [rat for rat in r['ratings'] if rat['question_id'] == question_filter]}
                     for r in responses
                 ]
-                responses = [r for r in responses if r['ratings']]  
+                responses = [r for r in responses if r['ratings']]
             
             all_low_ratings.extend(responses)
-
-    for item in all_low_ratings:
+    
+    # Get text question responses (for alerts)
+    all_text_responses = []
+    for form_id in form_ids:
+        if form_id in forms_dict:
+            form_config = forms_dict[form_id]
+            responses = db.get_text_question_responses(form_id, form_config)
+            
+            # Add alert status to each text response
+            for r in responses:
+                for text_resp in r.get('text_responses', []):
+                    q_id = text_resp['question_id']
+                    related_alerts = alerts_by_qid.get(q_id, [])
+                    text_resp['alert_status'] = related_alerts[0].get('status', 'new') if related_alerts else 'new'
+                    text_resp['alert_notes'] = related_alerts[0].get('action_notes', '') if related_alerts else ''
+            
+            all_text_responses.extend(responses)
+    
+    # Combine and convert datetimes
+    all_feedback = all_low_ratings + all_text_responses
+    for item in all_feedback:
         if isinstance(item.get('submission_time'), datetime):
             item['submission_time'] = item['submission_time'].strftime('%Y-%m-%d %H:%M:%S')
     
-    return jsonify(all_low_ratings)
+    return jsonify(all_feedback)
 
 
 @app.route('/api/rating-questions')
@@ -1561,6 +1601,108 @@ def get_rating_questions():
     filtered_forms = {fid: forms_dict[fid] for fid in form_ids if fid in forms_dict}
     questions_by_form = db.get_all_rating_questions_by_form(filtered_forms)
     return jsonify(questions_by_form)
+
+
+@app.route('/api/hotspot-analysis')
+@api_login_required
+def get_hotspot_analysis():
+    """
+    Get hotspot analysis - questions ranked by priority (frequency × urgency).
+    Includes BOTH rating questions and text questions.
+    
+    Query params:
+    - forms: comma-separated form IDs (optional - if provided, filter by those forms)
+    """
+    forms_str = request.args.get('forms', '').strip()
+    
+    # Get all unresolved alerts
+    alerts = load_alerts()
+    active = [a for a in alerts if a.get('status') != 'resolved']
+    
+    # If forms specified, filter by those forms
+    if forms_str:
+        form_ids = {f.strip() for f in forms_str.split(',') if f.strip()}
+        active = [a for a in active if a.get('form_id') in form_ids]
+    
+    # Group by question
+    groups = defaultdict(lambda: {
+        'question_id': '', 'question_text': '', 'question_type': '', 'forms': set(),
+        'alert_count': 0, 'avg_rating': 0, 'alert_ids': [], 'comments': []
+    })
+    
+    for a in active:
+        qid = a.get('question_id', '')
+        alert_type = a.get('alert_type', 'rating')
+        g = groups[qid]
+        g['question_id'] = qid
+        g['question_text'] = g['question_text'] or a.get('question_text', qid)
+        g['question_type'] = g['question_type'] or alert_type
+        g['forms'].add(a.get('form_id', ''))
+        g['alert_ids'].append(a.get('id'))
+        g['alert_count'] += 1
+        
+        # For ratings, include in priority calculation
+        if alert_type == 'rating' and 'rating' in a:
+            if not hasattr(g, '_ratings'):
+                g['_ratings'] = []
+            g['_ratings'].append(a.get('rating', 0))
+        
+        # Collect comments
+        if a.get('comment'):
+            g['comments'].append(a['comment'])
+    
+    result = []
+    for qid, g in groups.items():
+        # Calculate priority score
+        ratings = g.get('_ratings', [3])  # Default to 3 if no ratings
+        avg_rating = sum(ratings) / len(ratings) if ratings else 3
+        urgency = max(0, 3 - avg_rating) + 1  # Urgency: 1-4 scale
+        priority = round(g['alert_count'] * urgency, 2)
+        
+        result.append({
+            'question_id': g['question_id'],
+            'question_text': g['question_text'],
+            'question_type': g['question_type'],
+            'forms': list(g['forms']),
+            'alert_count': g['alert_count'],
+            'avg_rating': round(avg_rating, 2),
+            'priority_score': priority,
+            'alert_ids': g['alert_ids'],
+            'comments': g['comments'][:5]
+        })
+    
+    result.sort(key=lambda x: x['priority_score'], reverse=True)
+    return jsonify(result)
+
+
+@app.route('/api/update-alert-status', methods=['PUT'])
+@api_login_required
+def update_alert_status():
+    """
+    Update alert status and notes.
+    Body: {alert_ids: [...], status: 'acknowledged|in_progress|resolved', notes: '...'}
+    """
+    data = request.get_json()
+    alert_ids = data.get('alert_ids', [])
+    status = data.get('status', '').strip()
+    notes = data.get('notes', '').strip()
+    
+    if not alert_ids or not status:
+        return jsonify({'error': 'alert_ids and status required'}), 400
+    
+    alerts = load_alerts()
+    updated_count = 0
+    
+    for alert in alerts:
+        if alert.get('id') in alert_ids:
+            alert['status'] = status
+            if notes:
+                alert['action_notes'] = notes
+            alert['updated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            updated_count += 1
+    
+    save_alerts_data(alerts)
+    return jsonify({'success': True, 'updated': updated_count})
 
 
 @app.route('/api/send-rectification', methods=['POST'])

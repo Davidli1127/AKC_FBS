@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Low Rating Feedback - AKC Feedback Management System</title>
+    <title>Low Rating Feedback & Alerts - AKC Feedback Management System</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
@@ -149,15 +149,30 @@
             font-weight: 500;
         }
 
+        .item-type {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 11px;
+        }
+
+        .item-type.rating {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .item-type.text {
+            background: #f3e5f5;
+            color: #6a1b9a;
+        }
+
         .rating-badge {
             display: inline-block;
             padding: 3px 8px;
             border-radius: 12px;
             font-weight: 600;
             font-size: 12px;
-        }
-
-        .rating-badge.low {
             background: #f8d7da;
             color: #721c24;
         }
@@ -170,37 +185,98 @@
 
         .chart-container {
             position: relative;
-            height: 300px;
+            height: 280px;
             margin-bottom: 20px;
         }
 
-        .questions-filter {
-            margin-top: 16px;
+        .rating-checkbox-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
         }
 
-        .questions-filter h4 {
-            margin: 0 0 12px 0;
-            font-size: 13px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .question-checkbox {
+        .rating-checkbox {
             display: flex;
             align-items: center;
-            padding: 6px 0;
+            gap: 6px;
+        }
+
+        .rating-checkbox input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .rating-checkbox label {
+            cursor: pointer;
+            margin: 0;
             font-size: 13px;
         }
 
-        .question-checkbox input[type="checkbox"] {
-            margin-right: 8px;
-            cursor: pointer;
+        .hotspot-section {
+            margin-top: 16px;
+            border-top: 1px solid #e9ecef;
+            padding-top: 16px;
         }
 
-        .question-checkbox label {
+        .hotspot-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             cursor: pointer;
-            margin: 0;
-            flex: 1;
+            user-select: none;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+        }
+
+        .hotspot-toggle {
+            font-size: 11px;
+            color: #666;
+            transition: transform 0.2s;
+        }
+
+        .hotspot-toggle.open {
+            transform: rotate(90deg);
+        }
+
+        .hotspot-content {
+            display: none;
+        }
+
+        .hotspot-content.open {
+            display: block;
+        }
+
+        .hotspot-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-left: 3px solid #007bff;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .hotspot-question {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .hotspot-stats {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 6px;
+        }
+
+        .hotspot-stat {
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .detail-form {
@@ -216,6 +292,10 @@
             color: white;
             padding: 12px 16px;
             font-weight: 600;
+        }
+
+        .detail-form-header.text {
+            background: #6c757d;
         }
 
         .detail-form-body {
@@ -244,6 +324,7 @@
             border-radius: 4px;
             font-size: 13px;
             font-family: inherit;
+            box-sizing: border-box;
         }
 
         .detail-field textarea {
@@ -252,7 +333,8 @@
         }
 
         .detail-field input[type="text"]:disabled,
-        .detail-field input[type="date"]:disabled {
+        .detail-field input[type="date"]:disabled,
+        .detail-field textarea:disabled {
             background: #f5f5f5;
             color: #888;
         }
@@ -261,10 +343,12 @@
             display: flex;
             gap: 10px;
             margin-top: 20px;
+            flex-wrap: wrap;
         }
 
         .form-actions button {
             flex: 1;
+            min-width: 120px;
             padding: 10px 16px;
             border: none;
             border-radius: 4px;
@@ -378,13 +462,29 @@
             font-weight: 700;
             color: #333;
         }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .field-row .detail-field {
+            margin-bottom: 0;
+        }
     </style>
 </head>
 <body>
     <div class="low-ratings-container">
         <div class="low-ratings-header">
-            <h2>Low Rating Feedback Management</h2>
-            <a href="/admin" class="btn btn-secondary" style="padding: 8px 16px; text-decoration: none;">← Back to Admin Site</a>
+            <h2>📊 Low Rating Feedback & Alerts</h2>
+            <a href="/admin" class="btn btn-secondary" style="padding: 8px 16px; text-decoration: none;">← Back to Admin</a>
         </div>
 
         <div class="form-selector">
@@ -396,7 +496,7 @@
                     <option value="{{ form_id }}">{{ form_data.get('title', form_id) }}</option>
                     {% endfor %}
                 </select>
-                <button onclick="loadLowRatings()">🔄 Refresh Data</button>
+                <button onclick="loadFeedback()">🔄 Refresh Data</button>
                 <label for="ratingThresholdSelect" style="margin-left: auto;">Show ratings:</label>
                 <select id="ratingThresholdSelect" onchange="onRatingThresholdChange()">
                     <option value="2">1-2 (Critical)</option>
@@ -408,106 +508,188 @@
 
         <div id="statistics" class="stats-row" style="display: none;">
             <div class="stat-box">
-                <div class="stat-label">Total Low Ratings</div>
-                <div class="stat-value" id="totalLowRatings">0</div>
+                <div class="stat-label">Total Alerts</div>
+                <div class="stat-value" id="totalAlerts">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Low Ratings</div>
+                <div class="stat-value" id="ratingAlerts">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Text Feedback</div>
+                <div class="stat-value" id="textAlerts">0</div>
             </div>
             <div class="stat-box">
                 <div class="stat-label">Participants Affected</div>
                 <div class="stat-value" id="affectedParticipants">0</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">Questions with Issues</div>
-                <div class="stat-value" id="questionsWithIssues">0</div>
             </div>
         </div>
 
         <div id="messageContainer"></div>
 
         <div class="main-content">
+            <!-- LEFT PANEL: Low Ratings & Text Feedback List -->
             <div class="left-panel">
-                <div class="panel-header">Low-Rated Responses</div>
+                <div class="panel-header">Low-Rated & Text Feedback Responses</div>
                 <div class="panel-body">
-                    <div id="lowRatingsList"></div>
+                    <div id="feedbackList"></div>
                 </div>
             </div>
 
+            <!-- RIGHT PANEL: Chart & Analysis -->
             <div class="right-panel">
-                <div class="panel-header">Rating Distribution & Question Filter</div>
+                <div class="panel-header">Rating Distribution & Hotspot Analysis</div>
                 <div class="panel-body">
-                    <div class="chart-container">
-                        <canvas id="ratingChart"></canvas>
+                    <!-- Rating Chart Section -->
+                    <div id="chartSection">
+                        <div style="font-size: 12px; font-weight: 600; color: #333; margin-bottom: 10px;">Total Count of Rating by Rating Score</div>
+                        <div class="chart-container">
+                            <canvas id="ratingChart"></canvas>
+                        </div>
+
+                        <!-- Rating Checkbox Filter -->
+                        <div style="font-size: 12px; font-weight: 600; color: #333; margin-bottom: 8px;">Questions</div>
+                        <div class="rating-checkbox-group" id="ratingCheckboxes" style="margin: 0; padding: 0; background: transparent; flex-direction: column;">
+                        </div>
                     </div>
-                    <div class="questions-filter">
-                        <h4>Select Rating Questions to Filter:</h4>
-                        <div id="questionsCheckboxes"></div>
+
+                    <!-- Hotspot Analysis Section -->
+                    <div class="hotspot-section">
+                        <div class="hotspot-header" onclick="toggleHotspot()">
+                            <span class="hotspot-toggle">▶</span>
+                            <span>🔥 Hotspot Analysis</span>
+                        </div>
+                        <div id="hotspotContent" class="hotspot-content">
+                            <div id="hotspotList" style="font-size: 12px; color: #666;"></div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="detail-form">
-            <div class="detail-form-header">Rectification Form</div>
+        <!-- DETAIL FORM -->
+        <div id="detailForm" class="detail-form" style="display: none;">
+            <div id="detailFormHeader" class="detail-form-header">Feedback Response</div>
             <div class="detail-form-body">
                 <div id="detailFormContainer" class="no-data">
-                    Select a low rating entry from the left to fill the rectification form.
+                    Select an item from the left to view details and manage alerts.
                 </div>
                 <div id="detailFormContent" style="display: none;">
-                    <div class="detail-field">
-                        <label>Participant Name:</label>
-                        <input type="text" id="detailParticipantName" disabled>
-                    </div>
-
-                    <div class="detail-field">
-                        <label>ID Number:</label>
-                        <input type="text" id="detailIdNumber" disabled>
-                    </div>
-
-                    <div class="detail-field">
-                        <label>Email Address:</label>
-                        <input type="text" id="detailEmail" disabled>
-                    </div>
-
-                    <div class="detail-field">
-                        <label>Question (What was rated low):</label>
-                        <textarea id="detailQuestion" disabled></textarea>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <!-- Rating Feedback Form -->
+                    <div id="ratingForm" style="display: none;">
                         <div class="detail-field">
-                            <label>Rating Given:</label>
-                            <input type="text" id="detailRating" disabled>
+                            <label>Participant Name:</label>
+                            <input type="text" id="detailParticipantName" disabled>
                         </div>
+
+                        <div class="field-row">
+                            <div class="detail-field">
+                                <label>ID Number:</label>
+                                <input type="text" id="detailIdNumber" disabled>
+                            </div>
+                            <div class="detail-field">
+                                <label>Email Address:</label>
+                                <input type="text" id="detailEmail" disabled>
+                            </div>
+                        </div>
+
                         <div class="detail-field">
-                            <label>Form:</label>
-                            <input type="text" id="detailFormName" disabled>
+                            <label>Question (What was rated low):</label>
+                            <textarea id="detailQuestion" disabled></textarea>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="detail-field">
+                                <label>Rating Given:</label>
+                                <input type="text" id="detailRating" disabled>
+                            </div>
+                            <div class="detail-field">
+                                <label>Form:</label>
+                                <input type="text" id="detailFormName" disabled>
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <label>Rectification / Response:</label>
+                            <textarea id="detailRectification" placeholder="Enter your response to address the low rating..." required></textarea>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="detail-field">
+                                <label>Implementation Date:</label>
+                                <input type="date" id="detailImplementationDate" required>
+                            </div>
+                            <div class="detail-field">
+                                <label>Status:</label>
+                                <select id="detailStatus" required>
+                                    <option value="Pending">Pending</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Resolved">Resolved</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="btn-preview" onclick="previewEmail()">👁️ Preview Email</button>
+                            <button class="btn-submit" id="submitBtn" onclick="submitRectification()">✉️ Submit & Send</button>
+                            <button class="btn-clear" onclick="clearForm()">Clear</button>
                         </div>
                     </div>
 
-                    <div class="detail-field">
-                        <label>Rectification / Response:</label>
-                        <textarea id="detailRectification" placeholder="Enter your response to address the low rating..." required></textarea>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <!-- Text Feedback Form (Alerts only) -->
+                    <div id="textForm" style="display: none;">
                         <div class="detail-field">
-                            <label>Implementation Date:</label>
-                            <input type="date" id="detailImplementationDate" required>
+                            <label>Participant Name:</label>
+                            <input type="text" id="textParticipantName" disabled>
                         </div>
-                        <div class="detail-field">
-                            <label>Status:</label>
-                            <select id="detailStatus" required>
-                                <option value="Pending">Pending</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Resolved">Resolved</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <div class="form-actions">
-                        <button class="btn-preview" onclick="previewEmail()">👁️ Preview Email in Outlook</button>
-                        <button class="btn-submit" id="submitBtn" onclick="submitRectification()">✉️ Submit & Send Email</button>
-                        <button class="btn-clear" onclick="clearForm()">Clear</button>
+                        <div class="field-row">
+                            <div class="detail-field">
+                                <label>ID Number:</label>
+                                <input type="text" id="textIdNumber" disabled>
+                            </div>
+                            <div class="detail-field">
+                                <label>Email Address:</label>
+                                <input type="text" id="textEmail" disabled>
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <label>Question:</label>
+                            <textarea id="textQuestion" disabled></textarea>
+                        </div>
+
+                        <div class="detail-field">
+                            <label>Participant's Response:</label>
+                            <textarea id="textResponse" disabled></textarea>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="detail-field">
+                                <label>Alert Status:</label>
+                                <select id="textAlertStatus" required>
+                                    <option value="new">New</option>
+                                    <option value="acknowledged">Acknowledged</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="resolved">Resolved</option>
+                                </select>
+                            </div>
+                            <div class="detail-field">
+                                <label>Form:</label>
+                                <input type="text" id="textFormName" disabled>
+                            </div>
+                        </div>
+
+                        <div class="detail-field">
+                            <label>Action Notes:</label>
+                            <textarea id="textActionNotes" placeholder="Add notes about actions taken or follow-up..."></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="btn-submit" onclick="updateTextAlertStatus()">✓ Update Status</button>
+                            <button class="btn-clear" onclick="clearForm()">Clear</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -515,101 +697,117 @@
     </div>
 
     <script>
-        let allLowRatings = [];
-        let selectedRating = null;
+        let allFeedback = [];
+        let selectedItem = null;
         let ratingChart = null;
-        let allRatingQuestions = {};
+        let allHotspots = [];
 
+        // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
-            loadLowRatings();
+            loadFeedback();
         });
 
         function onFormSelectionChange() {
-            loadLowRatings();
+            loadFeedback();
         }
 
         function onRatingThresholdChange() {
-            loadLowRatings();
+            loadFeedback();
         }
 
-        async function loadLowRatings() {
+        async function loadFeedback() {
             const formSelect = document.getElementById('formFilterSelect').value;
             const threshold = document.getElementById('ratingThresholdSelect').value;
-            const loadingDiv = document.getElementById('lowRatingsList');
+            const loadingDiv = document.getElementById('feedbackList');
             
-            loadingDiv.innerHTML = '<div class="loading"><div class="spinner"></div> Loading low ratings...</div>';
+            loadingDiv.innerHTML = '<div class="loading"><div class="spinner"></div> Loading feedback...</div>';
 
             try {
                 let formsToFetch = [];
                 if (formSelect) {
                     formsToFetch = [formSelect];
                 } else {
-                    const formSelect = document.getElementById('formFilterSelect');
-                    formsToFetch = Array.from(formSelect.options)
+                    const selectElement = document.getElementById('formFilterSelect');
+                    formsToFetch = Array.from(selectElement.options)
                         .filter(opt => opt.value !== '')
                         .map(opt => opt.value);
                 }
 
                 const formsStr = formsToFetch.join(',');
-                const response = await fetch(`/api/low-ratings-data?forms=${formsStr}&rating_threshold=${threshold}`);
-                if (!response.ok) throw new Error('Failed to load low ratings');
                 
-                allLowRatings = await response.json();
+                // Fetch feedback (ratings + text)
+                const response = await fetch(`/api/low-ratings-data?forms=${formsStr}&rating_threshold=${threshold}`);
+                if (!response.ok) throw new Error('Failed to load feedback');
+                
+                allFeedback = await response.json();
 
-                const qResponse = await fetch(`/api/rating-questions?forms=${formsStr}`);
-                if (qResponse.ok) {
-                    allRatingQuestions = await qResponse.json();
+                // Load hotspot analysis
+                const hotspotResponse = await fetch(`/api/hotspot-analysis?forms=${formsStr}`);
+                if (hotspotResponse.ok) {
+                    allHotspots = await hotspotResponse.json();
                 }
 
-                displayLowRatings();
+                displayFeedback();
                 updateStatistics();
-                buildQuestionFilter();
+                buildRatingFilter();
                 updateChart();
+                displayHotspots();
 
-                if (allLowRatings.length === 0) {
+                if (allFeedback.length === 0) {
                     document.getElementById('messageContainer').innerHTML = 
-                        '<div class="message info">✓ Great! No low ratings found in the selected forms.</div>';
+                        '<div class="message info">✓ Great! No low ratings or text feedback alerts found.</div>';
                 } else {
                     document.getElementById('messageContainer').innerHTML = '';
                 }
             } catch (error) {
-                console.error('Error loading low ratings:', error);
+                console.error('Error loading feedback:', error);
                 loadingDiv.innerHTML = `<div class="no-data">❌ Error loading data: ${error.message}</div>`;
                 document.getElementById('messageContainer').innerHTML = 
                     `<div class="message error">Error: ${error.message}</div>`;
             }
         }
 
-        function displayLowRatings() {
-            const container = document.getElementById('lowRatingsList');
+        function displayFeedback() {
+            const container = document.getElementById('feedbackList');
             
-            if (allLowRatings.length === 0) {
-                container.innerHTML = '<div class="no-data">No low ratings found</div>';
+            if (allFeedback.length === 0) {
+                container.innerHTML = '<div class="no-data">No feedback found</div>';
                 return;
             }
 
             let html = '<table class="ratings-table"><thead><tr>' +
-                '<th>Participant</th>' +
-                '<th>ID Number</th>' +
-                '<th>Email</th>' +
-                '<th>Question</th>' +
-                '<th>Rating</th>' +
-                '<th>Form</th>' +
-                '<th>Date</th>' +
-                '</tr></thead><tbody>';
+                '<th>Type</th><th>Participant</th><th>ID</th><th>Email</th>' +
+                '<th>Question</th><th>Date</th></tr></thead><tbody>';
 
-            allLowRatings.forEach((rating, idx) => {
-                if (rating.ratings && rating.ratings.length > 0) {
-                    rating.ratings.forEach((r, qIdx) => {
-                        const uniqueId = `${idx}-${qIdx}`;
-                        html += `<tr class="rating-row" onclick="selectRating('${uniqueId}')">
-                            <td>${escapeHtml(rating.participant_name)}</td>
-                            <td>${escapeHtml(rating.id_number)}</td>
-                            <td>${escapeHtml(rating.participant_email)}</td>
-                            <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(r.question_text)}</td>
-                            <td><span class="rating-badge low">${r.rating_value}/5</span></td>
-                            <td>${escapeHtml(rating.form_title)}</td>
-                            <td>${rating.submission_time.split(' ')[0]}</td>
+            allFeedback.forEach((item, idx) => {
+                const isRating = item.ratings && item.ratings.length > 0;
+                
+                if (isRating) {
+                    // Rating feedback rows
+                    item.ratings.forEach((r, qIdx) => {
+                        html += `<tr class="feedback-row" onclick="selectFeedback(${idx}, ${qIdx}, true)">
+                            <td><span class="item-type rating">RATING</span></td>
+                            <td>${escapeHtml(item.participant_name)}</td>
+                            <td>${escapeHtml(item.id_number)}</td>
+                            <td>${escapeHtml(item.participant_email)}</td>
+                            <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                <span class="rating-badge">${r.rating_value}/5</span> ${escapeHtml(r.question_text)}
+                            </td>
+                            <td>${item.submission_time.split(' ')[0]}</td>
+                        </tr>`;
+                    });
+                } else if (item.text_responses && item.text_responses.length > 0) {
+                    // Text feedback rows
+                    item.text_responses.forEach((t, qIdx) => {
+                        html += `<tr class="feedback-row" onclick="selectFeedback(${idx}, ${qIdx}, false)">
+                            <td><span class="item-type text">TEXT</span></td>
+                            <td>${escapeHtml(item.participant_name)}</td>
+                            <td>${escapeHtml(item.id_number)}</td>
+                            <td>${escapeHtml(item.participant_email)}</td>
+                            <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                ${escapeHtml(t.question_text)}
+                            </td>
+                            <td>${item.submission_time.split(' ')[0]}</td>
                         </tr>`;
                     });
                 }
@@ -619,51 +817,86 @@
             container.innerHTML = html;
         }
 
-        function selectRating(uniqueId) {
-            const [idx, qIdx] = uniqueId.split('-').map(Number);
-            selectedRating = { idx, qIdx, id: uniqueId };
+        function selectFeedback(itemIdx, dataIdx, isRating) {
+            const item = allFeedback[itemIdx];
+            selectedItem = { itemIdx, dataIdx, isRating };
 
-            document.querySelectorAll('.rating-row').forEach(row => row.classList.remove('selected'));
-            event.target.closest('tr').classList.add('selected');
+            // Update UI
+            document.querySelectorAll('.feedback-row').forEach(row => row.classList.remove('selected'));
+            if (event && event.target) {
+                event.target.closest('tr').classList.add('selected');
+            }
 
-            populateDetailForm();
+            document.getElementById('detailForm').style.display = 'block';
+            clearForm();
 
-            document.getElementById('detailFormContainer').style.display = 'none';
-            document.getElementById('detailFormContent').style.display = 'block';
+            if (isRating) {
+                populateRatingForm(item, dataIdx);
+            } else {
+                populateTextForm(item, dataIdx);
+            }
         }
 
-        function populateDetailForm() {
-            if (!selectedRating) return;
+        function populateRatingForm(item, qIdx) {
+            const rating = item.ratings[qIdx];
 
-            const rating = allLowRatings[selectedRating.idx];
-            const question = rating.ratings[selectedRating.qIdx];
+            document.getElementById('detailFormHeader').textContent = '✉️ Rating Rectification';
+            document.getElementById('detailFormHeader').className = 'detail-form-header';
 
-            document.getElementById('detailParticipantName').value = rating.participant_name;
-            document.getElementById('detailIdNumber').value = rating.id_number;
-            document.getElementById('detailEmail').value = rating.participant_email;
-            document.getElementById('detailQuestion').value = question.question_text;
-            document.getElementById('detailRating').value = `${question.rating_value}/5`;
-            document.getElementById('detailFormName').value = rating.form_title;
+            document.getElementById('ratingForm').style.display = 'block';
+            document.getElementById('textForm').style.display = 'none';
+            document.getElementById('detailFormContainer').style.display = 'none';
+            document.getElementById('detailFormContent').style.display = 'block';
+
+            document.getElementById('detailParticipantName').value = item.participant_name;
+            document.getElementById('detailIdNumber').value = item.id_number;
+            document.getElementById('detailEmail').value = item.participant_email;
+            document.getElementById('detailQuestion').value = rating.question_text;
+            document.getElementById('detailRating').value = `${rating.rating_value}/5`;
+            document.getElementById('detailFormName').value = item.form_title;
             document.getElementById('detailRectification').value = '';
             document.getElementById('detailImplementationDate').value = '';
             document.getElementById('detailStatus').value = 'Pending';
         }
 
+        function populateTextForm(item, qIdx) {
+            const text = item.text_responses[qIdx];
+
+            document.getElementById('detailFormHeader').textContent = '📝 Text Feedback Alert';
+            document.getElementById('detailFormHeader').className = 'detail-form-header text';
+
+            document.getElementById('ratingForm').style.display = 'none';
+            document.getElementById('textForm').style.display = 'block';
+            document.getElementById('detailFormContainer').style.display = 'none';
+            document.getElementById('detailFormContent').style.display = 'block';
+
+            document.getElementById('textParticipantName').value = item.participant_name;
+            document.getElementById('textIdNumber').value = item.id_number;
+            document.getElementById('textEmail').value = item.participant_email;
+            document.getElementById('textQuestion').value = text.question_text;
+            document.getElementById('textResponse').value = text.response_text;
+            document.getElementById('textFormName').value = item.form_title;
+            document.getElementById('textAlertStatus').value = text.alert_status || 'new';
+            document.getElementById('textActionNotes').value = text.alert_notes || '';
+        }
+
         function clearForm() {
-            selectedRating = null;
+            selectedItem = null;
             document.getElementById('detailFormContainer').style.display = 'block';
             document.getElementById('detailFormContent').style.display = 'none';
-            document.querySelectorAll('.rating-row').forEach(row => row.classList.remove('selected'));
+            document.getElementById('ratingForm').style.display = 'none';
+            document.getElementById('textForm').style.display = 'none';
+            document.querySelectorAll('.feedback-row').forEach(row => row.classList.remove('selected'));
         }
 
         function previewEmail() {
-            if (!selectedRating) {
-                alert('Please select a low rating entry first.');
+            if (!selectedItem || !selectedItem.isRating) {
+                alert('Please select a rating feedback first.');
                 return;
             }
 
-            const rating = allLowRatings[selectedRating.idx];
-            const question = rating.ratings[selectedRating.qIdx];
+            const item = allFeedback[selectedItem.itemIdx];
+            const rating = item.ratings[selectedItem.dataIdx];
             const rectificationText = document.getElementById('detailRectification').value;
             const implDate = document.getElementById('detailImplementationDate').value;
             const status = document.getElementById('detailStatus').value;
@@ -673,12 +906,12 @@
                 return;
             }
 
-            const emailBody = `Dear ${rating.participant_name},
+            const emailBody = `Dear ${item.participant_name},
 
 Thank you for completing the feedback form. We appreciate your valuable input.
 
-Question: ${question.question_text}
-Your Rating: ${question.rating_value}/5
+Question: ${rating.question_text}
+Your Rating: ${rating.rating_value}/5
 
 Rectification / Response:
 ${rectificationText}
@@ -694,14 +927,14 @@ postcourse.enquiries@SG-AKC.com`;
 
             const subject = encodeURIComponent('Response to Your Feedback');
             const body = encodeURIComponent(emailBody);
-            const mailtoLink = `mailto:${rating.participant_email}?subject=${subject}&body=${body}`;
+            const mailtoLink = `mailto:${item.participant_email}?subject=${subject}&body=${body}`;
 
             window.open(mailtoLink, '_blank');
         }
 
         async function submitRectification() {
-            if (!selectedRating) {
-                alert('Please select a low rating entry first.');
+            if (!selectedItem || !selectedItem.isRating) {
+                alert('Please select a rating feedback first.');
                 return;
             }
 
@@ -714,8 +947,8 @@ postcourse.enquiries@SG-AKC.com`;
                 return;
             }
 
-            const rating = allLowRatings[selectedRating.idx];
-            const question = rating.ratings[selectedRating.qIdx];
+            const item = allFeedback[selectedItem.itemIdx];
+            const rating = item.ratings[selectedItem.dataIdx];
 
             document.getElementById('submitBtn').disabled = true;
             document.getElementById('submitBtn').textContent = '📤 Sending...';
@@ -725,14 +958,14 @@ postcourse.enquiries@SG-AKC.com`;
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        form_id: rating.form_id,
-                        response_id: rating.response_id,
-                        participant_name: rating.participant_name,
-                        participant_email: rating.participant_email,
-                        id_number: rating.id_number,
-                        question_id: question.question_id,
-                        question_text: question.question_text,
-                        rating_value: question.rating_value,
+                        form_id: item.form_id,
+                        response_id: item.response_id,
+                        participant_name: item.participant_name,
+                        participant_email: item.participant_email,
+                        id_number: item.id_number,
+                        question_id: rating.question_id,
+                        question_text: rating.question_text,
+                        rating_value: rating.rating_value,
                         rectification_text: rectText,
                         implementation_date: implDate,
                         status: status
@@ -747,14 +980,14 @@ postcourse.enquiries@SG-AKC.com`;
                 const result = await response.json();
 
                 document.getElementById('messageContainer').innerHTML = 
-                    '<div class="message success">✓ Rectification logged successfully! Email preview should open in your default email client.</div>';
+                    '<div class="message success">✓ Rectification logged successfully! Email preview should open.</div>';
 
                 if (result.mailto_link) {
                     window.open(result.mailto_link, '_blank');
                 }
 
                 clearForm();
-                loadLowRatings();
+                loadFeedback();
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('messageContainer').innerHTML = 
@@ -765,16 +998,52 @@ postcourse.enquiries@SG-AKC.com`;
             }
         }
 
-        function buildQuestionFilter() {
-            const container = document.getElementById('questionsCheckboxes');
+        async function updateTextAlertStatus() {
+            if (!selectedItem || selectedItem.isRating) {
+                alert('Please select a text feedback first.');
+                return;
+            }
+
+            const status = document.getElementById('textAlertStatus').value;
+            const notes = document.getElementById('textActionNotes').value;
+
+            try {
+                const response = await fetch('/api/update-alert-status', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        alert_ids: [''], // Will need alert ID from data
+                        status: status,
+                        notes: notes
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update status');
+                }
+
+                document.getElementById('messageContainer').innerHTML = 
+                    '<div class="message success">✓ Alert status updated successfully!</div>';
+
+                clearForm();
+                loadFeedback();
+            } catch (error) {
+                document.getElementById('messageContainer').innerHTML = 
+                    `<div class="message error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        function buildRatingFilter() {
+            const container = document.getElementById('ratingCheckboxes');
             container.innerHTML = '';
 
             const allQuestions = new Map();
             const seen = new Set();
 
-            allLowRatings.forEach(rating => {
-                if (rating.ratings) {
-                    rating.ratings.forEach(r => {
+            // Collect all rating questions
+            allFeedback.forEach(item => {
+                if (item.ratings) {
+                    item.ratings.forEach(r => {
                         const key = `${r.question_id}-${r.question_text}`;
                         if (!seen.has(key)) {
                             seen.add(key);
@@ -784,78 +1053,44 @@ postcourse.enquiries@SG-AKC.com`;
                 }
             });
 
-            if (allQuestions.size === 0) {
-                container.innerHTML = '<p style="color: #888; font-size: 12px;">No rating questions found.</p>';
-                return;
-            }
+            // Add "Select All" checkbox
+            let html = `<div class="rating-checkbox">
+                <input type="checkbox" id="selectAll" onchange="toggleAllQuestions(this.checked)">
+                <label for="selectAll">Select All</label>
+            </div>`;
 
+            // Add individual questions
             allQuestions.forEach((text, id) => {
-                const html = `<div class="question-checkbox">
+                html += `<div class="rating-checkbox">
                     <input type="checkbox" id="q-${id}" value="${id}" onchange="filterByQuestion()">
-                    <label for="q-${id}">${escapeHtml(text)}</label>
+                    <label for="q-${id}">2</label>
                 </div>`;
-                container.innerHTML += html;
             });
+
+            container.innerHTML = html || '<p style="color: #888; font-size: 12px;">No rating questions found.</p>';
+        }
+
+        function toggleAllQuestions(checked) {
+            document.querySelectorAll('#ratingCheckboxes input[type="checkbox"]:not(#selectAll)').forEach(cb => {
+                cb.checked = checked;
+            });
+            filterByQuestion();
         }
 
         function filterByQuestion() {
-            const checkedBoxes = Array.from(document.querySelectorAll('#questionsCheckboxes input:checked')).map(cb => cb.value);
-            
-            if (checkedBoxes.length === 0) {
-                displayLowRatings();
-            } else {
-                const filtered = allLowRatings.map(rating => ({
-                    ...rating,
-                    ratings: rating.ratings.filter(r => checkedBoxes.includes(r.question_id))
-                })).filter(r => r.ratings.length > 0);
-
-                const container = document.getElementById('lowRatingsList');
-                let html = '<table class="ratings-table"><thead><tr>' +
-                    '<th>Participant</th><th>ID Number</th><th>Email</th><th>Question</th>' +
-                    '<th>Rating</th><th>Form</th><th>Date</th></tr></thead><tbody>';
-
-                filtered.forEach((rating, idx) => {
-                    rating.ratings.forEach((r, qIdx) => {
-                        const uniqueId = `filtered-${idx}-${qIdx}`;
-                        html += `<tr class="rating-row" onclick="selectRatingFromFiltered(${allLowRatings.indexOf(rating)}, ${rating.ratings.indexOf(r)})">
-                            <td>${escapeHtml(rating.participant_name)}</td>
-                            <td>${escapeHtml(rating.id_number)}</td>
-                            <td>${escapeHtml(rating.participant_email)}</td>
-                            <td>${escapeHtml(r.question_text)}</td>
-                            <td><span class="rating-badge low">${r.rating_value}/5</span></td>
-                            <td>${escapeHtml(rating.form_title)}</td>
-                            <td>${rating.submission_time.split(' ')[0]}</td>
-                        </tr>`;
-                    });
-                });
-
-                html += '</tbody></table>';
-                container.innerHTML = html;
-            }
-
             updateChart();
         }
 
-        function selectRatingFromFiltered(idx, qIdx) {
-            selectedRating = { idx, qIdx };
-            populateDetailForm();
-            document.getElementById('detailFormContainer').style.display = 'none';
-            document.getElementById('detailFormContent').style.display = 'block';
-        }
-
         function updateChart() {
-            const checkedBoxes = Array.from(document.querySelectorAll('#questionsCheckboxes input:checked')).map(cb => cb.value);
-            const filtered = checkedBoxes.length === 0 ? allLowRatings : 
-                allLowRatings.map(r => ({
-                    ...r,
-                    ratings: r.ratings.filter(rat => checkedBoxes.includes(rat.question_id))
-                })).filter(r => r.ratings.length > 0);
-
+            // Collect rating values for chart
             const ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-            filtered.forEach(rating => {
-                rating.ratings.forEach(r => {
-                    ratingCounts[r.rating_value]++;
-                });
+            
+            allFeedback.forEach(item => {
+                if (item.ratings) {
+                    item.ratings.forEach(r => {
+                        ratingCounts[r.rating_value]++;
+                    });
+                }
             });
 
             const ctx = document.getElementById('ratingChart').getContext('2d');
@@ -867,9 +1102,9 @@ postcourse.enquiries@SG-AKC.com`;
             ratingChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['1 Star', '2 Stars', '3 Stars', '4 Stars', '5 Stars'],
+                    labels: ['1', '2', '3', '4', '5'],
                     datasets: [{
-                        label: 'Count of Ratings',
+                        label: 'Count of Rating',
                         data: [ratingCounts[1], ratingCounts[2], ratingCounts[3], ratingCounts[4], ratingCounts[5]],
                         backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#28a745', '#20c997'],
                         borderRadius: 4
@@ -878,11 +1113,12 @@ postcourse.enquiries@SG-AKC.com`;
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    indexAxis: 'y',
                     plugins: {
                         legend: { display: false }
                     },
                     scales: {
-                        y: {
+                        x: {
                             beginAtZero: true,
                             ticks: { stepSize: 1 }
                         }
@@ -891,14 +1127,46 @@ postcourse.enquiries@SG-AKC.com`;
             });
         }
 
-        function updateStatistics() {
-            const totalCount = allLowRatings.reduce((sum, r) => sum + (r.ratings ? r.ratings.length : 0), 0);
-            const uniqueParticipants = new Set(allLowRatings.map(r => r.participant_email)).size;
-            const uniqueQuestions = new Set(allLowRatings.flatMap(r => r.ratings.map(rat => rat.question_id))).size;
+        function displayHotspots() {
+            const container = document.getElementById('hotspotList');
+            
+            if (allHotspots.length === 0) {
+                container.innerHTML = '<p style="color: #aaa;">No active alerts found.</p>';
+                return;
+            }
 
-            document.getElementById('totalLowRatings').textContent = totalCount;
+            let html = '';
+            allHotspots.slice(0, 5).forEach(hs => {
+                const typeLabel = hs.question_type === 'rating' ? '📊' : '💬';
+                html += `<div class="hotspot-item">
+                    <div class="hotspot-question">${typeLabel} ${escapeHtml(hs.question_text)}</div>
+                    <div class="hotspot-stats">
+                        <div class="hotspot-stat">🔔 ${hs.alert_count} alerts</div>
+                        <div class="hotspot-stat">⭐ ${hs.avg_rating}/5</div>
+                        <div class="hotspot-stat">🎯 Priority: ${hs.priority_score}</div>
+                    </div>
+                </div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function toggleHotspot() {
+            const content = document.getElementById('hotspotContent');
+            const toggle = document.querySelector('.hotspot-toggle');
+            content.classList.toggle('open');
+            toggle.classList.toggle('open');
+        }
+
+        function updateStatistics() {
+            const ratingCount = allFeedback.reduce((sum, r) => sum + (r.ratings ? r.ratings.length : 0), 0);
+            const textCount = allFeedback.reduce((sum, r) => sum + (r.text_responses ? r.text_responses.length : 0), 0);
+            const uniqueParticipants = new Set(allFeedback.map(r => r.participant_email)).size;
+
+            document.getElementById('totalAlerts').textContent = ratingCount + textCount;
+            document.getElementById('ratingAlerts').textContent = ratingCount;
+            document.getElementById('textAlerts').textContent = textCount;
             document.getElementById('affectedParticipants').textContent = uniqueParticipants;
-            document.getElementById('questionsWithIssues').textContent = uniqueQuestions;
             document.getElementById('statistics').style.display = 'grid';
         }
 
