@@ -659,10 +659,14 @@ def save_response_to_db(form_id, course_id, course, participant_name,
     data        : raw submitted dict from the form.
     form_title  : used to derive the table name.
     form_config : used to build the column list.
+    
+    NOTE: Response table MUST exist before calling this function.
+    Call create_form_response_table() first to ensure table exists.
     """
     table = _get_table_name(form_title)
     conn  = get_fbs_connection()
     if not conn:
+        print(f"Error: Cannot connect to database for table [{table}]")
         return False
     try:
         cur         = conn.cursor()
