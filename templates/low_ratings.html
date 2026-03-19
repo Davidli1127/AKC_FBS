@@ -279,6 +279,15 @@
             gap: 4px;
         }
 
+        .hotspot-info-text {
+            background: #f8f9fa;
+            border-left: 3px solid #ffc107;
+            padding: 8px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #666;
+        }
+
         .detail-form {
             background: white;
             border-radius: 8px;
@@ -553,11 +562,14 @@
                         </div>
                     </div>
 
-                    <!-- Hotspot Analysis Section -->
+                    <!-- Top Priority Issues Section -->
                     <div class="hotspot-section">
-                        <div class="hotspot-header" onclick="toggleHotspot()">
+                        <div class="hotspot-header" onclick="toggleHotspot()" title="Click to see the most frequently reported issues">
                             <span class="hotspot-toggle">▶</span>
-                            <span>🔥 Hotspot Analysis</span>
+                            <span>⚠️ Top Priority Issues</span>
+                        </div>
+                        <div class="hotspot-info-text" style="font-size: 12px; color: #666; margin-bottom: 10px; display: none;">
+                            <strong>What is this?</strong> Shows the questions with the most feedback. Issues are ranked by how often they're reported and how urgent they are. This helps you focus on what matters most to participants.
                         </div>
                         <div id="hotspotContent" class="hotspot-content">
                             <div id="hotspotList" style="font-size: 12px; color: #666;"></div>
@@ -1154,8 +1166,17 @@ postcourse.enquiries@SG-AKC.com`;
         function toggleHotspot() {
             const content = document.getElementById('hotspotContent');
             const toggle = document.querySelector('.hotspot-toggle');
+            const infoText = document.querySelector('.hotspot-info-text');
+            
             content.classList.toggle('open');
             toggle.classList.toggle('open');
+            
+            // Show explanation when expanded
+            if (content.classList.contains('open')) {
+                infoText.style.display = 'block';
+            } else {
+                infoText.style.display = 'none';
+            }
         }
 
         function updateStatistics() {

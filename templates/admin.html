@@ -24,7 +24,6 @@
             <button class="tab" onclick="showTab('participants')">View Participants</button>
             <button class="tab" onclick="showTab('forms')">Edit Form Questions</button>
             <button class="tab" onclick="showTab('existing')">Generated QR Codes</button>
-            <button class="tab" onclick="showTab('alerts')" id="alertsTab">&#9888; Low Feedback Alerts <span id="alertsBadge" style="display:none; background:#dc3545; color:white; border-radius:10px; padding:1px 7px; font-size:11px; margin-left:4px; font-weight:700;"></span></button>
             <button class="tab" onclick="showTab('analysis')">&#128202; Data Analysis</button>
         </div>
 
@@ -367,74 +366,6 @@
                             <p>No QR codes generated yet.</p>
                         </li>
                     </ul>
-                </div>
-            </div>
-        </div>
-
-        <div id="alerts" class="tab-content">
-            <div class="card">
-                <div class="card-header">&#9888; Low Feedback Alerts</div>
-                <div class="card-body">
-
-                    <div class="alert-summary-bar" id="alertsSummary" style="margin-bottom:16px;"></div>
-                    <div style="border:1px solid #c7d7ff; border-radius:8px; margin-bottom:20px; overflow:hidden;">
-                        <div style="background:#f0f5ff; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; cursor:pointer; user-select:none;" onclick="toggleAlertAnalysis()">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <span id="analysisToggleIcon" style="font-size:11px; color:#003366;">&#9654;</span>
-                                <strong style="color:#003366; font-size:14px;">&#128202; Hotspot Analysis</strong>
-                                <span style="color:#777; font-size:12px;">Questions ranked by urgency &mdash; click to expand</span>
-                            </div>
-                            <div style="display:flex; gap:6px; flex-wrap:wrap;" onclick="event.stopPropagation()">
-                                <button id="analysisGroupQBtn" class="btn btn-primary btn-sm" onclick="setAnalysisMode('question')">&#128203; By Question</button>
-                                <button id="analysisGroupCBtn" class="btn btn-secondary btn-sm" onclick="setAnalysisMode('course')">&#127979; By Course</button>
-                                <button class="btn btn-sm" style="background:#dc3545;color:white;font-weight:600;" onclick="resolveAllUnresolved()">&#10003;&#10003; Resolve ALL</button>
-                                <button class="btn btn-sm" style="background:#6c757d;color:white;" onclick="deleteAlerts(null,'resolved')" title="Delete all resolved alerts to clean up test data">&#128465; Delete Resolved</button>
-                            </div>
-                        </div>
-                        <div id="alertAnalysisCollapsible" style="display:none; padding:14px; border-top:1px solid #e0e8ff;">
-                            <p id="analysisModeDesc" style="color:#555; font-size:13px; margin-bottom:14px;">
-                                Questions are grouped and ranked by <strong>priority score</strong> (frequency &times; urgency). Click <strong>Resolve All</strong> or <strong>Ack All</strong> on any row to bulk-close alerts.
-                            </p>
-                            <div id="alertAnalysisContent"><p style="color:#888;">Loading...</p></div>
-                        </div>
-                    </div>
-
-                    <div id="batchActionBar" style="display:none; align-items:center; gap:10px; flex-wrap:wrap; background:#f0f5ff; border:1px solid #c7d7ff; border-radius:8px; padding:10px 14px; margin-bottom:14px;">
-                        <span id="batchSelectedCount" style="font-weight:600; color:#003366;">0 selected</span>
-                        <select id="batchStatusSelect" style="padding:5px 10px; border:1px solid #c7d7ff; border-radius:6px;">
-                            <option value="">—— Mark as ——</option>
-                            <option value="acknowledged">Acknowledged</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="resolved">Resolved</option>
-                            <option value="new">New</option>
-                        </select>
-                        <input type="text" id="batchNotesInput" placeholder="Notes (optional)" style="padding:5px 10px; border:1px solid #c7d7ff; border-radius:6px; width:200px;">
-                        <button class="btn btn-primary btn-sm" onclick="batchUpdateAlerts()">Apply to Selected</button>
-                        <button class="btn btn-secondary btn-sm" onclick="selectAllAlerts(false)">Clear Selection</button>
-                        <button class="btn btn-sm" style="background:#dc3545;color:white;" onclick="deleteSelectedAlerts()">&#128465; Delete Selected</button>
-                    </div>
-
-                    <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
-                        <label style="font-weight:500;">Filter:</label>
-                        <select id="alertStatusFilter" onchange="loadAlerts()" style="padding:6px 10px; border:1px solid #ddd; border-radius:6px;">
-                            <option value="">All Statuses</option>
-                            <option value="new">New</option>
-                            <option value="acknowledged">Acknowledged</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="resolved">Resolved</option>
-                        </select>
-                        <select id="alertTypeFilter" onchange="loadAlerts()" style="padding:6px 10px; border:1px solid #ddd; border-radius:6px;">
-                            <option value="">All Types</option>
-                            <option value="rating">&#11088; Low Rating</option>
-                            <option value="text_sentiment">&#128172; Negative Text</option>
-                        </select>
-                        <button class="btn btn-secondary btn-sm" onclick="loadAlerts()">&#8635; Refresh</button>
-                        <button class="btn btn-secondary btn-sm" onclick="selectAllAlerts(true)">&#9745; Select All</button>
-                        <button class="btn btn-secondary btn-sm" onclick="selectAllAlerts(false)">&#9744; Deselect All</button>
-                    </div>
-
-                    <div id="alertsList"><p style="color:#888;">Loading alerts...</p></div>
-
                 </div>
             </div>
         </div>
@@ -2781,7 +2712,7 @@
                     <ul style="margin:8px 0 10px 0;padding-left:20px;">
                         ${below3.map(q=>`<li style="margin-bottom:3px;">${escHtml(q.text)} <span style="background:#dc3545;color:white;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;">${q.avg.toFixed(1)}</span></li>`).join('')}
                     </ul>
-                    <p style="margin:0;font-size:13px;">Review participant comments on the <a href="#" onclick="showTab('alerts');return false;" style="color:#dc3545;font-weight:600;">Low Feedback Alerts</a> tab for specific feedback on these questions.</p>
+                    <p style="margin:0;font-size:13px;">Review participant comments on the <a href="{{ url_for('low_ratings_page') }}" style="color:#dc3545;font-weight:600;\">Low Rating Feedback</a> page for specific feedback on these questions.</p>
                 </div>`;
             }
             if (mid.length) {
