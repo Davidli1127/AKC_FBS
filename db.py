@@ -1084,19 +1084,48 @@ def get_low_rating_responses(form_id, form_config, rating_threshold=2):
             FROM INFORMATION_SCHEMA.COLUMNS 
             WHERE TABLE_NAME = ? AND TABLE_CATALOG = DB_NAME()
         """, (table,))
-        all_cols = [row[0] for row in cur.fetchall()]
-        question_map = {}
+        all_cols = set(row[0] for row in cur.fetchall())
+        col_to_q_map = {}
+        
         for section in form_config.get('sections', []):
             section_type = section.get('type', '')
-            if section_type in ('rating', 'instructor_rating', 'assessor_rating'):
+            if section_type == 'rating':
                 for q in section.get('questions', []):
                     q_id = q.get('id')
-                    question_map[q_id] = {
-                        'text': q.get('text', ''),
-                        'section_type': section_type
-                    }
+                    if q_id in all_cols:
+                        col_to_q_map[q_id] = {
+                            'question_id': q_id,
+                            'text': q.get('text', ''),
+                            'section_type': section_type
+                        }
+            elif section_type == 'instructor_rating':
+                max_inst = section.get('maxInstructors', 3)
+                for n in range(1, max_inst + 1):
+                    for q in section.get('questions', []):
+                        q_id = q.get('id')
+                        col_name = f"B{n}_{q_id}"
+                        if col_name in all_cols:
+                            col_to_q_map[col_name] = {
+                                'question_id': col_name,
+                                'text': q.get('text', ''),
+                                'section_type': section_type,
+                                'instructor_num': n
+                            }
+            elif section_type == 'assessor_rating':
+                max_assess = section.get('maxAssessors', 2)
+                for n in range(1, max_assess + 1):
+                    for q in section.get('questions', []):
+                        q_id = q.get('id')
+                        col_name = f"A{n}_{q_id}"
+                        if col_name in all_cols:
+                            col_to_q_map[col_name] = {
+                                'question_id': col_name,
+                                'text': q.get('text', ''),
+                                'section_type': section_type,
+                                'assessor_num': n
+                            }
         
-        rating_cols = list(question_map.keys())
+        rating_cols = list(col_to_q_map.keys())
         if not rating_cols:
             return []
         
@@ -1129,12 +1158,12 @@ def get_low_rating_responses(form_id, form_config, rating_threshold=2):
             participant_email = _get_participant_email(course_id, id_number, participant_name) or "N/A"
             
             low_ratings = []
-            for i, q_id in enumerate(rating_cols):
+            for i, col_name in enumerate(rating_cols):
                 rating_val = ratings_values[i]
                 if rating_val is not None and rating_val <= rating_threshold:
-                    q_info = question_map.get(q_id, {})
+                    q_info = col_to_q_map.get(col_name, {})
                     low_ratings.append({
-                        'question_id': q_id,
+                        'question_id': q_info.get('question_id', col_name),
                         'question_text': q_info.get('text', ''),
                         'rating_value': rating_val,
                         'section_type': q_info.get('section_type', '')

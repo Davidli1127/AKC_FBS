@@ -531,7 +531,7 @@
                     <option value="{{ form_id }}">{{ form_data.get('title', form_id) }}</option>
                     {% endfor %}
                 </select>
-                <button onclick="loadFeedback()">🔄 Refresh Data</button>
+                <button onclick="loadFeedback()">🔄Refresh Data</button>
                 <label for="ratingThresholdSelect" style="margin-left: auto;">Show ratings:</label>
                 <select id="ratingThresholdSelect" onchange="onRatingThresholdChange()">
                     <option value="2">1-2 (Critical)</option>
@@ -736,7 +736,7 @@
         let selectedItem = null;
         let ratingChart = null;
         let allHotspots = [];
-        let viewMode = 'all'; // 'all', 'ratings', 'text'
+        let viewMode = 'all';
 
         document.addEventListener('DOMContentLoaded', function() {
             loadFeedback();
@@ -744,14 +744,10 @@
 
         function setViewMode(mode, buttonEl) {
             viewMode = mode;
-            
-            // Update button styling
             document.getElementById('viewAllBtn').classList.remove('active');
             document.getElementById('viewRatingsBtn').classList.remove('active');
             document.getElementById('viewTextBtn').classList.remove('active');
             buttonEl.classList.add('active');
-            
-            // Re-display feedback with new filter
             displayFeedback();
             updateStatistics();
         }
@@ -828,8 +824,6 @@
             allFeedback.forEach((item, idx) => {
                 const hasRatings = item.ratings && item.ratings.length > 0;
                 const hasTextResponses = item.text_responses && item.text_responses.length > 0;
-                
-                // Filter based on view mode
                 let shouldShowRatings = false;
                 let shouldShowText = false;
                 
@@ -842,7 +836,6 @@
                     shouldShowText = hasTextResponses;
                 }
                 
-                // Display ratings if applicable
                 if (shouldShowRatings) {
                     item.ratings.forEach((r, qIdx) => {
                         html += `<tr class="feedback-row" onclick="selectFeedback(${idx}, ${qIdx}, true)">
@@ -858,7 +851,6 @@
                     });
                 }
                 
-                // Display text responses if applicable
                 if (shouldShowText) {
                     item.text_responses.forEach((t, qIdx) => {
                         html += `<tr class="feedback-row" onclick="selectFeedback(${idx}, ${qIdx}, false)">
