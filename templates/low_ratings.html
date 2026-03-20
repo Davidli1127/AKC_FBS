@@ -532,6 +532,8 @@
                     {% endfor %}
                 </select>
                 <button onclick="loadFeedback()">🔄Refresh Data</button>
+                <label for="courseCodeSearch" style="margin-left: 20px;">Search by Class Code:</label>
+                <input type="text" id="courseCodeSearch" placeholder="e.g., HT26ACSRABD012" onchange="onCourseCodeChange()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 200px;">
                 <label for="ratingThresholdSelect" style="margin-left: auto;">Show ratings:</label>
                 <select id="ratingThresholdSelect" onchange="onRatingThresholdChange()">
                     <option value="2">1-2 (Critical)</option>
@@ -759,6 +761,10 @@
 
         function onRatingThresholdChange() {
             loadFeedback();
+        }
+
+        function onCourseCodeChange() {
+            displayFeedback();
         }
 
         async function loadFeedback() {

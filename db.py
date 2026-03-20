@@ -1139,6 +1139,7 @@ def get_low_rating_responses(form_id, form_config, rating_threshold=2):
                 [id_number],
                 [submission_time],
                 [course_id],
+                [course_title],
                 {rating_col_sql}
             FROM [{table}]
             WHERE ({where_clauses})
@@ -1153,9 +1154,9 @@ def get_low_rating_responses(form_id, form_config, rating_threshold=2):
             id_number = row_list[2]
             submission_time = row_list[3]
             course_id = row_list[4]
-            ratings_values = row_list[5:]
-
-            participant_email = _get_participant_email(course_id, id_number, participant_name) or "N/A"
+            course_title = row_list[5]
+            ratings_values = row_list[6:]
+            participant_email = _get_participant_email(course_title, id_number, participant_name) or "N/A"
             
             low_ratings = []
             for i, col_name in enumerate(rating_cols):
@@ -1178,6 +1179,7 @@ def get_low_rating_responses(form_id, form_config, rating_threshold=2):
                     'form_id': form_id,
                     'form_title': form_config.get('title', form_id),
                     'course_id': course_id or '',
+                    'course_title': course_title or '',
                     'submission_time': submission_time,
                     'ratings': low_ratings
                 })
@@ -1340,6 +1342,7 @@ def get_text_question_responses(form_id, form_config):
                 [id_number],
                 [submission_time],
                 [course_id],
+                [course_title],
                 {text_col_sql}
             FROM [{table}]
             ORDER BY [submission_time] DESC
@@ -1353,8 +1356,9 @@ def get_text_question_responses(form_id, form_config):
             id_number = row_list[2]
             submission_time = row_list[3]
             course_id = row_list[4]
-            text_values = row_list[5:]
-            participant_email = _get_participant_email(course_id, id_number, participant_name) or "N/A"
+            course_title = row_list[5]
+            text_values = row_list[6:]
+            participant_email = _get_participant_email(course_title, id_number, participant_name) or "N/A"
             
             text_responses = []
             for i, q_id in enumerate(text_question_cols):
@@ -1377,6 +1381,7 @@ def get_text_question_responses(form_id, form_config):
                     'form_id': form_id,
                     'form_title': form_config.get('title', form_id),
                     'course_id': course_id or '',
+                    'course_title': course_title or '',
                     'submission_time': submission_time,
                     'text_responses': text_responses
                 })
