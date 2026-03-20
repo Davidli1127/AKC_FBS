@@ -507,7 +507,6 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-
 @app.route('/admin')
 @login_required
 def admin():
