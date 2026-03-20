@@ -1588,15 +1588,13 @@ def get_low_ratings_data():
                 for text_resp in r.get('text_responses', []):
                     q_id = text_resp['question_id']
                     related_alerts = alerts_by_qid.get(q_id, [])
-                    
-                    # Only include if there's an active (non-resolved) alert
                     active_alerts = [a for a in related_alerts if a.get('status') != 'resolved']
+
                     if active_alerts:
                         text_resp['alert_status'] = active_alerts[0].get('status', 'new')
                         text_resp['alert_notes'] = active_alerts[0].get('action_notes', '')
                         filtered_text_responses.append(text_resp)
                 
-                # Only add response if it has text responses with active alerts
                 if filtered_text_responses:
                     r['text_responses'] = filtered_text_responses
                     all_text_responses.append(r)
@@ -1670,7 +1668,6 @@ def get_hotspot_analysis():
     
     result = []
     for qid, g in groups.items():
-        # Calculate priority score
         ratings = g.get('_ratings', [3])
         avg_rating = sum(ratings) / len(ratings) if ratings else 3
         urgency = max(0, 3 - avg_rating) + 1 
