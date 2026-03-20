@@ -378,14 +378,12 @@ def save_response(form_id, course_id, data, id_number=''):
     form_title  = form_config.get('title', form_id)
     participant_name = data.get('name', '')
     position         = data.get('position', '')
-    
-    # CRITICAL FIX #1: Ensure the response table exists BEFORE attempting INSERT
+
     table_ok, table_msg = db.create_form_response_table(form_title, form_config)
     if not table_ok:
         print(f"ERROR: Could not create response table [{form_title}]: {table_msg}")
         return False
     
-    # CRITICAL FIX #2: Now insert the data
     ok = db.save_response_to_db(
         form_id, course_id, course or {},
         participant_name, id_number, position, data, form_title, form_config)
@@ -1002,8 +1000,6 @@ def submit_form(course_id):
         return jsonify({'error': 'Course not found'}), 404
 
     data = request.json
-    
-    # CRITICAL FIX #2: Pass id_number from session (not from form data!)
     success = save_response(course['form_id'], course_id, data, student_id)
     if not success:
         print(f"ABORT: Form submission failed for {student_name} (ID: {student_id})")
@@ -1012,7 +1008,6 @@ def submit_form(course_id):
         session.pop('student_course_id', None)
         return jsonify({'error': 'Failed to save your feedback. Please try again.'}), 500
     
-    # Save low feedback alerts
     config = load_config()
     form_config = config['forms'].get(course['form_id'], {})
     try:
