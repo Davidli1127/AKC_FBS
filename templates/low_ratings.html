@@ -733,7 +733,7 @@
 
     <script>
         let allFeedback = [];
-        let selectedItem = null;
+        let selectedFeedback = null;
         let ratingChart = null;
         let allHotspots = [];
         let viewMode = 'all';
@@ -748,6 +748,7 @@
             document.getElementById('viewRatingsBtn').classList.remove('active');
             document.getElementById('viewTextBtn').classList.remove('active');
             buttonEl.classList.add('active');
+            clearForm();
             displayFeedback();
             updateStatistics();
         }
@@ -873,7 +874,12 @@
 
         function selectFeedback(itemIdx, dataIdx, isRating) {
             const item = allFeedback[itemIdx];
-            selectedItem = { itemIdx, dataIdx, isRating };
+            
+            selectedFeedback = {
+                item: item,
+                dataIdx: dataIdx,
+                isRating: isRating
+            };
 
             document.querySelectorAll('.feedback-row').forEach(row => row.classList.remove('selected'));
             if (event && event.target) {
@@ -881,8 +887,7 @@
             }
 
             document.getElementById('detailForm').style.display = 'block';
-            clearForm();
-
+            
             if (isRating) {
                 populateRatingForm(item, dataIdx);
             } else {
@@ -934,7 +939,7 @@
         }
 
         function clearForm() {
-            selectedItem = null;
+            selectedFeedback = null;
             document.getElementById('detailFormContainer').style.display = 'block';
             document.getElementById('detailFormContent').style.display = 'none';
             document.getElementById('ratingForm').style.display = 'none';
@@ -943,13 +948,13 @@
         }
 
         function previewEmail() {
-            if (!selectedItem || !selectedItem.isRating) {
+            if (!selectedFeedback || !selectedFeedback.isRating) {
                 alert('Please select a rating feedback first.');
                 return;
             }
 
-            const item = allFeedback[selectedItem.itemIdx];
-            const rating = item.ratings[selectedItem.dataIdx];
+            const item = selectedFeedback.item;
+            const rating = item.ratings[selectedFeedback.dataIdx];
             const rectificationText = document.getElementById('detailRectification').value;
             const implDate = document.getElementById('detailImplementationDate').value;
             const status = document.getElementById('detailStatus').value;
@@ -986,7 +991,7 @@ postcourse.enquiries@SG-AKC.com`;
         }
 
         async function submitRectification() {
-            if (!selectedItem || !selectedItem.isRating) {
+            if (!selectedFeedback || !selectedFeedback.isRating) {
                 alert('Please select a rating feedback first.');
                 return;
             }
@@ -1000,8 +1005,8 @@ postcourse.enquiries@SG-AKC.com`;
                 return;
             }
 
-            const item = allFeedback[selectedItem.itemIdx];
-            const rating = item.ratings[selectedItem.dataIdx];
+            const item = selectedFeedback.item;
+            const rating = item.ratings[selectedFeedback.dataIdx];
 
             document.getElementById('submitBtn').disabled = true;
             document.getElementById('submitBtn').textContent = '📤 Sending...';
@@ -1052,7 +1057,7 @@ postcourse.enquiries@SG-AKC.com`;
         }
 
         async function updateTextAlertStatus() {
-            if (!selectedItem || selectedItem.isRating) {
+            if (!selectedFeedback || selectedFeedback.isRating) {
                 alert('Please select a text feedback first.');
                 return;
             }

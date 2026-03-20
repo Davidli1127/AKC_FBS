@@ -242,9 +242,8 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
         if len(response_val) < 5:
             continue
         matches = _extract_negative_matches(response_val)
-        if not matches:
-            continue
-        seen = dict.fromkeys(m.lower() for m in matches)
+        matched_keywords = ', '.join(dict.fromkeys(m.lower() for m in matches))[:300] if matches else ''
+        
         alerts.append({
             'id': str(uuid.uuid4())[:12],
             'course_id': course_id,
@@ -257,8 +256,8 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
             'rating': None,
             'rating_label': '',
             'comment': response_val,
-            'alert_type': 'text_sentiment',
-            'matched_keywords': ', '.join(seen)[:300],
+            'alert_type': 'text_feedback',
+            'matched_keywords': matched_keywords,
             'status': 'new',
             'action_notes': '',
             'submitted_at': now,
@@ -275,10 +274,9 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
         if base_q_id in new_rating_alert_q_ids:
             continue 
         matches = _extract_negative_matches(comment_val)
-        if not matches:
-            continue
+        matched_keywords = ', '.join(dict.fromkeys(m.lower() for m in matches))[:300] if matches else ''
+        
         q_text = q_texts.get(base_q_id, base_q_id)
-        seen   = dict.fromkeys(m.lower() for m in matches)
         alerts.append({
             'id': str(uuid.uuid4())[:12],
             'course_id': course_id,
@@ -291,8 +289,8 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
             'rating': None,
             'rating_label': '',
             'comment': comment_val,
-            'alert_type': 'text_sentiment',
-            'matched_keywords': ', '.join(seen)[:300],
+            'alert_type': 'rating_comment',
+            'matched_keywords': matched_keywords,
             'status': 'new',
             'action_notes': '',
             'submitted_at': now,
