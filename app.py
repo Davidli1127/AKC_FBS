@@ -370,7 +370,7 @@ def _slugify_form_id(title):
     return s.strip('_') or 'form_' + uuid.uuid4().hex[:8]
 
 
-def save_response(form_id, course_id, data):
+def save_response(form_id, course_id, data, id_number=''):
     """Save form response to AKC_FBS database."""
     course = db.get_course_by_id(course_id)
     config = load_config()
@@ -378,12 +378,23 @@ def save_response(form_id, course_id, data):
     form_title  = form_config.get('title', form_id)
     participant_name = data.get('name', '')
     position         = data.get('position', '')
-    id_number        = data.get('id_number', '')
+    
+    # CRITICAL FIX #1: Ensure the response table exists BEFORE attempting INSERT
+    table_ok, table_msg = db.create_form_response_table(form_title, form_config)
+    if not table_ok:
+        print(f"ERROR: Could not create response table [{form_title}]: {table_msg}")
+        return False
+    
+    # CRITICAL FIX #2: Now insert the data
     ok = db.save_response_to_db(
         form_id, course_id, course or {},
         participant_name, id_number, position, data, form_title, form_config)
     if not ok:
-        print(f"Warning: Could not save response to AKC_FBS for form_id={form_id}")
+        print(f"ERROR: Could not save response to database for form_id={form_id}")
+        return False
+    
+    print(f"SUCCESS: Response saved to table [{form_title}] for participant {participant_name} (ID: {id_number})")
+    return True
 
 
 @app.route('/')
@@ -991,11 +1002,22 @@ def submit_form(course_id):
         return jsonify({'error': 'Course not found'}), 404
 
     data = request.json
-    save_response(course['form_id'], course_id, data)
+    
+    # CRITICAL FIX #2: Pass id_number from session (not from form data!)
+    success = save_response(course['form_id'], course_id, data, student_id)
+    if not success:
+        print(f"ABORT: Form submission failed for {student_name} (ID: {student_id})")
+        session.pop('student_name', None)
+        session.pop('student_id_number', None)
+        session.pop('student_course_id', None)
+        return jsonify({'error': 'Failed to save your feedback. Please try again.'}), 500
+    
+    # Save low feedback alerts
     config = load_config()
     form_config = config['forms'].get(course['form_id'], {})
     try:
         save_low_feedback_alerts(course['form_id'], course_id, course, data, form_config)
+        print(f"SUCCESS: Low feedback alerts saved for {student_name}")
     except Exception as e:
         print(f"Warning: Could not save low feedback alerts: {e}")
 
