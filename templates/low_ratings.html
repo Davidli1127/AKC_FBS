@@ -74,6 +74,32 @@
             background: #0056b3;
         }
 
+        .view-mode-buttons {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .view-mode-buttons button {
+            padding: 8px 12px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: background 0.3s;
+        }
+
+        .view-mode-buttons button:hover {
+            background: #5a6268;
+        }
+
+        .view-mode-buttons button.active {
+            background: #007bff;
+        }
+
         .main-content {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -512,6 +538,11 @@
                     <option value="3">1-3 (Below Average)</option>
                     <option value="4">1-4 (Needs Improvement)</option>
                 </select>
+                <div class="view-mode-buttons">
+                    <button id="viewAllBtn" class="active" onclick="setViewMode('all', this)">All</button>
+                    <button id="viewRatingsBtn" onclick="setViewMode('ratings', this)">Low Ratings Only</button>
+                    <button id="viewTextBtn" onclick="setViewMode('text', this)">Text Feedback Only</button>
+                </div>
             </div>
         </div>
 
@@ -705,10 +736,25 @@
         let selectedItem = null;
         let ratingChart = null;
         let allHotspots = [];
+        let viewMode = 'all'; // 'all', 'ratings', 'text'
 
         document.addEventListener('DOMContentLoaded', function() {
             loadFeedback();
         });
+
+        function setViewMode(mode, buttonEl) {
+            viewMode = mode;
+            
+            // Update button styling
+            document.getElementById('viewAllBtn').classList.remove('active');
+            document.getElementById('viewRatingsBtn').classList.remove('active');
+            document.getElementById('viewTextBtn').classList.remove('active');
+            buttonEl.classList.add('active');
+            
+            // Re-display feedback with new filter
+            displayFeedback();
+            updateStatistics();
+        }
 
         function onFormSelectionChange() {
             loadFeedback();
@@ -780,9 +826,24 @@
                 '<th>Question</th><th>Date</th></tr></thead><tbody>';
 
             allFeedback.forEach((item, idx) => {
-                const isRating = item.ratings && item.ratings.length > 0;
+                const hasRatings = item.ratings && item.ratings.length > 0;
+                const hasTextResponses = item.text_responses && item.text_responses.length > 0;
                 
-                if (isRating) {
+                // Filter based on view mode
+                let shouldShowRatings = false;
+                let shouldShowText = false;
+                
+                if (viewMode === 'all') {
+                    shouldShowRatings = hasRatings;
+                    shouldShowText = hasTextResponses;
+                } else if (viewMode === 'ratings') {
+                    shouldShowRatings = hasRatings;
+                } else if (viewMode === 'text') {
+                    shouldShowText = hasTextResponses;
+                }
+                
+                // Display ratings if applicable
+                if (shouldShowRatings) {
                     item.ratings.forEach((r, qIdx) => {
                         html += `<tr class="feedback-row" onclick="selectFeedback(${idx}, ${qIdx}, true)">
                             <td><span class="item-type rating">RATING</span></td>
@@ -795,7 +856,10 @@
                             <td>${item.submission_time.split(' ')[0]}</td>
                         </tr>`;
                     });
-                } else if (item.text_responses && item.text_responses.length > 0) {
+                }
+                
+                // Display text responses if applicable
+                if (shouldShowText) {
                     item.text_responses.forEach((t, qIdx) => {
                         html += `<tr class="feedback-row" onclick="selectFeedback(${idx}, ${qIdx}, false)">
                             <td><span class="item-type text">TEXT</span></td>
@@ -1160,14 +1224,30 @@ postcourse.enquiries@SG-AKC.com`;
         }
 
         function updateStatistics() {
-            const ratingCount = allFeedback.reduce((sum, r) => sum + (r.ratings ? r.ratings.length : 0), 0);
-            const textCount = allFeedback.reduce((sum, r) => sum + (r.text_responses ? r.text_responses.length : 0), 0);
-            const uniqueParticipants = new Set(allFeedback.map(r => r.participant_email)).size;
-
-            document.getElementById('totalAlerts').textContent = ratingCount + textCount;
+            let ratingCount = 0;
+            let textCount = 0;
+            const affectedEmails = new Set();
+            
+            allFeedback.forEach(r => {
+                if (viewMode === 'all' || viewMode === 'ratings') {
+                    if (r.ratings) {
+                        ratingCount += r.ratings.length;
+                        r.ratings.forEach(() => affectedEmails.add(r.participant_email));
+                    }
+                }
+                if (viewMode === 'all' || viewMode === 'text') {
+                    if (r.text_responses) {
+                        textCount += r.text_responses.length;
+                        r.text_responses.forEach(() => affectedEmails.add(r.participant_email));
+                    }
+                }
+            });
+            
+            const totalCount = ratingCount + textCount;
+            document.getElementById('totalAlerts').textContent = totalCount;
             document.getElementById('ratingAlerts').textContent = ratingCount;
             document.getElementById('textAlerts').textContent = textCount;
-            document.getElementById('affectedParticipants').textContent = uniqueParticipants;
+            document.getElementById('affectedParticipants').textContent = affectedEmails.size;
             document.getElementById('statistics').style.display = 'grid';
         }
 

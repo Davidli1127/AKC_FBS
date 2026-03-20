@@ -1584,13 +1584,22 @@ def get_low_ratings_data():
             
             # Add alert status to each text response
             for r in responses:
+                filtered_text_responses = []
                 for text_resp in r.get('text_responses', []):
                     q_id = text_resp['question_id']
                     related_alerts = alerts_by_qid.get(q_id, [])
-                    text_resp['alert_status'] = related_alerts[0].get('status', 'new') if related_alerts else 'new'
-                    text_resp['alert_notes'] = related_alerts[0].get('action_notes', '') if related_alerts else ''
-            
-            all_text_responses.extend(responses)
+                    
+                    # Only include if there's an active (non-resolved) alert
+                    active_alerts = [a for a in related_alerts if a.get('status') != 'resolved']
+                    if active_alerts:
+                        text_resp['alert_status'] = active_alerts[0].get('status', 'new')
+                        text_resp['alert_notes'] = active_alerts[0].get('action_notes', '')
+                        filtered_text_responses.append(text_resp)
+                
+                # Only add response if it has text responses with active alerts
+                if filtered_text_responses:
+                    r['text_responses'] = filtered_text_responses
+                    all_text_responses.append(r)
     
     all_feedback = all_low_ratings + all_text_responses
     for item in all_feedback:
