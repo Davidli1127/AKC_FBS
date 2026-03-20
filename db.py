@@ -711,8 +711,16 @@ def save_response_to_db(form_id, course_id, course, participant_name,
                 val = str(val)
             q_vals.append(val)
 
-        all_col_names = fixed_col_names + q_col_names
-        all_vals      = fixed_vals + q_vals
+        fixed_col_set = set(fixed_col_names)
+        deduplicated_cols = []
+        deduplicated_vals = []
+        for col, val in zip(q_col_names, q_vals):
+            if col not in fixed_col_set:
+                deduplicated_cols.append(col)
+                deduplicated_vals.append(val)
+        
+        all_col_names = fixed_col_names + deduplicated_cols
+        all_vals      = fixed_vals + deduplicated_vals
         cols_sql      = ', '.join(f'[{c}]' for c in all_col_names)
         params_sql    = ', '.join('?' for _ in all_vals)
 
