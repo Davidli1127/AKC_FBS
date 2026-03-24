@@ -1124,7 +1124,7 @@ postcourse.enquiries@SG-AKC.com`;
             allQuestions.forEach((text, id) => {
                 html += `<div class="rating-checkbox">
                     <input type="checkbox" id="q-${id}" value="${id}" onchange="filterByQuestion()">
-                    <label for="q-${id}">2</label>
+                    <label for="q-${id}">${text}</label>
                 </div>`;
             });
 

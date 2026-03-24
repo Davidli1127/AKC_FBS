@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - AKC Feedback Management System</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="admin-container">
@@ -372,115 +373,94 @@
 
         <div id="analysis" class="tab-content">
             <div class="card">
-                <div class="card-header">&#128202; Data Analysis Pipeline</div>
+                <div class="card-header">&#128202; Monthly Data Analysis</div>
                 <div class="card-body">
-                    <div style="margin-bottom:28px;">
-                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                            <span style="background:#003366;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">1</span>
-                            <h3 style="margin:0;font-size:16px;color:#003366;">Data Collection Overview</h3>
+                    <p style="color:#555;font-size:13px;margin-bottom:14px;">Choose month, questions, and course titles, then switch between pie and bar chart views for visual analysis.</p>
+
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;background:#f7f9ff;border:1px solid #e0e8ff;border-radius:10px;padding:16px;margin-bottom:18px;">
+                        <div>
+                            <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Form</label>
+                            <select id="analysisFormId" onchange="refreshAnalysisFilters()" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:230px;">
+                                {% for form_id, form in config.forms.items() %}
+                                <option value="{{ form_id }}">{{ form.title }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
-                        <p style="color:#555;font-size:13px;margin-bottom:14px;">Total responses collected by form type. Click a card to jump to that form in the analysis below.</p>
-                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
-                            <input type="text" id="overviewSearch" placeholder="&#128269; Search form name..."
-                                   oninput="filterOverviewCards(this.value)"
-                                   style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:8px;font-size:13px;min-width:220px;flex:1;max-width:380px;">
-                            <span id="overviewFormCount" style="color:#888;font-size:13px;"></span>
+                        <div>
+                            <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Month Selection</label>
+                            <select id="analysisMonth" onchange="refreshAnalysisFilters()" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:180px;">
+                                <option value="">All Months</option>
+                            </select>
                         </div>
-                        <div id="collectionCards" style="display:flex;gap:12px;flex-wrap:wrap;"><p style="color:#aaa;">Loading...</p></div>
+                        <div>
+                            <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Chart Type</label>
+                            <select id="analysisChartType" onchange="renderAnalysisChart()" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:180px;">
+                                <option value="pie">Pie Chart</option>
+                                <option value="bar">Bar Chart</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Bar Value</label>
+                            <select id="analysisBarMetric" onchange="renderAnalysisChart()" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:180px;">
+                                <option value="count">Count</option>
+                                <option value="percentage">Percentage</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Min Responses / Question</label>
+                            <input type="number" id="analysisMinResponses" min="1" value="1" style="padding:7px 10px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;width:160px;">
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Question Sort</label>
+                            <select id="analysisQuestionSort" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:180px;">
+                                <option value="priority">Priority (Low Avg First)</option>
+                                <option value="avg_desc">Highest Avg First</option>
+                                <option value="count_desc">Most Responses First</option>
+                                <option value="avg_asc">Lowest Avg First</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="runAnalysisDashboard()" style="padding:8px 18px;">&#9654; Visualize</button>
+                        <button class="btn btn-secondary btn-sm" onclick="clearAnalysisFilters()">Reset</button>
                     </div>
 
-                    <hr style="border:none;border-top:2px solid #eef;margin:20px 0;">
+                    <div id="analysisSummaryCards" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;"></div>
 
-                    <div style="margin-bottom:28px;">
-                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                            <span style="background:#003366;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">2</span>
-                            <h3 style="margin:0;font-size:16px;color:#003366;">Segmentation &amp; Analysis</h3>
+                    <div style="display:grid;grid-template-columns:minmax(320px,1.2fr) minmax(260px,1fr);gap:14px;align-items:start;">
+                        <div style="background:#fff;border:1px solid #e0e8ff;border-radius:10px;padding:14px;">
+                            <div style="font-size:13px;font-weight:600;color:#003366;margin-bottom:8px;">Visualization</div>
+                            <div style="position:relative;min-height:360px;">
+                                <canvas id="analysisChartCanvas" height="250"></canvas>
+                            </div>
+                            <div id="analysisChartEmpty" style="display:none;color:#888;text-align:center;padding:20px 0 8px;">No rating data found for this filter selection.</div>
                         </div>
-                        <p style="color:#555;font-size:13px;margin-bottom:16px;">Filter by form, date range, or specific course, then run the analysis to see per-question ratings ranked from lowest to highest.</p>
-                        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;background:#f7f9ff;border:1px solid #e0e8ff;border-radius:10px;padding:16px;margin-bottom:18px;">
-                            <div>
-                                <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Form</label>
-                                <select id="analysisFormId" onchange="updateAnalysisCourses()" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:160px;"></select>
-                            </div>
-                            <div>
-                                <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Date From</label>
-                                <input type="date" id="analysisDateFrom" style="padding:7px 10px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;">
-                            </div>
-                            <div>
-                                <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Date To</label>
-                                <input type="date" id="analysisDateTo" style="padding:7px 10px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;">
-                            </div>
-                            <div style="position:relative;">
-                                <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Course</label>
-                                <input type="text" id="analysisCourseFilter" placeholder="All courses (type to search...)" autocomplete="off"
-                                       oninput="showCourseAC('analysisCourseFilter','analysisCourseSugg',analysisCoursesAvailable)"
-                                       onfocus="showCourseAC('analysisCourseFilter','analysisCourseSugg',analysisCoursesAvailable)"
-                                       onblur="setTimeout(()=>{const s=document.getElementById('analysisCourseSugg');if(s)s.style.display='none';},200)"
-                                       style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:200px;">
-                                <div id="analysisCourseSugg" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #c7d7ff;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.12);"></div>
-                            </div>
-                            <button class="btn btn-primary" onclick="runAnalysis()" style="padding:8px 18px;">&#9654; Run Analysis</button>
-                            <button class="btn btn-secondary btn-sm" onclick="clearAnalysisFilters()">Clear</button>
-                        </div>
-                        <div id="analysisResults">
-                            <p style="color:#aaa;text-align:center;padding:40px;font-size:14px;">Select a form and click <strong>Run Analysis</strong> to see results.</p>
-                        </div>
-                    </div>
 
-                    <hr style="border:none;border-top:2px solid #eef;margin:20px 0;">
+                        <div style="display:flex;flex-direction:column;gap:12px;">
+                            <div style="background:#fff;border:1px solid #e0e8ff;border-radius:10px;padding:12px;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                                    <strong style="font-size:14px;color:#333;">Questions</strong>
+                                    <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:6px;cursor:pointer;">
+                                        <input type="checkbox" id="analysisSelectAllQuestions" onchange="toggleAllAnalysisCheckboxes('question', this.checked)" checked>
+                                        Select All
+                                    </label>
+                                </div>
+                                <div id="analysisQuestionsList" style="max-height:180px;overflow:auto;border:1px solid #f0f0f0;border-radius:6px;padding:8px;"></div>
+                            </div>
 
-                    <div style="margin-bottom:28px;">
-                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                            <span style="background:#003366;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">3</span>
-                            <h3 style="margin:0;font-size:16px;color:#003366;">Open-Ended Text Responses</h3>
-                        </div>
-                        <p style="color:#555;font-size:13px;margin-bottom:16px;">Read what participants wrote. Filter by form, date range, or a specific course. Responses are listed per question and labelled by session.</p>
-                        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;background:#f7f9ff;border:1px solid #e0e8ff;border-radius:10px;padding:16px;margin-bottom:18px;">
-                            <div>
-                                <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Form</label>
-                                <select id="textFormId" onchange="updateTextCourses()" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:160px;">
-                                    {% for form_id, form in config.forms.items() %}
-                                    <option value="{{ form_id }}">{{ form.title }}</option>
-                                    {% endfor %}
-                                </select>
+                            <div style="background:#fff;border:1px solid #e0e8ff;border-radius:10px;padding:12px;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                                    <strong style="font-size:14px;color:#333;">Course Title</strong>
+                                    <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:6px;cursor:pointer;">
+                                        <input type="checkbox" id="analysisSelectAllCourses" onchange="toggleAllAnalysisCheckboxes('course', this.checked)" checked>
+                                        Select All
+                                    </label>
+                                </div>
+                                <div id="analysisCourseTitlesList" style="max-height:220px;overflow:auto;border:1px solid #f0f0f0;border-radius:6px;padding:8px;"></div>
                             </div>
-                            <div>
-                                <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Date From</label>
-                                <input type="date" id="textDateFrom" style="padding:7px 10px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;">
-                            </div>
-                            <div>
-                                <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Date To</label>
-                                <input type="date" id="textDateTo" style="padding:7px 10px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;">
-                            </div>
-                            <div style="position:relative;">
-                                <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Course</label>
-                                <input type="text" id="textCourseFilter" placeholder="All courses (type to search...)" autocomplete="off"
-                                       oninput="showCourseAC('textCourseFilter','textCourseSugg',textCoursesAvailable)"
-                                       onfocus="showCourseAC('textCourseFilter','textCourseSugg',textCoursesAvailable)"
-                                       onblur="setTimeout(()=>{const s=document.getElementById('textCourseSugg');if(s)s.style.display='none';},200)"
-                                       style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:200px;">
-                                <div id="textCourseSugg" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #c7d7ff;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.12);"></div>
-                            </div>
-                            <button class="btn btn-primary" onclick="runTextAnalysis()" style="padding:8px 18px;">&#128196; View Responses</button>
-                            <button class="btn btn-secondary btn-sm" onclick="clearTextFilters()">Clear</button>
-                        </div>
-                        <div id="textResponsesResults">
-                            <p style="color:#aaa;text-align:center;padding:40px;font-size:14px;">Select a form and click <strong>View Responses</strong> to read open-ended answers.</p>
                         </div>
                     </div>
 
-                    <hr style="border:none;border-top:2px solid #eef;margin:20px 0;">
-                    <div>
-                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                            <span style="background:#003366;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">4</span>
-                            <h3 style="margin:0;font-size:16px;color:#003366;">Action Insights</h3>
-                        </div>
-                        <p style="color:#555;font-size:13px;margin-bottom:14px;">After running analysis, actionable insights appear here highlighting questions that need attention.</p>
-                        <div id="actionInsightsDiv">
-                            <p style="color:#aaa;text-align:center;padding:20px;">Run Analysis above to generate action insights.</p>
-                        </div>
-                    </div>
-
+                    <div id="analysisQuestionTable" style="margin-top:16px;"></div>
+                    <div id="analysisInsights" style="margin-top:16px;"></div>
                 </div>
             </div>
         </div>
@@ -560,6 +540,9 @@
         const ALERTS_PAGE_SIZE = 50;
         let analysisFormsList = [];
         let analysisCoursesAvailable = [];
+        let analysisDashboardLoaded = false;
+        let analysisDashboardData = null;
+        let analysisChartInstance = null;
         let textCoursesAvailable = [];
         let allCoursesCache = [];
         let lastTextResponseData = null;
@@ -958,7 +941,7 @@
             if (tabId === 'forms') loadFormForEdit();
             if (tabId === 'existing') loadCoursesOnStartup();
             if (tabId === 'alerts') loadAlertsAll();
-            if (tabId === 'analysis') loadAnalysisOverview();
+            if (tabId === 'analysis') initializeAnalysisDashboard();
         }
 
         function updateFormFields() {
@@ -2382,362 +2365,360 @@
             } catch(err) { alert('Error: ' + err.message); }
         }
 
-        async function loadAnalysisOverview() {
-            const cards = document.getElementById('collectionCards');
-            cards.innerHTML = '<p style="color:#aaa;">Loading...</p>';
+        async function initializeAnalysisDashboard() {
+            if (analysisDashboardLoaded) return;
+            analysisDashboardLoaded = true;
+            await refreshAnalysisFilters();
+            await runAnalysisDashboard();
+        }
+
+        async function refreshAnalysisFilters() {
+            const formId = document.getElementById('analysisFormId').value;
+            const monthSelect = document.getElementById('analysisMonth');
+            const selectedMonth = monthSelect.value || '';
             try {
-                const res = await fetch('/api/analysis/summary');
+                const params = new URLSearchParams({ form_id: formId });
+                if (selectedMonth) params.set('month', selectedMonth);
+                const res = await fetch(`/api/analysis/dashboard/filters?${params.toString()}`);
                 const data = await res.json();
-                analysisFormsList = [];
-                let html = '';
-                const barColors = ['#003366','#0d6efd','#17a2b8','#6610f2','#20c997','#fd7e14'];
-                let colorIdx = 0;
-                for (const [fid, fd] of Object.entries(data)) {
-                    if (fid.startsWith('_')) continue;
-                    analysisFormsList.push({id: fid, title: fd.title || fid});
-                    const bc = barColors[colorIdx++ % barColors.length];
-                    html += `<div data-form-id="${fid}" data-form-title="${escHtml(fd.title || fid).toLowerCase()}"
-                                  style="background:#f0f5ff;border:1px solid #c7d7ff;border-radius:10px;padding:16px 20px;min-width:200px;cursor:pointer;"
-                                  onclick="document.getElementById('analysisFormId').value='${fid}'; updateAnalysisCourses(); document.getElementById('analysisResults').innerHTML='<p style=\'color:#aaa;text-align:center;padding:40px;\'>Click Run Analysis to see results.</p>'">
-                        <div style="font-size:28px;font-weight:700;color:${bc};">${fd.total_responses}</div>
-                        <div style="font-size:13px;color:#333;margin-top:4px;font-weight:600;">${escHtml(fd.title || fid)}</div>
-                        <div style="font-size:11px;color:#888;margin-top:2px;">responses collected</div>
-                    </div>`;
-                }
-                const al = data._alerts || {};
-                html += `<div style="background:#fff5f5;border:1px solid #ffb3b3;border-radius:10px;padding:16px 20px;min-width:200px;cursor:pointer;"
-                              onclick="showTab('alerts')">
-                    <div style="font-size:28px;font-weight:700;color:#dc3545;">${al.unresolved || 0}</div>
-                    <div style="font-size:13px;color:#333;margin-top:4px;font-weight:600;">Unresolved Alerts</div>
-                    <div style="font-size:11px;color:#888;margin-top:2px;">${al.total || 0} total &nbsp;&#8594; click to view</div>
-                </div>`;
-                cards.innerHTML = html || '<p style="color:#aaa;">No data yet.</p>';
-                const countEl = document.getElementById('overviewFormCount');
-                if (countEl) countEl.textContent = `${analysisFormsList.length} form${analysisFormsList.length !== 1 ? 's' : ''}`;
-                const sel = document.getElementById('analysisFormId');
-                sel.innerHTML = analysisFormsList.map(f =>
-                    `<option value="${f.id}">${escHtml(f.title || f.id)}</option>`
-                ).join('');
-                if (analysisFormsList.length) updateAnalysisCourses();
-            } catch(err) {
-                cards.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+                if (data.error) throw new Error(data.error);
+
+                renderMonthOptions(data.months_available || [], selectedMonth);
+                renderAnalysisCheckboxes('question', data.questions_available || []);
+                renderAnalysisCheckboxes('course', (data.course_titles_available || []).map(c => ({ id: c, text: c, count: null })));
+            } catch (err) {
+                const qList = document.getElementById('analysisQuestionsList');
+                const cList = document.getElementById('analysisCourseTitlesList');
+                if (qList) qList.innerHTML = `<div style="color:#dc3545;font-size:12px;">${escHtml(err.message)}</div>`;
+                if (cList) cList.innerHTML = `<div style="color:#dc3545;font-size:12px;">${escHtml(err.message)}</div>`;
             }
         }
 
-        async function updateAnalysisCourses() {
-            const formId = document.getElementById('analysisFormId').value;
-            if (!formId) return;
-            try {
-                const res = await fetch(`/api/analysis/ratings?form_id=${encodeURIComponent(formId)}`);
-                const data = await res.json();
-                analysisCoursesAvailable = data.courses_available || [];
-                document.getElementById('analysisCourseFilter').value = '';
-                const s = document.getElementById('analysisCourseSugg');
-                if (s) s.style.display = 'none';
-            } catch(err) { /* silently fail */ }
-        }
-
-        async function runAnalysis() {
-            const formId = document.getElementById('analysisFormId').value;
-            const dateFrom = document.getElementById('analysisDateFrom').value;
-            const dateTo = document.getElementById('analysisDateTo').value;
-            const course = document.getElementById('analysisCourseFilter').value;
-            const resultsDiv = document.getElementById('analysisResults');
-            resultsDiv.innerHTML = '<p style="color:#888;text-align:center;padding:30px;">&#9203; Analysing...</p>';
-            document.getElementById('actionInsightsDiv').innerHTML = '<p style="color:#aaa;text-align:center;padding:20px;">Loading insights...</p>';
-            try {
-                let url = `/api/analysis/ratings?form_id=${encodeURIComponent(formId)}`;
-                if (dateFrom) url += `&date_from=${dateFrom}`;
-                if (dateTo) url += `&date_to=${dateTo}`;
-                if (course) url += `&course=${encodeURIComponent(course)}`;
-                const res = await fetch(url);
-                const data = await res.json();
-                if (data.error) { resultsDiv.innerHTML = `<p style="color:red;">${data.error}</p>`; return; }
-                renderAnalysisResults(data);
-                renderActionInsights(data);
-            } catch(err) {
-                resultsDiv.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
-            }
-        }
-
-        function filterOverviewCards(q) {
-            const lower = (q || '').toLowerCase().trim();
-            const cards = document.querySelectorAll('#collectionCards [data-form-id]');
-            cards.forEach(card => {
-                const title = (card.dataset.formTitle || '').toLowerCase();
-                card.style.display = !lower || title.includes(lower) ? '' : 'none';
+        function renderMonthOptions(months, selectedMonth) {
+            const monthSelect = document.getElementById('analysisMonth');
+            const old = selectedMonth || monthSelect.value || '';
+            let html = '<option value="">All Months</option>';
+            months.forEach(m => {
+                const label = formatMonthLabel(m);
+                html += `<option value="${escHtml(m)}">${escHtml(label)}</option>`;
             });
-            const shown = [...cards].filter(c => c.style.display !== 'none').length;
-            const countEl = document.getElementById('overviewFormCount');
-            if (countEl) countEl.textContent = lower ? `${shown} of ${cards.length} forms` : `${cards.length} form${cards.length !== 1 ? 's' : ''}`;
+            monthSelect.innerHTML = html;
+            monthSelect.value = months.includes(old) ? old : '';
+        }
+
+        function formatMonthLabel(yyyyMm) {
+            const parts = String(yyyyMm || '').split('-');
+            if (parts.length !== 2) return yyyyMm;
+            const y = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10);
+            if (!y || !m || m < 1 || m > 12) return yyyyMm;
+            return new Date(y, m - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        }
+
+        function renderAnalysisCheckboxes(kind, items) {
+            const container = document.getElementById(kind === 'question' ? 'analysisQuestionsList' : 'analysisCourseTitlesList');
+            const selectAll = document.getElementById(kind === 'question' ? 'analysisSelectAllQuestions' : 'analysisSelectAllCourses');
+            const previous = new Set(getSelectedAnalysisValues(kind));
+
+            if (!items.length) {
+                container.innerHTML = '<div style="color:#888;font-size:12px;padding:8px;">No options available.</div>';
+                selectAll.checked = false;
+                return;
+            }
+
+            const forceSelectAll = previous.size === 0;
+            let html = '';
+            items.forEach((item, idx) => {
+                const value = kind === 'question' ? item.id : item.text;
+                const label = kind === 'question' ? item.text : item.text;
+                const checked = forceSelectAll || previous.has(value);
+                const id = `analysis-${kind}-${idx}`;
+                const countText = item.count === null || item.count === undefined ? '' : ` <span style="color:#888;font-size:11px;">(${item.count})</span>`;
+                html += `<label for="${id}" style="display:flex;align-items:flex-start;gap:8px;padding:4px 2px;cursor:pointer;font-size:13px;color:#333;">
+                    <input id="${id}" type="checkbox" data-kind="${kind}" value="${escHtml(value)}" ${checked ? 'checked' : ''} onchange="syncAnalysisSelectAll('${kind}')">
+                    <span>${escHtml(label)}${countText}</span>
+                </label>`;
+            });
+            container.innerHTML = html;
+            syncAnalysisSelectAll(kind);
+        }
+
+        function getSelectedAnalysisValues(kind) {
+            return [...document.querySelectorAll(`input[data-kind="${kind}"]:checked`)].map(el => el.value);
+        }
+
+        function toggleAllAnalysisCheckboxes(kind, checked) {
+            document.querySelectorAll(`input[data-kind="${kind}"]`).forEach(el => {
+                el.checked = checked;
+            });
+        }
+
+        function syncAnalysisSelectAll(kind) {
+            const all = [...document.querySelectorAll(`input[data-kind="${kind}"]`)];
+            const checked = all.filter(el => el.checked).length;
+            const selectAllId = kind === 'question' ? 'analysisSelectAllQuestions' : 'analysisSelectAllCourses';
+            const selectAll = document.getElementById(selectAllId);
+            selectAll.checked = all.length > 0 && checked === all.length;
+        }
+
+        async function runAnalysisDashboard() {
+            const formId = document.getElementById('analysisFormId').value;
+            const month = document.getElementById('analysisMonth').value;
+            const selectedQuestions = getSelectedAnalysisValues('question');
+            const selectedCourses = getSelectedAnalysisValues('course');
+            const minResponses = document.getElementById('analysisMinResponses').value || '1';
+            const sortMode = document.getElementById('analysisQuestionSort').value || 'priority';
+
+            const params = new URLSearchParams({ form_id: formId });
+            if (month) params.set('month', month);
+            params.set('min_responses', minResponses);
+            params.set('sort', sortMode);
+            selectedQuestions.forEach(q => params.append('question', q));
+            selectedCourses.forEach(c => params.append('course_title', c));
+
+            const summaryDiv = document.getElementById('analysisSummaryCards');
+            summaryDiv.innerHTML = '<div style="color:#888;font-size:13px;">Loading analysis...</div>';
+
+            try {
+                const res = await fetch(`/api/analysis/dashboard?${params.toString()}`);
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+                analysisDashboardData = data;
+                renderAnalysisSummaryCards(data.summary || {});
+                renderAnalysisQuestionTable(data.bar || {}, data.rating_legend || {});
+                renderAnalysisInsights(data.insights || {});
+                renderAnalysisChart();
+
+                const filters = data.filters || {};
+                renderMonthOptions(filters.months_available || [], month);
+                renderAnalysisCheckboxes('question', filters.questions_available || []);
+                renderAnalysisCheckboxes('course', (filters.course_titles_available || []).map(c => ({ id: c, text: c, count: null })));
+            } catch (err) {
+                summaryDiv.innerHTML = `<div style="color:#dc3545;font-size:13px;">${escHtml(err.message)}</div>`;
+                const table = document.getElementById('analysisQuestionTable');
+                table.innerHTML = '';
+                const insights = document.getElementById('analysisInsights');
+                insights.innerHTML = '';
+                const empty = document.getElementById('analysisChartEmpty');
+                empty.style.display = 'block';
+                if (analysisChartInstance) {
+                    analysisChartInstance.destroy();
+                    analysisChartInstance = null;
+                }
+            }
+        }
+
+        function renderAnalysisSummaryCards(summary) {
+            const div = document.getElementById('analysisSummaryCards');
+            const monthText = summary.selected_month ? formatMonthLabel(summary.selected_month) : 'All Months';
+            div.innerHTML = `
+                <div style="background:#f0f5ff;border:1px solid #c7d7ff;border-radius:8px;padding:14px 18px;min-width:170px;">
+                    <div style="font-size:12px;color:#666;">Month Selection</div>
+                    <div style="font-size:20px;font-weight:700;color:#003366;">${escHtml(monthText)}</div>
+                </div>
+                <div style="background:#f0f5ff;border:1px solid #c7d7ff;border-radius:8px;padding:14px 18px;min-width:170px;">
+                    <div style="font-size:12px;color:#666;">Rows Analysed</div>
+                    <div style="font-size:24px;font-weight:700;color:#003366;">${summary.response_count || 0}</div>
+                </div>
+                <div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:8px;padding:14px 18px;min-width:170px;">
+                    <div style="font-size:12px;color:#666;">Response Rating 3 and above</div>
+                    <div style="font-size:24px;font-weight:700;color:#16a34a;">${(summary.rating_3_or_above_pct || 0).toFixed(2)}%</div>
+                </div>
+                <div style="background:#fff8e8;border:1px solid #f5d37a;border-radius:8px;padding:14px 18px;min-width:170px;">
+                    <div style="font-size:12px;color:#666;">Total Ratings Counted</div>
+                    <div style="font-size:24px;font-weight:700;color:#8a6500;">${summary.total_ratings || 0}</div>
+                </div>
+                <div style="background:#fff;border:1px solid #d8d8d8;border-radius:8px;padding:14px 18px;min-width:170px;">
+                    <div style="font-size:12px;color:#666;">Questions Included</div>
+                    <div style="font-size:24px;font-weight:700;color:#222;">${summary.question_count || 0}</div>
+                </div>`;
+        }
+
+        function renderAnalysisChart() {
+            const data = analysisDashboardData;
+            if (!data) return;
+
+            const chartType = document.getElementById('analysisChartType').value;
+            const canvas = document.getElementById('analysisChartCanvas');
+            const empty = document.getElementById('analysisChartEmpty');
+
+            if (analysisChartInstance) {
+                analysisChartInstance.destroy();
+                analysisChartInstance = null;
+            }
+
+            if (chartType === 'pie') {
+                const pieValues = (data.pie && data.pie.values) || [0, 0];
+                if (!pieValues.some(v => v > 0)) {
+                    empty.style.display = 'block';
+                    return;
+                }
+                empty.style.display = 'none';
+                analysisChartInstance = new Chart(canvas, {
+                    type: 'pie',
+                    data: {
+                        labels: data.pie.labels,
+                        datasets: [{
+                            data: pieValues,
+                            backgroundColor: data.pie.colors,
+                            borderWidth: 1,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'right'
+                            }
+                        }
+                    }
+                });
+                return;
+            }
+
+            const bar = data.bar || {};
+            if (!(bar.question_labels || []).length || !(bar.datasets || []).length) {
+                empty.style.display = 'block';
+                return;
+            }
+
+            const barMetric = document.getElementById('analysisBarMetric').value || 'count';
+            const chartQuestions = bar.questions || [];
+            const baseDatasets = bar.datasets || [];
+            const usePercentage = barMetric === 'percentage';
+            const datasets = baseDatasets.map(ds => {
+                const next = { ...ds };
+                next.data = (ds.data || []).map((val, idx) => {
+                    if (!usePercentage) return val;
+                    const total = chartQuestions[idx]?.count || 0;
+                    return total ? Number(((val * 100) / total).toFixed(2)) : 0;
+                });
+                return next;
+            });
+
+            empty.style.display = 'none';
+            analysisChartInstance = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: bar.question_labels,
+                    datasets
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            ticks: { maxRotation: 0, minRotation: 0 }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: usePercentage ? 'Percentage of Responses (%)' : 'Count of Response'
+                            },
+                            suggestedMax: usePercentage ? 100 : undefined
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    return usePercentage
+                                        ? `${context.dataset.label}: ${value}%`
+                                        : `${context.dataset.label}: ${value}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderAnalysisQuestionTable(barData, ratingLegend) {
+            const div = document.getElementById('analysisQuestionTable');
+            const questions = barData.questions || [];
+            if (!questions.length) {
+                div.innerHTML = '';
+                return;
+            }
+
+            const orderedRatings = [1, 2, 3, 4, 5].filter(r => questions.some(q => (q.dist || {})[r] > 0));
+            const headers = orderedRatings.map(r => `<th style="padding:8px 10px;text-align:center;">${escHtml(ratingLegend[r] || String(r))}</th>`).join('');
+            const rows = questions.map((q, idx) => {
+                const cols = orderedRatings.map(r => `<td style="padding:8px 10px;text-align:center;">${(q.dist || {})[r] || 0}</td>`).join('');
+                const avgColor = (q.avg || 0) >= 4 ? '#16a34a' : (q.avg || 0) >= 3 ? '#ca8a04' : '#dc2626';
+                return `<tr style="border-bottom:1px solid #eee;${idx % 2 ? 'background:#fafafa;' : ''}">
+                    <td style="padding:8px 10px;">${escHtml(q.text)}</td>
+                    ${cols}
+                    <td style="padding:8px 10px;text-align:center;color:${avgColor};font-weight:700;">${Number(q.avg || 0).toFixed(2)}</td>
+                    <td style="padding:8px 10px;text-align:center;">${Number(q.good_pct || 0).toFixed(1)}%</td>
+                    <td style="padding:8px 10px;text-align:center;">${q.count || 0}</td>
+                </tr>`;
+            }).join('');
+
+            div.innerHTML = `<div style="overflow:auto;border:1px solid #e0e8ff;border-radius:8px;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead>
+                        <tr style="background:#003366;color:white;">
+                            <th style="padding:8px 10px;text-align:left;">Questions</th>
+                            ${headers}
+                            <th style="padding:8px 10px;text-align:center;">Avg</th>
+                            <th style="padding:8px 10px;text-align:center;">>=3 (%)</th>
+                            <th style="padding:8px 10px;text-align:center;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+        }
+
+        function renderAnalysisInsights(insights) {
+            const div = document.getElementById('analysisInsights');
+            const issues = insights.top_issues || [];
+            const strengths = insights.strongest_questions || [];
+
+            if (!issues.length && !strengths.length) {
+                div.innerHTML = '';
+                return;
+            }
+
+            const issueHtml = issues.map((q, i) => `
+                <div style="padding:8px 10px;border-bottom:${i < issues.length - 1 ? '1px solid #f2dada' : 'none'};">
+                    <div style="font-size:13px;color:#222;font-weight:600;">${escHtml(q.text)}</div>
+                    <div style="font-size:12px;color:#666;">Avg: <strong style="color:#dc2626;">${Number(q.avg || 0).toFixed(2)}</strong> | Responses: ${q.count || 0} | >=3: ${Number(q.good_pct || 0).toFixed(1)}%</div>
+                </div>`).join('');
+
+            const strengthHtml = strengths.map((q, i) => `
+                <div style="padding:8px 10px;border-bottom:${i < strengths.length - 1 ? '1px solid #d8efdd' : 'none'};">
+                    <div style="font-size:13px;color:#222;font-weight:600;">${escHtml(q.text)}</div>
+                    <div style="font-size:12px;color:#666;">Avg: <strong style="color:#16a34a;">${Number(q.avg || 0).toFixed(2)}</strong> | Responses: ${q.count || 0} | >=3: ${Number(q.good_pct || 0).toFixed(1)}%</div>
+                </div>`).join('');
+
+            div.innerHTML = `
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;">
+                    <div style="background:#fff7f7;border:1px solid #ffd1d1;border-radius:10px;overflow:hidden;">
+                        <div style="background:#ffe8e8;padding:10px 12px;font-weight:700;color:#991b1b;font-size:13px;">Top Priority Issues</div>
+                        ${issueHtml || '<div style="padding:10px;color:#666;font-size:12px;">No issues in current filter.</div>'}
+                    </div>
+                    <div style="background:#f4fff7;border:1px solid #c6efce;border-radius:10px;overflow:hidden;">
+                        <div style="background:#e7fbe9;padding:10px 12px;font-weight:700;color:#166534;font-size:13px;">Strongest Performing Questions</div>
+                        ${strengthHtml || '<div style="padding:10px;color:#666;font-size:12px;">No strong-performing items in current filter.</div>'}
+                    </div>
+                </div>`;
         }
 
         function clearAnalysisFilters() {
-            document.getElementById('analysisCourseFilter').value = '';
-            const s = document.getElementById('analysisCourseSugg');
-            if (s) s.style.display = 'none';
-            document.getElementById('analysisResults').innerHTML =
-                '<p style="color:#aaa;text-align:center;padding:40px;">Click Run Analysis to see results.</p>';
-            document.getElementById('actionInsightsDiv').innerHTML =
-                '<p style="color:#aaa;text-align:center;padding:20px;">Run Analysis above to generate action insights.</p>';
-        }
-
-        async function updateTextCourses() {
-            const formId = document.getElementById('textFormId').value;
-            if (!formId) return;
-            try {
-                const res = await fetch(`/api/analysis/text?form_id=${encodeURIComponent(formId)}`);
-                const data = await res.json();
-                textCoursesAvailable = data.courses_available || [];
-                document.getElementById('textCourseFilter').value = '';
-                const s = document.getElementById('textCourseSugg');
-                if (s) s.style.display = 'none';
-            } catch(err) { /* silently fail */ }
-        }
-
-        async function runTextAnalysis() {
-            const formId   = document.getElementById('textFormId').value;
-            const dateFrom = document.getElementById('textDateFrom').value;
-            const dateTo   = document.getElementById('textDateTo').value;
-            const course   = document.getElementById('textCourseFilter').value;
-            const resultsDiv = document.getElementById('textResponsesResults');
-            resultsDiv.innerHTML = '<p style="color:#888;text-align:center;padding:30px;">&#9203; Loading responses...</p>';
-            try {
-                let url = `/api/analysis/text?form_id=${encodeURIComponent(formId)}`;
-                if (dateFrom) url += `&date_from=${dateFrom}`;
-                if (dateTo)   url += `&date_to=${dateTo}`;
-                if (course)   url += `&course=${encodeURIComponent(course)}`;
-                const res = await fetch(url);
-                const data = await res.json();
-                if (data.error) { resultsDiv.innerHTML = `<p style="color:red;">${data.error}</p>`; return; }
-                renderTextResponses(data, course);
-            } catch(err) {
-                resultsDiv.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
-            }
-        }
-
-        function renderTextResponses(data, activeCourseFilter) {
-            lastTextResponseData = data;
-            lastTextCourseFilter = activeCourseFilter;
-            const div = document.getElementById('textResponsesResults');
-            const qs  = data.questions || [];
-            const singleCourse = !!activeCourseFilter;
-            const enriched = qs.map(q => ({
-                ...q,
-                clean: (q.responses||[]).filter(r => !isJunkResp(r.value)),
-                junk:  (q.responses||[]).filter(r =>  isJunkResp(r.value)).length
-            })).filter(q => q.clean.length > 0 || q.junk > 0);
-
-            const totalClean = enriched.reduce((s,q)=>s+q.clean.length, 0);
-            const totalJunk  = enriched.reduce((s,q)=>s+q.junk, 0);
-
-            if (!enriched.some(q=>q.clean.length)) {
-                div.innerHTML = '<p style="color:#888;text-align:center;padding:30px;">No substantive text responses found. All responses appear to be blank or N/A.</p>';
-                return;
-            }
-
-            const courseCount = singleCourse ? 0 : new Set(qs.flatMap(q=>(q.responses||[]).map(r=>r.course)).filter(c=>c)).size;
-            let html = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;background:#f7f9ff;border:1px solid #e0e8ff;border-radius:8px;margin-bottom:14px;">
-                <span style="font-size:13px;color:#666;flex:1;">
-                    <strong>${totalClean}</strong> response${totalClean!==1?'s':''} across <strong>${enriched.filter(q=>q.clean.length).length}</strong> question${enriched.filter(q=>q.clean.length).length!==1?'s':''}`;
-            if (!singleCourse && courseCount) html += ` &nbsp;&#183;&nbsp; <strong>${courseCount}</strong> course session${courseCount!==1?'s':''}`;
-            if (totalJunk) html += ` <span style="color:#aaa;font-size:12px;">(${totalJunk} blank/junk hidden)</span>`;
-            html += `</span>
-                <input type="text" id="textKeywordSearch" placeholder="&#128269; Search responses..." oninput="filterTextByKeyword(this.value)"
-                       style="padding:6px 10px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:190px;flex:1;max-width:280px;">
-                <button class="btn btn-secondary btn-sm" onclick="exportTextToCSV()" style="white-space:nowrap;">&#8595; Export CSV</button>
-            </div>`;
-
-            enriched.forEach(q => {
-                if (!q.clean.length) return;
-                const count  = q.clean.length;
-                const freqId = 'wf_' + q.id.replace(/\W/g,'_');
-                const wordFreq = computeWordFreq(q.clean.map(r=>r.value));
-                const hasFreq  = wordFreq.length >= 3;
-
-                html += `<div class="q-block" style="border:1px solid #d0dff8;border-radius:10px;margin-bottom:20px;overflow:hidden;">
-                    <div style="background:#003366;color:white;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                        <div>
-                            <span style="font-size:14px;font-weight:600;">${escHtml(q.text)}</span>
-                            <span style="font-size:11px;opacity:0.6;margin-left:8px;">[${escHtml(q.id)}]</span>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <span class="q-resp-count" style="background:rgba(255,255,255,0.2);border-radius:12px;padding:2px 10px;font-size:12px;">${count} response${count!==1?'s':''}</span>
-                            ${hasFreq ? `<button onclick="toggleWordFreq('${freqId}')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.45);color:white;border-radius:6px;padding:2px 10px;font-size:11px;cursor:pointer;">&#128200; Keywords</button>` : ''}
-                        </div>
-                    </div>`;
-
-                if (hasFreq) {
-                    const maxN = wordFreq[0][1];
-                    html += `<div id="${freqId}" style="display:none;background:#f0f5ff;border-bottom:1px solid #d0dff8;padding:10px 14px;">
-                        <div style="font-size:12px;font-weight:600;color:#003366;margin-bottom:7px;">Top keywords (stop-words removed):</div>
-                        <div style="display:flex;flex-wrap:wrap;gap:6px;">`;
-                    wordFreq.forEach(([w,n]) => {
-                        const bg = n/maxN > 0.7 ? '#003366' : n/maxN > 0.4 ? '#0d6efd' : '#6c8ebf';
-                        html += `<span style="background:${bg};color:white;border-radius:20px;padding:3px 11px;font-size:12px;">${escHtml(w)} <strong>${n}</strong></span>`;
-                    });
-                    html += `</div></div>`;
-                }
-
-                html += `<div style="padding:12px 14px;">`;
-
-                if (singleCourse) {
-                    q.clean.forEach((r,i) => {
-                        html += `<div class="text-response-item" data-value="${escHtml(r.value)}" style="background:${i%2===0?'#f9fbff':'#fff'};border-left:3px solid #4a90d9;padding:8px 12px;margin-bottom:5px;border-radius:0 6px 6px 0;font-size:13px;color:#333;">${escHtml(r.value)}</div>`;
-                    });
-                } else {
-                    const groups = {};
-                    q.clean.forEach(r => {
-                        const k = (r.course||'Unknown') + (r.date ? ' ('+r.date+')' : '');
-                        if (!groups[k]) groups[k] = [];
-                        groups[k].push(r.value);
-                    });
-                    Object.entries(groups).forEach(([gk, vals]) => {
-                        html += `<div style="margin-bottom:12px;">
-                            <div style="font-size:12px;font-weight:600;color:#003366;background:#eef4ff;border-radius:4px;padding:4px 9px;margin-bottom:5px;display:inline-block;">${escHtml(gk)} &mdash; ${vals.length} response${vals.length!==1?'s':''}</div>`;
-                        vals.forEach((v,i) => {
-                            html += `<div class="text-response-item" data-value="${escHtml(v)}" style="background:${i%2===0?'#f9fbff':'#fff'};border-left:3px solid #4a90d9;padding:8px 12px;margin-bottom:4px;border-radius:0 6px 6px 0;font-size:13px;color:#333;">${escHtml(v)}</div>`;
-                        });
-                        html += `</div>`;
-                    });
-                }
-
-                if (q.junk) {
-                    html += `<div style="font-size:11px;color:#bbb;margin-top:6px;padding-top:6px;border-top:1px dashed #eee;">&#128683; ${q.junk} blank/N/A response${q.junk!==1?'s':''} hidden</div>`;
-                }
-                html += `</div></div>`;
-            });
-
-            div.innerHTML = html;
-        }
-
-        function clearTextFilters() {
-            document.getElementById('textDateFrom').value = '';
-            document.getElementById('textDateTo').value = '';
-            document.getElementById('textCourseFilter').value = '';
-            const s = document.getElementById('textCourseSugg');
-            if (s) s.style.display = 'none';
-            lastTextResponseData = null;
-            document.getElementById('textResponsesResults').innerHTML =
-                '<p style="color:#aaa;text-align:center;padding:40px;font-size:14px;">Select a form and click <strong>View Responses</strong> to read open-ended answers.</p>';
-        }
-
-        function renderAnalysisResults(data) {
-            const div = document.getElementById('analysisResults');
-            if (!data.questions || !data.questions.length) {
-                div.innerHTML = '<p style="color:#888;text-align:center;padding:30px;">No rating data found for the selected filters.</p>';
-                return;
-            }
-            const qs = data.questions;
-            const overallAvg = qs.length ? (qs.reduce((s,q)=>s+q.avg,0)/qs.length).toFixed(2) : '-';
-            const avgColor = overallAvg >= 4 ? '#28a745' : overallAvg >= 3 ? '#fd7e14' : '#dc3545';
-            const pctGood = Math.round(qs.filter(q=>q.avg>=4).length / qs.length * 100);
-            const belowThree = qs.filter(q=>q.avg<3).length;
-
-            let html = `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
-                <div style="background:#f0f5ff;border:1px solid #c7d7ff;border-radius:8px;padding:14px 18px;text-align:center;min-width:110px;">
-                    <div style="font-size:26px;font-weight:700;color:#003366;">${data.filtered_rows}</div>
-                    <div style="font-size:12px;color:#666;">Responses Analysed</div>
-                    <div style="font-size:11px;color:#aaa;">of ${data.total_rows} total</div>
-                </div>
-                <div style="background:#f0f5ff;border:1px solid #c7d7ff;border-radius:8px;padding:14px 18px;text-align:center;min-width:110px;">
-                    <div style="font-size:26px;font-weight:700;color:${avgColor};">${overallAvg}</div>
-                    <div style="font-size:12px;color:#666;">Overall Avg Rating</div>
-                    <div style="font-size:11px;color:#aaa;">across all questions</div>
-                </div>
-                <div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:8px;padding:14px 18px;text-align:center;min-width:110px;">
-                    <div style="font-size:26px;font-weight:700;color:#28a745;">${pctGood}%</div>
-                    <div style="font-size:12px;color:#666;">Questions Rated ≥ 4</div>
-                    <div style="font-size:11px;color:#aaa;">Very Good or better</div>
-                </div>
-                <div style="background:#fff5f5;border:1px solid #ffb3b3;border-radius:8px;padding:14px 18px;text-align:center;min-width:110px;">
-                    <div style="font-size:26px;font-weight:700;color:#dc3545;">${belowThree}</div>
-                    <div style="font-size:12px;color:#666;">Questions Below 3.0</div>
-                    <div style="font-size:11px;color:#aaa;">need immediate action</div>
-                </div>
-            </div>`;
-
-            html += `<div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px;">
-                <thead><tr style="background:#003366;color:white;">
-                    <th style="padding:10px 12px;text-align:left;">Question <span style="font-weight:400;font-size:11px;opacity:0.8;">(sorted: lowest avg first)</span></th>
-                    <th style="padding:10px 8px;text-align:center;width:55px;">Avg</th>
-                    <th style="padding:10px 12px;text-align:left;">Rating Distribution &nbsp;<span style="font-weight:400;font-size:11px;opacity:0.8;">1=Poor &nbsp;5=Excellent</span></th>
-                    <th style="padding:10px 8px;text-align:center;width:55px;">Resp.</th>
-                </tr></thead><tbody>`;
-
-            const barColors = {1:'#dc3545',2:'#fd7e14',3:'#ffc107',4:'#17a2b8',5:'#28a745'};
-            qs.forEach((q, idx) => {
-                const ac = q.avg >= 4 ? '#28a745' : q.avg >= 3 ? '#fd7e14' : '#dc3545';
-                const dist = q.dist || {1:0,2:0,3:0,4:0,5:0};
-                const tot = Object.values(dist).reduce((a,b)=>a+b,0);
-                const pct = r => tot > 0 ? dist[r]/tot*100 : 0;
-                const bars = [1,2,3,4,5].map(r => pct(r) > 0 ?
-                    `<div style="width:${pct(r).toFixed(1)}%;min-width:3px;background:${barColors[r]};height:22px;" title="${['','Poor','Unsatisfactory','Satisfactory','Very Good','Excellent'][r]}: ${dist[r]} (${pct(r).toFixed(0)}%)"></div>` : ''
-                ).join('');
-                const legend = [1,2,3,4,5].filter(r=>dist[r]>0).map(r =>
-                    `<span style="background:${barColors[r]};color:white;border-radius:4px;padding:1px 5px;font-size:10px;margin-right:2px;">${r}:${dist[r]}</span>`
-                ).join('');
-                html += `<tr style="border-bottom:1px solid #eee;${idx%2===1?'background:#f9f9f9':''};">
-                    <td style="padding:10px 12px;">
-                        <div style="font-weight:600;color:#222;">${escHtml(q.text)}</div>
-                        <div style="color:#aaa;font-size:11px;">[${escHtml(q.id)}]</div>
-                    </td>
-                    <td style="padding:10px 8px;text-align:center;">
-                        <span style="font-size:20px;font-weight:700;color:${ac};">${q.avg.toFixed(1)}</span>
-                    </td>
-                    <td style="padding:10px 12px;">
-                        <div style="display:flex;width:100%;height:22px;border-radius:4px;overflow:hidden;background:#eee;margin-bottom:4px;">${bars}</div>
-                        <div>${legend}</div>
-                    </td>
-                    <td style="padding:10px 8px;text-align:center;color:#666;font-size:12px;">${q.count}</td>
-                </tr>`;
-            });
-            html += '</tbody></table></div>';
-
-            div.innerHTML = html;
-        }
-
-        function renderActionInsights(data) {
-            const div = document.getElementById('actionInsightsDiv');
-            const qs = data.questions || [];
-            const below3 = qs.filter(q=>q.avg<3).sort((a,b)=>a.avg-b.avg);
-            const mid = qs.filter(q=>q.avg>=3 && q.avg<4).sort((a,b)=>a.avg-b.avg);
-            const excellent = qs.filter(q=>q.avg>=4.5);
-            let html = '';
-
-            if (below3.length) {
-                html += `<div style="background:#fff5f5;border:1px solid #ffb3b3;border-radius:8px;padding:16px;margin-bottom:14px;">
-                    <strong style="color:#dc3545;">&#9888; ${below3.length} question(s) require <u>immediate action</u> (avg &lt; 3.0):</strong>
-                    <ul style="margin:8px 0 10px 0;padding-left:20px;">
-                        ${below3.map(q=>`<li style="margin-bottom:3px;">${escHtml(q.text)} <span style="background:#dc3545;color:white;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;">${q.avg.toFixed(1)}</span></li>`).join('')}
-                    </ul>
-                    <p style="margin:0;font-size:13px;">Review participant comments on the <a href="{{ url_for('low_ratings_page') }}" style="color:#dc3545;font-weight:600;\">Low Rating Feedback</a> page for specific feedback on these questions.</p>
-                </div>`;
-            }
-            if (mid.length) {
-                html += `<div style="background:#fffbec;border:1px solid #ffd27a;border-radius:8px;padding:16px;margin-bottom:14px;">
-                    <strong style="color:#856404;">&#128203; ${mid.length} question(s) have room for improvement (3.0 – 3.9):</strong>
-                    <ul style="margin:8px 0 0 0;padding-left:20px;">
-                        ${mid.slice(0,6).map(q=>`<li style="margin-bottom:3px;">${escHtml(q.text)} <span style="background:#fd7e14;color:white;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;">${q.avg.toFixed(1)}</span></li>`).join('')}
-                        ${mid.length>6?`<li style="color:#aaa;">...and ${mid.length-6} more</li>`:''}
-                    </ul>
-                </div>`;
-            }
-            if (excellent.length && !below3.length && !mid.length) {
-                html += `<div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:8px;padding:16px;">
-                    <strong style="color:#276749;">&#10003; Outstanding! All questions rated ≥ 4.0 and ${excellent.length} rated ≥ 4.5 — excellent performance across the board.</strong>
-                </div>`;
-            } else if (excellent.length) {
-                html += `<div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:8px;padding:14px;">
-                    <strong style="color:#276749;">&#9733; ${excellent.length} top-performing question(s) rated ≥ 4.5:</strong>
-                    <ul style="margin:6px 0 0 0;padding-left:20px;">
-                        ${excellent.map(q=>`<li>${escHtml(q.text)} <span style="background:#28a745;color:white;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;">${q.avg.toFixed(1)}</span></li>`).join('')}
-                    </ul>
-                </div>`;
-            }
-            if (!html) html = '<p style="color:#888;text-align:center;padding:20px;">No insights to show for this selection.</p>';
-            div.innerHTML = html;
+            document.getElementById('analysisMonth').value = '';
+            document.getElementById('analysisChartType').value = 'pie';
+            document.getElementById('analysisBarMetric').value = 'count';
+            document.getElementById('analysisMinResponses').value = '1';
+            document.getElementById('analysisQuestionSort').value = 'priority';
+            analysisDashboardLoaded = false;
+            initializeAnalysisDashboard();
         }
 
         function escHtml(str) {

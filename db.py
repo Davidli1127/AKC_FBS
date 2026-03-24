@@ -840,6 +840,78 @@ def get_distinct_courses_for_form(form_id, form_config):
         print(f"Error fetching distinct courses from [{table}]: {e}")
         return []
 
+
+def get_available_analysis_months(form_id, form_config):
+    """Return distinct available months (YYYY-MM) from a form response table."""
+    table = _get_table_name(form_config.get('title', form_id))
+    conn = get_fbs_connection()
+    if not conn:
+        return []
+    try:
+        cur = conn.cursor()
+        cur.execute(f"""
+            SELECT DISTINCT
+                YEAR([submission_time]) AS y,
+                MONTH([submission_time]) AS m
+            FROM [{table}]
+            WHERE [submission_time] IS NOT NULL
+            ORDER BY y DESC, m DESC
+        """)
+        months = [f"{int(r[0]):04d}-{int(r[1]):02d}" for r in cur.fetchall() if r[0] and r[1]]
+        conn.close()
+        return months
+    except Exception as e:
+        print(f"Error fetching analysis months from [{table}]: {e}")
+        return []
+
+
+def get_nav_course_name_map(class_codes):
+    """Map class code -> NAV course Name using Timestamp relation.
+
+    The mapping uses:
+    - [Absolute Kinetics Consultancy$Course Participant].[Class Code]
+    - [Absolute Kinetics Consultancy$Course Participant].[Timestamp]
+    - [Absolute Kinetics Consultancy$Course].[Timestamp]
+    - [Absolute Kinetics Consultancy$Course].[Name]
+    """
+    if not class_codes:
+        return {}
+
+    codes = sorted({str(c).strip() for c in class_codes if str(c).strip()})
+    if not codes:
+        return {}
+
+    conn = get_connection()
+    if not conn:
+        return {}
+
+    try:
+        placeholders = ','.join('?' for _ in codes)
+        cur = conn.cursor()
+        cur.execute(f"""
+            SELECT
+                p.[Class Code] AS class_code,
+                MAX(NULLIF(LTRIM(RTRIM(c.[Name])), '')) AS course_name
+            FROM {PARTICIPANT_TABLE} p
+            LEFT JOIN {COURSE_TABLE} c
+                ON p.[Timestamp] = c.[Timestamp]
+            WHERE p.[Class Code] IN ({placeholders})
+            GROUP BY p.[Class Code]
+        """, codes)
+
+        result = {}
+        for row in cur.fetchall():
+            class_code = str(row[0] or '').strip()
+            course_name = str(row[1] or '').strip()
+            if class_code:
+                result[class_code] = course_name
+
+        conn.close()
+        return result
+    except Exception as e:
+        print(f"Error mapping NAV course names by class code: {e}")
+        return {}
+
 def get_courses_from_db(search_term=None, limit=50):
     """Fetch courses from AKC_NAV. Returns list of dicts with code and description."""
     conn = get_connection()

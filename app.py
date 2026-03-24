@@ -1348,6 +1348,298 @@ def get_analysis_text():
     })
 
 
+def _parse_month_range(month_value):
+    """Parse YYYY-MM into an inclusive-exclusive datetime window."""
+    if not month_value:
+        return None, None
+    try:
+        start = datetime.strptime(month_value, '%Y-%m')
+    except ValueError:
+        return None, None
+    if start.month == 12:
+        end = datetime(start.year + 1, 1, 1)
+    else:
+        end = datetime(start.year, start.month + 1, 1)
+    return start, end
+
+
+def _build_rating_question_map(form):
+    """Build ordered map {column_id: question_text} for all rating-like sections."""
+    rating_q_map = {}
+    for section in form.get('sections', []):
+        s_type = section.get('type', '')
+        questions = section.get('questions', [])
+        if s_type == 'instructor_rating':
+            max_inst = section.get('maxInstructors', 3)
+            for i in range(1, max_inst + 1):
+                for q in questions:
+                    col = f"B{i}_{q['id']}"
+                    rating_q_map[col] = f"Instructor {i}: {q.get('text', q['id'])}"
+        elif s_type == 'assessor_rating':
+            max_assess = section.get('maxAssessors', 2)
+            for i in range(1, max_assess + 1):
+                for q in questions:
+                    col = f"A{i}_{q['id']}"
+                    rating_q_map[col] = f"Assessor {i}: {q.get('text', q['id'])}"
+        elif s_type == 'rating':
+            for q in questions:
+                rating_q_map[q['id']] = q.get('text', q['id'])
+    return rating_q_map
+
+
+@app.route('/api/analysis/dashboard/filters', methods=['GET'])
+@api_login_required
+def get_analysis_dashboard_filters():
+    """Return dashboard filter options by form/month.
+
+    Filters include available months, course titles (from NAV Course.Name), and
+    rating questions with data count.
+    """
+    form_id = request.args.get('form_id', 'form1')
+    month = request.args.get('month', '').strip()
+
+    config = load_config()
+    form = config['forms'].get(form_id)
+    if not form:
+        return jsonify({'error': 'Form not found'}), 404
+
+    dt_from, dt_to = _parse_month_range(month)
+    months_available = db.get_available_analysis_months(form_id, form)
+    rows = db.get_responses_for_analysis(form_id, form, dt_from, dt_to, None)
+    rating_q_map = _build_rating_question_map(form)
+
+    class_codes = {r.get('class_code', '') for r in rows if r.get('class_code')}
+    nav_name_map = db.get_nav_course_name_map(class_codes)
+
+    course_titles = set()
+    question_counts = defaultdict(int)
+    for row in rows:
+        class_code = str(row.get('class_code', '') or '').strip()
+        course_title = (nav_name_map.get(class_code) or class_code or 'Unknown Course').strip()
+        if course_title:
+            course_titles.add(course_title)
+
+        answers = row.get('answers', {})
+        for qid in rating_q_map.keys():
+            val = answers.get(qid)
+            try:
+                rating = int(float(str(val))) if val is not None else None
+            except (ValueError, TypeError):
+                rating = None
+            if rating is not None and 1 <= rating <= 5:
+                question_counts[qid] += 1
+
+    questions_available = [
+        {
+            'id': qid,
+            'text': qtext,
+            'count': question_counts.get(qid, 0)
+        }
+        for qid, qtext in rating_q_map.items()
+        if question_counts.get(qid, 0) > 0
+    ]
+
+    return jsonify({
+        'months_available': months_available,
+        'course_titles_available': sorted(course_titles),
+        'questions_available': questions_available
+    })
+
+
+@app.route('/api/analysis/dashboard', methods=['GET'])
+@api_login_required
+def get_analysis_dashboard():
+    """Return pie/bar-ready rating analysis for the dashboard UI."""
+    form_id = request.args.get('form_id', 'form1')
+    month = request.args.get('month', '').strip()
+    selected_questions = [q.strip() for q in request.args.getlist('question') if q.strip()]
+    selected_course_titles = [c.strip() for c in request.args.getlist('course_title') if c.strip()]
+    sort_mode = request.args.get('sort', 'priority').strip().lower()
+    try:
+        min_responses = max(1, int(request.args.get('min_responses', '1')))
+    except (TypeError, ValueError):
+        min_responses = 1
+
+    config = load_config()
+    form = config['forms'].get(form_id)
+    if not form:
+        return jsonify({'error': 'Form not found'}), 404
+
+    dt_from, dt_to = _parse_month_range(month)
+    months_available = db.get_available_analysis_months(form_id, form)
+    rows = db.get_responses_for_analysis(form_id, form, dt_from, dt_to, None)
+    rating_q_map = _build_rating_question_map(form)
+
+    class_codes = {r.get('class_code', '') for r in rows if r.get('class_code')}
+    nav_name_map = db.get_nav_course_name_map(class_codes)
+
+    course_titles_available = set()
+    prepared_rows = []
+    for row in rows:
+        class_code = str(row.get('class_code', '') or '').strip()
+        resolved_title = (nav_name_map.get(class_code) or class_code or 'Unknown Course').strip()
+        if resolved_title:
+            course_titles_available.add(resolved_title)
+        prepared_rows.append({
+            'course_title_resolved': resolved_title,
+            'answers': row.get('answers', {})
+        })
+
+    if selected_course_titles:
+        selected_set = set(selected_course_titles)
+        prepared_rows = [r for r in prepared_rows if r.get('course_title_resolved') in selected_set]
+
+    question_ids = selected_questions if selected_questions else list(rating_q_map.keys())
+
+    rating_labels = {
+        1: 'Not at all',
+        2: 'To a Small Extent',
+        3: 'To Some Extent',
+        4: 'To a Large Extent',
+        5: 'To a Very Large Extent'
+    }
+    rating_colors = {
+        1: '#dc3545',
+        2: '#fd7e14',
+        3: '#ffc107',
+        4: '#4f8ad9',
+        5: '#28a745'
+    }
+
+    overall_dist = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+    per_question = {}
+    for qid in question_ids:
+        qtext = rating_q_map.get(qid)
+        if qtext:
+            per_question[qid] = {
+                'id': qid,
+                'text': qtext,
+                'count': 0,
+                'total': 0,
+                'avg': 0,
+                'good_pct': 0,
+                'dist': {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+            }
+
+    for row in prepared_rows:
+        answers = row.get('answers', {})
+        for qid in question_ids:
+            if qid not in per_question:
+                continue
+            val = answers.get(qid)
+            try:
+                rating = int(float(str(val))) if val is not None else None
+            except (ValueError, TypeError):
+                rating = None
+            if rating is None or rating < 1 or rating > 5:
+                continue
+            per_question[qid]['count'] += 1
+            per_question[qid]['total'] += rating
+            per_question[qid]['dist'][rating] += 1
+            overall_dist[rating] += 1
+
+    questions_available = []
+    for qid, qtext in rating_q_map.items():
+        count = per_question[qid]['count'] if qid in per_question else 0
+        if qid not in per_question:
+            # count can still exist when no question filter is selected
+            for row in prepared_rows:
+                val = row.get('answers', {}).get(qid)
+                try:
+                    rating = int(float(str(val))) if val is not None else None
+                except (ValueError, TypeError):
+                    rating = None
+                if rating is not None and 1 <= rating <= 5:
+                    count += 1
+        if count > 0:
+            questions_available.append({'id': qid, 'text': qtext, 'count': count})
+
+    for q in per_question.values():
+        if q['count'] > 0:
+            q['avg'] = round(q['total'] / q['count'], 2)
+            q['good_pct'] = round(((q['dist'][3] + q['dist'][4] + q['dist'][5]) / q['count']) * 100, 2)
+
+    ranked_questions = [q for q in per_question.values() if q['count'] >= min_responses]
+
+    if sort_mode == 'avg_asc':
+        ranked_questions.sort(key=lambda x: (x['avg'], -x['count'], x['text']))
+    elif sort_mode == 'avg_desc':
+        ranked_questions.sort(key=lambda x: (-x['avg'], -x['count'], x['text']))
+    elif sort_mode == 'count_desc':
+        ranked_questions.sort(key=lambda x: (-x['count'], x['avg'], x['text']))
+    else:
+        ranked_questions.sort(key=lambda x: (x['avg'], -x['count'], x['text']))
+
+    total_ratings = sum(overall_dist.values())
+    good_count = overall_dist[3] + overall_dist[4] + overall_dist[5]
+    bad_count = overall_dist[1] + overall_dist[2]
+    good_pct = round((good_count / total_ratings) * 100, 2) if total_ratings else 0
+
+    active_ratings = [r for r in [1, 2, 3, 4, 5] if any(q['dist'][r] > 0 for q in ranked_questions)]
+    bar_datasets = [
+        {
+            'label': rating_labels[r],
+            'rating_value': r,
+            'backgroundColor': rating_colors[r],
+            'data': [q['dist'][r] for q in ranked_questions]
+        }
+        for r in active_ratings
+    ]
+
+    top_issues = [
+        {
+            'id': q['id'],
+            'text': q['text'],
+            'avg': q['avg'],
+            'count': q['count'],
+            'good_pct': q['good_pct']
+        }
+        for q in ranked_questions[:5]
+    ]
+    strongest_questions = [
+        {
+            'id': q['id'],
+            'text': q['text'],
+            'avg': q['avg'],
+            'count': q['count'],
+            'good_pct': q['good_pct']
+        }
+        for q in sorted(ranked_questions, key=lambda x: (-x['avg'], -x['count'], x['text']))[:5]
+    ]
+
+    return jsonify({
+        'filters': {
+            'months_available': months_available,
+            'course_titles_available': sorted(course_titles_available),
+            'questions_available': questions_available
+        },
+        'summary': {
+            'selected_month': month,
+            'response_count': len(prepared_rows),
+            'total_ratings': total_ratings,
+            'rating_3_or_above_pct': good_pct,
+            'question_count': len(ranked_questions),
+            'min_responses': min_responses,
+            'sort_mode': sort_mode
+        },
+        'pie': {
+            'labels': ['Good Satisfaction (>=3)', 'Bad Satisfaction (<3)'],
+            'values': [good_count, bad_count],
+            'colors': ['#16a34a', '#ef4444']
+        },
+        'bar': {
+            'question_labels': [q['text'] for q in ranked_questions],
+            'datasets': bar_datasets,
+            'questions': ranked_questions
+        },
+        'insights': {
+            'top_issues': top_issues,
+            'strongest_questions': strongest_questions
+        },
+        'rating_legend': rating_labels
+    })
+
+
 @app.route('/api/forms', methods=['POST'])
 @api_login_required
 def create_form():
