@@ -27,7 +27,6 @@ ADMIN_ACCOUNT = os.environ.get('ADMIN_ACCOUNT', 'admin')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'akc2026')
 
 def _get_default_instructor_section(max_instructors=3):
-    """Generate an empty instructor_rating section scaffold."""
     return {
         'id': 'B',
         'title': 'Instructors',
@@ -37,7 +36,6 @@ def _get_default_instructor_section(max_instructors=3):
     }
 
 def _get_default_assessor_section(max_assessors=2):
-    """Generate an empty assessor_rating section scaffold."""
     return {
         'id': 'A',
         'title': 'Assessors',
@@ -69,7 +67,7 @@ def login_required(f):
 
 
 def api_login_required(f):
-    """Decorator to require login for API routes (returns JSON)"""
+    """Decorator to require login for API routes"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get('logged_in'):
@@ -308,7 +306,7 @@ def _norm_id(id_number):
     return id_number.strip().upper()
 
 def has_submitted(course_id, identifier):
-    """Check if a student (by ID number) has already submitted for this course."""
+    """Check if a student has already submitted for this course."""
     course = db.get_course_by_id(course_id)
     form_id = (course or {}).get('form_id', '')
     config = load_config()
@@ -317,7 +315,7 @@ def has_submitted(course_id, identifier):
     return db.has_submitted_db(course_id, identifier, form_title)
 
 def load_config():
-    """Load app config from JSON and forms from FBS_Forms (database source of truth)."""
+    """Load app config from JSON and forms from FBS_Forms."""
     base = {}
     if os.path.exists(CONFIG_PATH):
         try:
@@ -334,7 +332,6 @@ def load_config():
     return base
 
 def save_config(config):
-    """Save only non-form local config. Form definitions are DB-only."""
     local_cfg = {
         'courses': config.get('courses', [])
     }
@@ -360,13 +357,9 @@ def sync_forms_registry_with_config(config):
     return all_ok, results
 
 def _slugify_form_id(title):
-    """Convert a form title to a stable lowercase slug used as form_id.
-    e.g. 'TRAINER EVALUATION FORM' -> 'trainer_evaluation_form'
-    """
     s = title.strip().lower()
     s = re.sub(r'[^a-z0-9]+', '_', s)
     return s.strip('_') or 'form_' + uuid.uuid4().hex[:8]
-
 
 def save_response(form_id, course_id, data, id_number=''):
     """Save form response to AKC_FBS database."""
@@ -401,7 +394,7 @@ def index():
 
 @app.route('/scan')
 def scan_page():
-    """Universal scan / walk-in entry page.
+    """Universal scan page.
     Participant enters their Class Code and ID number; the server looks up the
     matching active course session and redirects them to the right form.
     """
@@ -410,12 +403,6 @@ def scan_page():
 
 @app.route('/api/scan/lookup', methods=['POST'])
 def scan_lookup():
-    """API used by the scan page.
-    Accepts { class_code, id_number }.
-    Returns the matching course session URL so the client can redirect.
-    If the class code matches multiple active sessions (e.g. Form1 + Form2)
-    all options are returned and the user can choose.
-    """
     data = request.json or {}
     class_code = (data.get('class_code') or '').strip()
     id_number  = (data.get('id_number')  or '').strip()
@@ -499,7 +486,6 @@ def login():
             error = 'Invalid account number or password'
     
     return render_template('admin_login.html', error=error)
-
 
 @app.route('/logout')
 def logout():
@@ -677,10 +663,7 @@ def search_db_courses():
 @app.route('/api/db/participants', methods=['GET'])
 @api_login_required
 def get_participants():
-    """Get participants for a class with pagination.
-    Enriches each participant with form_submitted: True/False by checking
-    FBS_Responses for any course whose course_title matches the class code.
-    """
+    """Get participants for a class with pagination."""
     class_code = request.args.get('class_code', '')
     offset = request.args.get('offset', 0, type=int)
     limit = request.args.get('limit', 20, type=int)
@@ -912,10 +895,6 @@ def get_course_qrcode(course_id):
 @app.route('/api/scan/qrcode', methods=['GET'])
 @api_login_required
 def get_universal_qrcode():
-    """Return the universal (fixed) QR code that points to /scan.
-    This QR code never changes — participants scan it and then type their
-    class code + ID number on the /scan page.
-    """
     if not QR_AVAILABLE:
         return jsonify({'error': 'QR code library not installed'}), 500
     public_base = os.environ.get('PUBLIC_URL', '').rstrip('/') or request.host_url.rstrip('/')
@@ -1145,9 +1124,6 @@ def delete_alert(alert_id):
 @app.route('/api/alerts/batch', methods=['DELETE'])
 @api_login_required
 def batch_delete_alerts():
-    """Bulk-delete alerts by IDs or by status filter.
-    Body: {ids: [...]} or {status_filter: 'resolved'}
-    """
     data = request.json or {}
     ids = set(data.get('ids', []))
     status_filter = data.get('status_filter', '')
@@ -1185,9 +1161,7 @@ def get_analysis_summary():
 @app.route('/api/analysis/ratings', methods=['GET'])
 @api_login_required
 def get_analysis_ratings():
-    """Compute per-question averages and rating distributions from the database.
-    Query params: form_id, date_from (YYYY-MM-DD), date_to (YYYY-MM-DD), course
-    """
+    """Compute per-question averages and rating distributions from the database."""
     form_id = request.args.get('form_id', 'form1')
     date_from_str = request.args.get('date_from', '').strip()
     date_to_str = request.args.get('date_to', '').strip()
@@ -1282,11 +1256,6 @@ def get_analysis_ratings():
 @app.route('/api/analysis/text', methods=['GET'])
 @api_login_required
 def get_analysis_text():
-    """Return open-ended / text responses grouped by question.
-    Each response is tagged with its course name and date.
-    Supports same filters as /api/analysis/ratings.
-    Also includes multiple_choice and yes_no responses.
-    """
     form_id = request.args.get('form_id', 'form1')
     date_from_str = request.args.get('date_from', '').strip()
     date_to_str   = request.args.get('date_to', '').strip()
@@ -1393,13 +1362,6 @@ def _looks_like_uuid(value):
 
 
 def _resolve_analysis_class_code(row, course_id_to_class_code):
-    """Resolve the class code used to map to NAV Course.Name.
-
-    Priority:
-    1) row.class_code if non-UUID
-    2) FBS_Courses.course_title resolved from row.course_id
-    3) row.course_title if non-UUID
-    """
     class_code = str(row.get('class_code', '') or '').strip()
     raw_course_title = str(row.get('course_title', '') or '').strip()
     raw_course_id = str(row.get('course_id', '') or '').strip()
@@ -1420,11 +1382,7 @@ def _resolve_analysis_class_code(row, course_id_to_class_code):
 @app.route('/api/analysis/dashboard/filters', methods=['GET'])
 @api_login_required
 def get_analysis_dashboard_filters():
-    """Return dashboard filter options by form/month.
-
-    Filters include available months, course titles (from NAV Course.Name), and
-    rating questions with data count.
-    """
+    """Return dashboard filter options by form/month."""
     form_id = request.args.get('form_id', 'form1')
     month = request.args.get('month', '').strip()
 
@@ -1806,8 +1764,8 @@ def create_form():
 @app.route('/api/forms/<form_id>', methods=['DELETE'])
 @api_login_required
 def delete_form(form_id):
-    """Delete or archive a form. Forms with response data are archived (soft-deleted)
-    so that historical responses are never lost. Forms without data are hard-deleted
+    """Delete or archive a form. Forms with response data are archived so that 
+    historical responses are never lost. Forms without data are hard-deleted
     and their empty response tables are removed."""
     if form_id in ('form1', 'form2'):
         return jsonify({'error': 'Cannot delete built-in forms'}), 400
@@ -1856,15 +1814,6 @@ def low_ratings_page():
 @app.route('/api/low-ratings-data')
 @api_login_required
 def get_low_ratings_data():
-    """
-    Fetch low-rated responses + text responses for specified forms.
-    
-    Query params:
-    - forms: comma-separated list of form_ids (mandatory)
-    - rating_threshold: max rating to include (default: 2)
-    - question_id: filter by specific question (optional)
-    - include_alerts: include alert status data (default: true)
-    """
     forms_str = request.args.get('forms', '').strip()
     rating_threshold = int(request.args.get('rating_threshold', 2))
     question_filter = request.args.get('question_id', '').strip()
@@ -1958,13 +1907,7 @@ def get_rating_questions():
 @app.route('/api/hotspot-analysis')
 @api_login_required
 def get_hotspot_analysis():
-    """
-    Get hotspot analysis - questions ranked by priority (frequency × urgency).
-    Includes BOTH rating questions and text questions.
-    
-    Query params:
-    - forms: comma-separated form IDs (optional - if provided, filter by those forms)
-    """
+    """Get hotspot analysis - questions ranked by priority. Includes BOTH rating questions and text questions."""
     forms_str = request.args.get('forms', '').strip()
     
     alerts = load_alerts()
@@ -2024,10 +1967,7 @@ def get_hotspot_analysis():
 @app.route('/api/update-alert-status', methods=['PUT'])
 @api_login_required
 def update_alert_status():
-    """
-    Update alert status and notes.
-    Body: {alert_ids: [...], status: 'acknowledged|in_progress|resolved', notes: '...'}
-    """
+    """Update alert status and notes."""
     data = request.get_json()
     alert_ids = data.get('alert_ids', [])
     status = data.get('status', '').strip()
@@ -2054,23 +1994,6 @@ def update_alert_status():
 @app.route('/api/send-rectification', methods=['POST'])
 @api_login_required
 def send_rectification():
-    """
-    Send rectification email to participant.
-    
-    Body JSON:
-    {
-        'form_id': str,
-        'response_id': UUID,
-        'participant_name': str,
-        'participant_email': str,
-        'question_id': str,
-        'question_text': str,
-        'rating_value': int,
-        'rectification_text': str,
-        'implementation_date': 'YYYY-MM-DD',
-        'status': 'Pending|In Progress|Completed|Resolved'
-    }
-    """
     try:
         data = request.get_json()
         
@@ -2097,7 +2020,6 @@ def send_rectification():
 Thank you for completing the feedback form. We appreciate your valuable input.
 
 Question: {question_text}
-Your Rating: {rating_value}/5
 
 Rectification / Response:
 {rectification_text}
