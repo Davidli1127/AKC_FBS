@@ -331,6 +331,36 @@ def get_course_by_id(course_id):
         return None
 
 
+def get_fbs_course_title_map(course_ids):
+    """Return {course_id: course_title} from FBS_Courses for a list of course IDs."""
+    ids = sorted({str(c).strip() for c in (course_ids or []) if str(c).strip()})
+    if not ids:
+        return {}
+
+    conn = get_fbs_connection()
+    if not conn:
+        return {}
+
+    try:
+        placeholders = ','.join('?' for _ in ids)
+        cur = conn.cursor()
+        cur.execute(
+            f"SELECT course_id, course_title FROM FBS_Courses WHERE course_id IN ({placeholders})",
+            ids
+        )
+        mapping = {}
+        for row in cur.fetchall():
+            cid = str(row[0] or '').strip()
+            ctitle = str(row[1] or '').strip()
+            if cid:
+                mapping[cid] = ctitle
+        conn.close()
+        return mapping
+    except Exception as e:
+        print(f"Error fetching FBS course title map: {e}")
+        return {}
+
+
 def get_all_courses_from_db():
     """Return all course sessions (active and closed), newest first."""
     conn = get_fbs_connection()
@@ -803,9 +833,21 @@ def get_responses_for_analysis(form_id, form_config, date_from=None, date_to=Non
             answers  = {col: row_dict.pop(col) for col in q_col_names}
             raw      = row_dict.get('submission_time')
             date_str = raw.strftime('%Y-%m-%d') if isinstance(raw, datetime) else str(raw or '')[:10]
+            raw_course_id = str(row_dict.get('course_id', '') or '').strip()
+            raw_course_title = str(row_dict.get('course_title', '') or '').strip()
+
+            # In FBS responses, course_id is often an internal UUID while
+            # course_title stores the class code selected during QR setup.
+            class_code = raw_course_title
+            if not class_code:
+                class_code = raw_course_id
+            if class_code and re.fullmatch(r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}', class_code):
+                class_code = ''
+
             rows.append({
-                'class_code':   str(row_dict.get('course_id',    '') or '').strip(),
-                'course_title': str(row_dict.get('course_title', '') or '').strip(),
+                'class_code':   class_code,
+                'course_title': raw_course_title,
+                'course_id':    raw_course_id,
                 'course_date':  str(row_dict.get('course_date',  '') or '').strip() or date_str,
                 'submitted_at': date_str,
                 'instructor1':  str(row_dict.get('instructor1_name') or ''),
@@ -877,7 +919,7 @@ def get_nav_course_name_map(class_codes):
     if not class_codes:
         return {}
 
-    codes = sorted({str(c).strip() for c in class_codes if str(c).strip()})
+    codes = sorted({str(c).strip().upper() for c in class_codes if str(c).strip()})
     if not codes:
         return {}
 
@@ -889,16 +931,47 @@ def get_nav_course_name_map(class_codes):
         placeholders = ','.join('?' for _ in codes)
         cur = conn.cursor()
         cur.execute(f"""
-            WITH mapped AS (
+            WITH req AS (
+                SELECT ? AS class_code
+                {''.join(' UNION ALL SELECT ?' for _ in range(len(codes) - 1))}
+            ), mapped AS (
                 SELECT
-                    p.[Class Code] AS class_code,
-                    NULLIF(LTRIM(RTRIM(c.[Name])), '') AS course_name,
+                    req.class_code,
+                    NULLIF(LTRIM(RTRIM(c_ts.[Name])), '') AS course_name,
+                    1 AS source_rank,
                     COUNT(*) AS hit_count
-                FROM {PARTICIPANT_TABLE} p
-                LEFT JOIN {COURSE_TABLE} c
-                    ON p.[Timestamp] = c.[Timestamp]
-                WHERE p.[Class Code] IN ({placeholders})
-                GROUP BY p.[Class Code], NULLIF(LTRIM(RTRIM(c.[Name])), '')
+                FROM req
+                LEFT JOIN {PARTICIPANT_TABLE} p
+                    ON UPPER(LTRIM(RTRIM(p.[Class Code]))) = req.class_code
+                LEFT JOIN {COURSE_TABLE} c_ts
+                    ON p.[Timestamp] = c_ts.[Timestamp]
+                GROUP BY req.class_code, NULLIF(LTRIM(RTRIM(c_ts.[Name])), '')
+
+                UNION ALL
+
+                SELECT
+                    req.class_code,
+                    NULLIF(LTRIM(RTRIM(c_code.[Name])), '') AS course_name,
+                    2 AS source_rank,
+                    COUNT(*) AS hit_count
+                FROM req
+                LEFT JOIN {PARTICIPANT_TABLE} p
+                    ON UPPER(LTRIM(RTRIM(p.[Class Code]))) = req.class_code
+                LEFT JOIN {COURSE_TABLE} c_code
+                    ON UPPER(LTRIM(RTRIM(p.[Class Code]))) = UPPER(LTRIM(RTRIM(c_code.[Code])))
+                GROUP BY req.class_code, NULLIF(LTRIM(RTRIM(c_code.[Name])), '')
+
+                UNION ALL
+
+                SELECT
+                    req.class_code,
+                    NULLIF(LTRIM(RTRIM(c_direct.[Name])), '') AS course_name,
+                    3 AS source_rank,
+                    COUNT(*) AS hit_count
+                FROM req
+                LEFT JOIN {COURSE_TABLE} c_direct
+                    ON UPPER(LTRIM(RTRIM(c_direct.[Code]))) = req.class_code
+                GROUP BY req.class_code, NULLIF(LTRIM(RTRIM(c_direct.[Name])), '')
             ), ranked AS (
                 SELECT
                     class_code,
@@ -906,6 +979,7 @@ def get_nav_course_name_map(class_codes):
                     ROW_NUMBER() OVER (
                         PARTITION BY class_code
                         ORDER BY CASE WHEN course_name IS NULL THEN 1 ELSE 0 END,
+                                 source_rank ASC,
                                  hit_count DESC,
                                  course_name ASC
                     ) AS rn
@@ -918,7 +992,7 @@ def get_nav_course_name_map(class_codes):
 
         result = {}
         for row in cur.fetchall():
-            class_code = str(row[0] or '').strip()
+            class_code = str(row[0] or '').strip().upper()
             course_name = str(row[1] or '').strip()
             if class_code:
                 result[class_code] = course_name

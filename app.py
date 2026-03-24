@@ -1387,6 +1387,36 @@ def _build_rating_question_map(form):
     return rating_q_map
 
 
+def _looks_like_uuid(value):
+    s = str(value or '').strip()
+    return bool(re.fullmatch(r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}', s))
+
+
+def _resolve_analysis_class_code(row, course_id_to_class_code):
+    """Resolve the class code used to map to NAV Course.Name.
+
+    Priority:
+    1) row.class_code if non-UUID
+    2) FBS_Courses.course_title resolved from row.course_id
+    3) row.course_title if non-UUID
+    """
+    class_code = str(row.get('class_code', '') or '').strip()
+    raw_course_title = str(row.get('course_title', '') or '').strip()
+    raw_course_id = str(row.get('course_id', '') or '').strip()
+
+    if class_code and not _looks_like_uuid(class_code):
+        return class_code
+
+    mapped_code = str(course_id_to_class_code.get(raw_course_id, '') or '').strip()
+    if mapped_code and not _looks_like_uuid(mapped_code):
+        return mapped_code
+
+    if raw_course_title and not _looks_like_uuid(raw_course_title):
+        return raw_course_title
+
+    return ''
+
+
 @app.route('/api/analysis/dashboard/filters', methods=['GET'])
 @api_login_required
 def get_analysis_dashboard_filters():
@@ -1408,14 +1438,23 @@ def get_analysis_dashboard_filters():
     rows = db.get_responses_for_analysis(form_id, form, dt_from, dt_to, None)
     rating_q_map = _build_rating_question_map(form)
 
-    class_codes = {r.get('class_code', '') for r in rows if r.get('class_code')}
-    nav_name_map = db.get_nav_course_name_map(class_codes)
+    course_ids = {r.get('course_id', '') for r in rows if r.get('course_id')}
+    course_id_to_class_code = db.get_fbs_course_title_map(course_ids)
+
+    normalized_codes = {
+        str(_resolve_analysis_class_code(r, course_id_to_class_code) or '').strip().upper()
+        for r in rows
+    }
+    normalized_codes.discard('')
+
+    nav_name_map = db.get_nav_course_name_map(normalized_codes)
 
     course_titles = set()
     question_counts = defaultdict(int)
     for row in rows:
-        class_code = str(row.get('class_code', '') or '').strip()
-        course_title = (nav_name_map.get(class_code) or class_code or 'Unknown Course').strip()
+        class_code = str(_resolve_analysis_class_code(row, course_id_to_class_code) or '').strip()
+        class_code_key = class_code.upper()
+        course_title = (nav_name_map.get(class_code_key) or class_code or '').strip()
         if course_title:
             course_titles.add(course_title)
 
@@ -1455,10 +1494,6 @@ def get_analysis_dashboard():
     selected_questions = [q.strip() for q in request.args.getlist('question') if q.strip()]
     selected_course_titles = [c.strip() for c in request.args.getlist('course_title') if c.strip()]
     sort_mode = request.args.get('sort', 'priority').strip().lower()
-    try:
-        min_responses = max(1, int(request.args.get('min_responses', '1')))
-    except (TypeError, ValueError):
-        min_responses = 1
 
     config = load_config()
     form = config['forms'].get(form_id)
@@ -1470,14 +1505,23 @@ def get_analysis_dashboard():
     rows = db.get_responses_for_analysis(form_id, form, dt_from, dt_to, None)
     rating_q_map = _build_rating_question_map(form)
 
-    class_codes = {r.get('class_code', '') for r in rows if r.get('class_code')}
-    nav_name_map = db.get_nav_course_name_map(class_codes)
+    course_ids = {r.get('course_id', '') for r in rows if r.get('course_id')}
+    course_id_to_class_code = db.get_fbs_course_title_map(course_ids)
+
+    normalized_codes = {
+        str(_resolve_analysis_class_code(r, course_id_to_class_code) or '').strip().upper()
+        for r in rows
+    }
+    normalized_codes.discard('')
+
+    nav_name_map = db.get_nav_course_name_map(normalized_codes)
 
     course_titles_available = set()
     prepared_rows = []
     for row in rows:
-        class_code = str(row.get('class_code', '') or '').strip()
-        resolved_title = (nav_name_map.get(class_code) or class_code or 'Unknown Course').strip()
+        class_code = str(_resolve_analysis_class_code(row, course_id_to_class_code) or '').strip()
+        class_code_key = class_code.upper()
+        resolved_title = (nav_name_map.get(class_code_key) or class_code or 'Unknown Course').strip()
         if resolved_title:
             course_titles_available.add(resolved_title)
         prepared_rows.append({
@@ -1559,7 +1603,7 @@ def get_analysis_dashboard():
             q['avg'] = round(q['total'] / q['count'], 2)
             q['good_pct'] = round(((q['dist'][3] + q['dist'][4] + q['dist'][5]) / q['count']) * 100, 2)
 
-    ranked_questions = [q for q in per_question.values() if q['count'] >= min_responses]
+    ranked_questions = [q for q in per_question.values() if q['count'] > 0]
 
     if sort_mode == 'avg_asc':
         ranked_questions.sort(key=lambda x: (x['avg'], -x['count'], x['text']))
@@ -1619,7 +1663,6 @@ def get_analysis_dashboard():
             'total_ratings': total_ratings,
             'rating_3_or_above_pct': good_pct,
             'question_count': len(ranked_questions),
-            'min_responses': min_responses,
             'sort_mode': sort_mode
         },
         'pie': {

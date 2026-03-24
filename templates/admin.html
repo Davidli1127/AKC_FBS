@@ -407,11 +407,6 @@
                             </select>
                         </div>
                         <div>
-                            <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Question Inclusion Threshold</label>
-                            <input type="number" id="analysisMinResponses" min="1" value="1" style="padding:7px 10px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;width:180px;">
-                            <div style="font-size:11px;color:#777;margin-top:4px;max-width:240px;">Only show questions with at least this many responses.</div>
-                        </div>
-                        <div>
                             <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Question Sort</label>
                             <select id="analysisQuestionSort" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:180px;">
                                 <option value="priority">Priority (Low Avg First)</option>
@@ -2467,7 +2462,6 @@
             const month = document.getElementById('analysisMonth').value;
             const selectedQuestions = getSelectedAnalysisValues('question');
             const selectedCourses = getSelectedAnalysisValues('course');
-            const minResponses = document.getElementById('analysisMinResponses').value || '1';
             const sortMode = document.getElementById('analysisQuestionSort').value || 'priority';
 
             if (!selectedQuestions.length) {
@@ -2477,7 +2471,6 @@
 
             const params = new URLSearchParams({ form_id: formId });
             if (month) params.set('month', month);
-            params.set('min_responses', minResponses);
             params.set('sort', sortMode);
             selectedQuestions.forEach(q => params.append('question', q));
             selectedCourses.forEach(c => params.append('course_title', c));
@@ -2716,7 +2709,6 @@
             document.getElementById('analysisMonth').value = '';
             document.getElementById('analysisChartType').value = 'pie';
             document.getElementById('analysisBarMetric').value = 'count';
-            document.getElementById('analysisMinResponses').value = '1';
             document.getElementById('analysisQuestionSort').value = 'priority';
             analysisDashboardLoaded = false;
             initializeAnalysisDashboard();
