@@ -889,14 +889,31 @@ def get_nav_course_name_map(class_codes):
         placeholders = ','.join('?' for _ in codes)
         cur = conn.cursor()
         cur.execute(f"""
-            SELECT
-                p.[Class Code] AS class_code,
-                MAX(NULLIF(LTRIM(RTRIM(c.[Name])), '')) AS course_name
-            FROM {PARTICIPANT_TABLE} p
-            LEFT JOIN {COURSE_TABLE} c
-                ON p.[Timestamp] = c.[Timestamp]
-            WHERE p.[Class Code] IN ({placeholders})
-            GROUP BY p.[Class Code]
+            WITH mapped AS (
+                SELECT
+                    p.[Class Code] AS class_code,
+                    NULLIF(LTRIM(RTRIM(c.[Name])), '') AS course_name,
+                    COUNT(*) AS hit_count
+                FROM {PARTICIPANT_TABLE} p
+                LEFT JOIN {COURSE_TABLE} c
+                    ON p.[Timestamp] = c.[Timestamp]
+                WHERE p.[Class Code] IN ({placeholders})
+                GROUP BY p.[Class Code], NULLIF(LTRIM(RTRIM(c.[Name])), '')
+            ), ranked AS (
+                SELECT
+                    class_code,
+                    course_name,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY class_code
+                        ORDER BY CASE WHEN course_name IS NULL THEN 1 ELSE 0 END,
+                                 hit_count DESC,
+                                 course_name ASC
+                    ) AS rn
+                FROM mapped
+            )
+            SELECT class_code, course_name
+            FROM ranked
+            WHERE rn = 1
         """, codes)
 
         result = {}
