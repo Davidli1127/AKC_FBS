@@ -1,11 +1,4 @@
-﻿"""
-Database module for SQL Server connection and operations.
-
-AKC_NAV  -- course catalogue and participant lookup (read-mostly).
-AKC_FBS  -- feedback form registry (FBS_Forms) and responses (FBS_Responses).
-"""
-
-import os
+﻿import os
 import re
 import json
 import pyodbc
@@ -67,9 +60,7 @@ def test_connection():
     return ok, ' | '.join(f'{k}: {v}' for k, v in results.items())
 
 def _get_table_name(form_title):
-    """Convert form title to a SQL table name.
-    e.g. 'TRAINER EVALUATION FORM' -> 'trainer_evaluation_form_response'
-    """
+    """Convert form title to a SQL table name."""
     slug = re.sub(r'[^a-zA-Z0-9]+', '_', form_title.strip().lower()).strip('_')
     return f"{slug}_response"
 
@@ -87,15 +78,6 @@ _FIXED_COLUMNS_SQL = """\
 
 
 def _get_form_columns(form_config):
-    """
-    Return list of (col_name, sql_type) for all question columns derived from
-    the form config sections.
-
-    instructor_rating  -> B{n}_{q_id} INT, B{n}_{q_id}_comment NVARCHAR(500)
-    assessor_rating    -> A{n}_{q_id} INT, A{n}_{q_id}_comment NVARCHAR(500)
-    rating             -> {q_id} INT,      {q_id}_comment NVARCHAR(500)
-    text/mc/yes_no     -> {q_id} NVARCHAR(MAX)
-    """
     cols = []
     
     has_instructor_section = any(s.get('type') == 'instructor_rating' for s in form_config.get('sections', []))
@@ -184,12 +166,6 @@ def form_table_exists(form_title):
 
 
 def sync_form_response_table(form_title, form_config):
-    """Sync the per-form response table schema with the current form config.
-
-    - New question columns are ADDED via ALTER TABLE.
-    - Removed question columns are KEPT (data is preserved).
-    Returns (True, summary_message) or (False, error_message).
-    """
     table = _get_table_name(form_title)
     conn  = get_fbs_connection()
     if not conn:
@@ -508,10 +484,6 @@ def soft_delete_form(form_id):
 
 
 def find_form_by_title(form_title):
-    """
-    Look up a form in FBS_Forms by title (case-insensitive).
-    Returns dict with form_id, form_title, is_deleted or None.
-    """
     conn = get_fbs_connection()
     if not conn:
         return None
@@ -596,13 +568,7 @@ def form_has_responses(form_id, form_title):
 
 
 def drop_form_response_table_if_empty(form_title):
-    """Drop the per-form response table only when it exists and has zero rows.
-
-    Returns (ok, dropped, message):
-      - ok=True, dropped=True  : table dropped
-      - ok=True, dropped=False : table not dropped (not found or contains rows)
-      - ok=False, dropped=False: unexpected DB error
-    """
+    """Drop the per-form response table only when it exists and has zero rows. """
     table = _get_table_name(form_title)
     conn = get_fbs_connection()
     if not conn:
@@ -650,10 +616,6 @@ def has_submitted_db(course_id, id_number, form_title):
         return False
 
 def get_submitted_ids_for_courses(course_ids, form_titles):
-    """
-    Return a set of normalised id_numbers that have already submitted
-    for any of the given course_ids, checking all relevant per-form tables.
-    """
     if not course_ids or not form_titles:
         return set()
     conn = get_fbs_connection()
@@ -679,20 +641,7 @@ def get_submitted_ids_for_courses(course_ids, form_titles):
         print(f"Error fetching submitted IDs: {e}")
         return ids
 
-
-def save_response_to_db(form_id, course_id, course, participant_name,
-                        id_number, position, data, form_title, form_config):
-    """
-    Insert one response into the per-form response table.
-    course      : course dict (course_title, course_date, classroom/venue,
-                  instructors, assessors).
-    data        : raw submitted dict from the form.
-    form_title  : used to derive the table name.
-    form_config : used to build the column list.
-    
-    NOTE: Response table MUST exist before calling this function.
-    Call create_form_response_table() first to ensure table exists.
-    """
+def save_response_to_db(form_id, course_id, course, participant_name, id_number, position, data, form_title, form_config):
     table = _get_table_name(form_title)
     conn  = get_fbs_connection()
     if not conn:
@@ -787,11 +736,7 @@ def get_response_count_by_form(forms_dict):
 
 
 def get_responses_for_analysis(form_id, form_config, date_from=None, date_to=None, course_filter=None):
-    """
-    Return response rows from the per-form table for analysis.
-    Each row: class_code, course_title, course_date, submitted_at,
-              instructor1..3_name, assessor1..2_name, answers (col→val dict).
-    """
+    """Return response rows from the per-form table for analysis."""
     table  = _get_table_name(form_config.get('title', form_id))
     conn   = get_fbs_connection()
     if not conn:
@@ -835,9 +780,6 @@ def get_responses_for_analysis(form_id, form_config, date_from=None, date_to=Non
             date_str = raw.strftime('%Y-%m-%d') if isinstance(raw, datetime) else str(raw or '')[:10]
             raw_course_id = str(row_dict.get('course_id', '') or '').strip()
             raw_course_title = str(row_dict.get('course_title', '') or '').strip()
-
-            # In FBS responses, course_id is often an internal UUID while
-            # course_title stores the class code selected during QR setup.
             class_code = raw_course_title
             if not class_code:
                 class_code = raw_course_id
@@ -908,14 +850,6 @@ def get_available_analysis_months(form_id, form_config):
 
 
 def get_nav_course_name_map(class_codes):
-    """Map class code -> NAV course Name using Timestamp relation.
-
-    The mapping uses:
-    - [Absolute Kinetics Consultancy$Course Participant].[Class Code]
-    - [Absolute Kinetics Consultancy$Course Participant].[Timestamp]
-    - [Absolute Kinetics Consultancy$Course].[Timestamp]
-    - [Absolute Kinetics Consultancy$Course].[Name]
-    """
     if not class_codes:
         return {}
 
@@ -1069,7 +1003,7 @@ def get_class_codes_by_date(registration_date):
 
 
 def verify_student_participant(class_code, participant_name):
-    """Return True if participant_name is registered for class_code (case-insensitive)."""
+    """Return True if participant_name is registered for class_code."""
     conn = get_connection()
     if not conn:
         return False
@@ -1216,25 +1150,7 @@ def init_rectification_log_table():
 
 
 def get_low_rating_responses(form_id, form_config, rating_threshold=2):
-    """
-    Get all low-rated responses (rating <= rating_threshold) from a form.
-    
-    Returns list of dicts with:
-    {
-        'response_id': UUID,
-        'participant_name': str,
-        'participant_email': str,
-        'form_title': str,
-        'course_id': str,
-        'submission_time': datetime,
-        'ratings': [{
-            'question_id': str,
-            'question_text': str,
-            'rating_value': int,
-            'section_type': str (rating, instructor_rating, assessor_rating)
-        }, ...]
-    }
-    """
+    """Get all low-rated responses (rating <= rating_threshold) from a form."""
     table = _get_table_name(form_config.get('title', form_id))
     conn = get_fbs_connection()
     if not conn:
@@ -1353,7 +1269,6 @@ def get_low_rating_responses(form_id, form_config, rating_threshold=2):
         print(f"Error getting low rating responses: {e}")
         return []
 
-
 def _get_participant_email(course_id, id_number, participant_name):
     """Look up participant email from AKC_NAV using course_id and id_number."""
     try:
@@ -1382,10 +1297,6 @@ def _get_participant_email(course_id, id_number, participant_name):
 
 
 def get_all_rating_questions_by_form(forms_dict):
-    """
-    Return {form_id: [{'id': str, 'text': str, 'type': str}]}
-    for all rating-type questions across all forms.
-    """
     result = {}
     for form_id, form_config in forms_dict.items():
         questions = []
@@ -1401,7 +1312,6 @@ def get_all_rating_questions_by_form(forms_dict):
         if questions:
             result[form_id] = questions
     return result
-
 
 def log_rectification_sent(form_id, response_id, participant_name, participant_email,
                            question_id, question_text, rating_value, rectification_text,
@@ -1426,7 +1336,6 @@ def log_rectification_sent(form_id, response_id, participant_name, participant_e
         print(f"Error logging rectification: {e}")
         return False
 
-
 def check_rectification_already_sent(form_id, response_id, question_id):
     """Check if a rectification has already been sent for this low rating."""
     conn = get_fbs_connection()
@@ -1444,27 +1353,8 @@ def check_rectification_already_sent(form_id, response_id, question_id):
     except Exception:
         return False
 
-
 def get_text_question_responses(form_id, form_config):
-    """
-    Get all text/short-answer question responses for alert management.
-    
-    Returns list of dicts with:
-    {
-        'response_id': UUID,
-        'participant_name': str,
-        'participant_email': str,
-        'form_title': str,
-        'course_id': str,
-        'submission_time': datetime,
-        'text_responses': [{
-            'question_id': str,
-            'question_text': str,
-            'question_type': str (text_questions, multiple_choice, yes_no),
-            'response_text': str
-        }, ...]
-    }
-    """
+    """Get all text/short-answer question responses for alert management."""
     table = _get_table_name(form_config.get('title', form_id))
     conn = get_fbs_connection()
     if not conn:
