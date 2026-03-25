@@ -394,10 +394,7 @@ def index():
 
 @app.route('/scan')
 def scan_page():
-    """Universal scan page.
-    Participant enters their Class Code and ID number; the server looks up the
-    matching active course session and redirects them to the right form.
-    """
+    """Universal scan page."""
     return render_template('scan.html')
 
 
@@ -732,7 +729,7 @@ def create_tables():
 @app.route('/api/forms/<form_id>/create-table', methods=['POST'])
 @api_login_required
 def create_form_table(form_id):
-    """Create (or verify) the per-form response table for the given form."""
+    """Create the per-form response table for the given form."""
     config = load_config()
     form = config['forms'].get(form_id)
     if not form:
@@ -1318,7 +1315,6 @@ def get_analysis_text():
 
 
 def _parse_month_range(month_value):
-    """Parse YYYY-MM into an inclusive-exclusive datetime window."""
     if not month_value:
         return None, None
     try:
