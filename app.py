@@ -237,7 +237,7 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
 
     for qid, q_text in text_q_map.items():
         response_val = str(data.get(qid, '')).strip()
-        if len(response_val) < 5:
+        if len(response_val) < 2:
             continue
         matches = _extract_negative_matches(response_val)
         matched_keywords = ', '.join(dict.fromkeys(m.lower() for m in matches))[:300] if matches else ''
@@ -266,7 +266,7 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
         if not key.endswith('_comment'):
             continue
         comment_val = str(value).strip() if value else ''
-        if len(comment_val) < 5:
+        if len(comment_val) < 2:
             continue
         base_q_id = key[:-len('_comment')]
         if base_q_id in new_rating_alert_q_ids:
