@@ -457,6 +457,35 @@
 
                     <div id="analysisQuestionTable" style="margin-top:16px;"></div>
                     <div id="analysisInsights" style="margin-top:16px;"></div>
+                    
+                    <div style="margin-top:20px;background:#f5f7ff;border:1px solid #d4e0ff;border-radius:10px;padding:16px;">
+                        <div style="font-weight:700;color:#003366;margin-bottom:12px;font-size:14px;">📊 Satisfaction Category Scale</div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">
+                            <div style="background:#fff;border-left:4px solid #dc2626;padding:10px 12px;border-radius:6px;">
+                                <div style="font-size:12px;font-weight:600;color:#666;">Rating 1</div>
+                                <div style="font-size:13px;color:#222;margin-top:4px;"><strong>Not at all</strong></div>
+                            </div>
+                            <div style="background:#fff;border-left:4px solid #ea580c;padding:10px 12px;border-radius:6px;">
+                                <div style="font-size:12px;font-weight:600;color:#666;">Rating 2</div>
+                                <div style="font-size:13px;color:#222;margin-top:4px;"><strong>To a Small Extent</strong></div>
+                            </div>
+                            <div style="background:#fff;border-left:4px solid #ca8a04;padding:10px 12px;border-radius:6px;">
+                                <div style="font-size:12px;font-weight:600;color:#666;">Rating 3</div>
+                                <div style="font-size:13px;color:#222;margin-top:4px;"><strong>To Some Extent</strong></div>
+                            </div>
+                            <div style="background:#fff;border-left:4px solid #059669;padding:10px 12px;border-radius:6px;">
+                                <div style="font-size:12px;font-weight:600;color:#666;">Rating 4</div>
+                                <div style="font-size:13px;color:#222;margin-top:4px;"><strong>To a Large Extent</strong></div>
+                            </div>
+                            <div style="background:#fff;border-left:4px solid #16a34a;padding:10px 12px;border-radius:6px;">
+                                <div style="font-size:12px;font-weight:600;color:#666;">Rating 5</div>
+                                <div style="font-size:13px;color:#222;margin-top:4px;"><strong>To a Very Large Extent</strong></div>
+                            </div>
+                        </div>
+                        <div style="margin-top:12px;padding:10px;background:#fff;border:1px dashed #c7d7ff;border-radius:6px;font-size:12px;color:#555;">
+                            <strong>📌 Note:</strong> Ratings 3 and above (To Some Extent or higher) are considered "Good Satisfaction" in the pie chart.
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2411,6 +2440,8 @@
             return new Date(y, m - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
         }
 
+        let analysisDashboardUpdateTimeout = null;
+        
         function renderAnalysisCheckboxes(kind, items) {
             const container = document.getElementById(kind === 'question' ? 'analysisQuestionsList' : 'analysisCourseTitlesList');
             const selectAll = document.getElementById(kind === 'question' ? 'analysisSelectAllQuestions' : 'analysisSelectAllCourses');
@@ -2431,12 +2462,20 @@
                 const id = `analysis-${kind}-${idx}`;
                 const countText = item.count === null || item.count === undefined ? '' : ` <span style="color:#888;font-size:11px;">(${item.count})</span>`;
                 html += `<label for="${id}" style="display:flex;align-items:flex-start;gap:8px;padding:4px 2px;cursor:pointer;font-size:13px;color:#333;">
-                    <input id="${id}" type="checkbox" data-kind="${kind}" value="${escHtml(value)}" ${checked ? 'checked' : ''} onchange="syncAnalysisSelectAll('${kind}')">
+                    <input id="${id}" type="checkbox" data-kind="${kind}" value="${escHtml(value)}" ${checked ? 'checked' : ''} onchange="handleAnalysisFilterChange('${kind}')">
                     <span>${escHtml(label)}${countText}</span>
                 </label>`;
             });
             container.innerHTML = html;
             syncAnalysisSelectAll(kind);
+        }
+
+        function handleAnalysisFilterChange(kind) {
+            syncAnalysisSelectAll(kind);
+            clearTimeout(analysisDashboardUpdateTimeout);
+            analysisDashboardUpdateTimeout = setTimeout(() => {
+                runAnalysisDashboard();
+            }, 300);
         }
 
         function getSelectedAnalysisValues(kind) {
@@ -2447,6 +2486,10 @@
             document.querySelectorAll(`input[data-kind="${kind}"]`).forEach(el => {
                 el.checked = checked;
             });
+            clearTimeout(analysisDashboardUpdateTimeout);
+            analysisDashboardUpdateTimeout = setTimeout(() => {
+                runAnalysisDashboard();
+            }, 300);
         }
 
         function syncAnalysisSelectAll(kind) {
