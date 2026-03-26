@@ -26,6 +26,29 @@ app.secret_key = os.environ.get('SECRET_KEY', 'akc-feedback-secret-key-2026')
 ADMIN_ACCOUNT = os.environ.get('ADMIN_ACCOUNT', 'admin')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'akc2026')
 
+# Language code mapping for form IDs
+# Maps full language name to short code and back
+LANGUAGE_CODE_MAP = {
+    'English': 'en',
+    'Chinese': 'zh',
+    'Thai': 'th',
+    'Spanish': 'es',
+    'French': 'fr',
+    'German': 'de',
+    'Japanese': 'ja',
+    'Korean': 'ko',
+}
+
+CODE_TO_LANGUAGE = {v: k for k, v in LANGUAGE_CODE_MAP.items()}
+
+def _language_to_code(language_name):
+    """Convert full language name to code (e.g., 'English' -> 'en')"""
+    return LANGUAGE_CODE_MAP.get(language_name, 'en')
+
+def _code_to_language(code):
+    """Convert language code to full name (e.g., 'en' -> 'English')"""
+    return CODE_TO_LANGUAGE.get(code, 'English')
+
 def _get_default_instructor_section(max_instructors=3):
     return {
         'id': 'B',
@@ -361,7 +384,7 @@ def _slugify_form_id(title):
     s = re.sub(r'[^a-z0-9]+', '_', s)
     return s.strip('_') or 'form_' + uuid.uuid4().hex[:8]
 
-def save_response(form_id, course_id, data, id_number=''):
+def save_response(form_id, course_id, data, id_number='', language='English'):
     """Save form response to AKC_FBS database."""
     course = db.get_course_by_id(course_id)
     config = load_config()
@@ -377,13 +400,23 @@ def save_response(form_id, course_id, data, id_number=''):
     
     ok = db.save_response_to_db(
         form_id, course_id, course or {},
-        participant_name, id_number, position, data, form_title, form_config)
+        participant_name, id_number, position, data, form_title, form_config, language)
     if not ok:
         print(f"ERROR: Could not save response to database for form_id={form_id}")
         return False
     
-    print(f"SUCCESS: Response saved to table [{form_title}] for participant {participant_name} (ID: {id_number})")
+    print(f"SUCCESS: Response saved to table [{form_title}] for participant {participant_name} (ID: {id_number}) in language {language}")
     return True
+
+
+def _extract_language_from_form_id(form_id):
+    """Extract language from form config using form_id.
+    
+    Returns the language as stored in form config, or 'English' as default.
+    """
+    config = load_config()
+    form_config = config['forms'].get(form_id, {})
+    return form_config.get('language', 'English')
 
 
 @app.route('/')
@@ -853,6 +886,26 @@ def create_course():
 
     return jsonify({'success': True, 'course': course, 'qr_code': qr_data})
 
+@app.route('/api/forms/by-base/<base_form_id>', methods=['GET'])
+@api_login_required
+def get_form_languages(base_form_id):
+    """Get all language versions of a base form.
+    
+    Returns array of forms with same base_form_id, grouped by language.
+    """
+    config = load_config()
+    form_versions = []
+    
+    for form_id, form_config in config['forms'].items():
+        if form_config.get('base_form_id') == base_form_id and not form_config.get('is_archived'):
+            form_versions.append({
+                'form_id': form_id,
+                'title': form_config.get('title', ''),
+                'language': form_config.get('language', 'English'),
+            })
+    
+    return jsonify({'base_form_id': base_form_id, 'versions': form_versions})
+
 @app.route('/api/courses/<course_id>', methods=['DELETE'])
 @api_login_required
 def close_course(course_id):
@@ -973,7 +1026,8 @@ def submit_form(course_id):
         return jsonify({'error': 'Course not found'}), 404
 
     data = request.json
-    success = save_response(course['form_id'], course_id, data, student_id)
+    language = _extract_language_from_form_id(course['form_id'])
+    success = save_response(course['form_id'], course_id, data, student_id, language)
     if not success:
         print(f"ABORT: Form submission failed for {student_name} (ID: {student_id})")
         session.pop('student_name', None)
@@ -998,7 +1052,7 @@ def submit_form(course_id):
 @app.route('/api/alerts', methods=['GET'])
 @api_login_required
 def get_alerts():
-    """Get low feedback alerts, optionally filtered by status and/or alert_type"""
+    """Get low feedback alerts, optionally filtered by status and/or alert type."""
     alerts = load_alerts()
     status_filter = request.args.get('status', '')
     type_filter   = request.args.get('alert_type', '')
@@ -1249,7 +1303,6 @@ def get_analysis_ratings():
         'courses_available': courses_available
     })
 
-
 @app.route('/api/analysis/text', methods=['GET'])
 @api_login_required
 def get_analysis_text():
@@ -1313,7 +1366,6 @@ def get_analysis_text():
         'courses_available': courses_available
     })
 
-
 def _parse_month_range(month_value):
     if not month_value:
         return None, None
@@ -1326,7 +1378,6 @@ def _parse_month_range(month_value):
     else:
         end = datetime(start.year, start.month + 1, 1)
     return start, end
-
 
 def _build_rating_question_map(form):
     """Build ordered map {column_id: question_text} for all rating-like sections."""
@@ -1351,11 +1402,9 @@ def _build_rating_question_map(form):
                 rating_q_map[q['id']] = q.get('text', q['id'])
     return rating_q_map
 
-
 def _looks_like_uuid(value):
     s = str(value or '').strip()
     return bool(re.fullmatch(r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}', s))
-
 
 def _resolve_analysis_class_code(row, course_id_to_class_code):
     class_code = str(row.get('class_code', '') or '').strip()
@@ -1373,7 +1422,6 @@ def _resolve_analysis_class_code(row, course_id_to_class_code):
         return raw_course_title
 
     return ''
-
 
 @app.route('/api/analysis/dashboard/filters', methods=['GET'])
 @api_login_required
@@ -1540,7 +1588,6 @@ def get_analysis_dashboard():
     for qid, qtext in rating_q_map.items():
         count = per_question[qid]['count'] if qid in per_question else 0
         if qid not in per_question:
-            # count can still exist when no question filter is selected
             for row in prepared_rows:
                 val = row.get('answers', {}).get(qid)
                 try:
@@ -1640,19 +1687,25 @@ def get_analysis_dashboard():
 @app.route('/api/forms', methods=['POST'])
 @api_login_required
 def create_form():
-    """Create a new custom form. Form ID is auto-generated from the title."""
+    """Create a new custom form. Form ID is auto-generated from title + language."""
     config = load_config()
     data = request.json
     title = (data.get('title') or 'New Form').strip()
-    form_id = _slugify_form_id(title)
+    language = (data.get('language') or 'English').strip()
+    
+    base_form_id = _slugify_form_id(title)
+    lang_code = _language_to_code(language)
+    form_id = f"{base_form_id}_{lang_code}"
+    
     existing = db.find_form_by_title(title)
-    if existing:
-        if not existing['is_deleted']:
-            return jsonify({'error': f'A form titled "{title}" already exists.'}), 400
-        form_id = existing['form_id']
+    if existing and not existing['is_deleted']:
+        if data.get('copy_from'):
+            pass
+        else:
+            return jsonify({'error': f'A form titled "{title}" already exists. Consider copying and changing the language.'}), 400
 
     if form_id in config['forms']:
-        return jsonify({'error': f'Form ID "{form_id}" already exists.'}), 400
+        return jsonify({'error': f'Form "{title}" in language "{language}" already exists.'}), 400
 
     template_id = data.get('copy_from', '')
     qr_fields = data.get('qr_fields')
@@ -1661,6 +1714,8 @@ def create_form():
         new_form = copy.deepcopy(config['forms'][template_id])
         new_form['id'] = form_id
         new_form['title'] = title
+        new_form['language'] = language
+        new_form['base_form_id'] = base_form_id
         new_form['formNumber'] = data.get('formNumber', new_form.get('formNumber', ''))
         new_form['description'] = data.get('description', new_form.get('description', ''))
         
@@ -1712,6 +1767,8 @@ def create_form():
         new_form = {
             'id': form_id,
             'title': title,
+            'language': language,
+            'base_form_id': base_form_id,
             'formNumber': data.get('formNumber', ''),
             'description': data.get('description', ''),
             'headerFields': header_fields,

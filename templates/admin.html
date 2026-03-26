@@ -44,6 +44,13 @@
                             </select>
                         </div>
 
+                        <div class="form-group" id="languageGroup" style="display:none;">
+                            <label>Language Version:</label>
+                            <select id="languageSelect" name="language_version" required onchange="selectLanguageVersion()">
+                                <option value="">Select a language...</option>
+                            </select>
+                        </div>
+
                         <div class="form-group">
                             <label>Course Date:</label>
                             <input type="date" id="courseDate" name="course_date" required onchange="loadClassCodes()">
@@ -198,6 +205,10 @@
                             <div class="form-group">
                                 <label>Form Title <small style="color:#888;">(ID will be auto-generated from title)</small></label>
                                 <input type="text" id="newFormTitle" placeholder="Course Evaluation Form">
+                            </div>
+                            <div class="form-group">
+                                <label>Language <small style="color:#888;">(e.g., English, Chinese, Thai)</small></label>
+                                <input type="text" id="newFormLanguage" placeholder="English" value="English">
                             </div>
                             <div class="form-group">
                                 <label>Form Number <small style="color:#888;">(Optional)</small></label>
@@ -663,6 +674,7 @@
 
         const FORM_PERSONNEL = JSON.parse(_appData.formPersonnel);
         const FORM_QR_FIELDS = JSON.parse(_appData.formQrFields || '{}');
+        const CODE_TO_LANGUAGE = {'en': 'English', 'zh': 'Chinese', 'th': 'Thai', 'es': 'Spanish', 'fr': 'French'};
 
         async function loadClassCodes() {
             const date = document.getElementById('courseDate').value;
@@ -969,9 +981,50 @@
             if (tabId === 'analysis') initializeAnalysisDashboard();
         }
 
-        function updateFormFields() {
+        async function updateFormFields() {
             const formId = document.getElementById('formSelect').value;
-            const qf = FORM_QR_FIELDS[formId];
+            const languageGroup = document.getElementById('languageGroup');
+            const languageSelect = document.getElementById('languageSelect');
+            
+            languageSelect.innerHTML = '<option value="">Select a language...</option>';
+            languageSelect.value = '';
+            languageGroup.style.display = 'none';
+            
+            const baseFormId = formId.split('_').slice(0, -1).join('_') || formId;
+            
+            try {
+                const response = await fetch(`/api/forms/by-base/${encodeURIComponent(baseFormId)}`);
+                const result = await response.json();
+                
+                if (result.success && result.forms && result.forms.length > 0) {
+                    const langMap = {};
+                    result.forms.forEach(f => {
+                        const parts = f.id.split('_');
+                        const langCode = parts[parts.length - 1];
+                        const lang = CODE_TO_LANGUAGE[langCode] || langCode;
+                        if (!langMap[f.id]) {
+                            langMap[f.id] = { id: f.id, language: lang };
+                        }
+                    });
+                    
+                    if (Object.keys(langMap).length > 1) {
+                        Object.values(langMap).forEach(langInfo => {
+                            const opt = new Option(`${langInfo.language}`, langInfo.id);
+                            languageSelect.add(opt);
+                        });
+                        languageSelect.value = formId;
+                        languageGroup.style.display = 'block';
+                    } else {
+                        languageGroup.style.display = 'none';
+                        document.getElementById('formSelect').value = Object.keys(langMap)[0];
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching language versions:', err);
+            }
+            
+            const selectedFormId = document.getElementById('languageSelect').value || formId;
+            const qf = FORM_QR_FIELDS[selectedFormId];
 
             if (qf) {
                 document.getElementById('classroomGroup').style.display = (qf.classroom && qf.classroom.show) ? 'block' : 'none';
@@ -1000,7 +1053,7 @@
                 renderQrCustomFields(qf.custom_fields || []);
             } else {
                 document.getElementById('customQrFields').innerHTML = '';
-                const personnel = FORM_PERSONNEL[formId] || 'instructor';
+                const personnel = FORM_PERSONNEL[selectedFormId] || 'instructor';
                 if (personnel === 'assessor') {
                     document.getElementById('classroomGroup').style.display = 'none';
                     document.getElementById('assessmentLocationGroup').style.display = 'block';
@@ -1017,6 +1070,14 @@
                     document.getElementById('instructorSection').style.display = 'block';
                     document.getElementById('assessorSection').style.display = 'none';
                 }
+            }
+        }
+
+        function selectLanguageVersion() {
+            const selectedFormId = document.getElementById('languageSelect').value;
+            if (selectedFormId) {
+                document.getElementById('formSelect').value = selectedFormId;
+                updateFormFields();
             }
         }
 
@@ -1068,7 +1129,12 @@
             e.preventDefault();
             
             const formData = new FormData(this);
-            const formType = formData.get('form_id');
+            
+            let formType = document.getElementById('languageSelect').value;
+            if (!formType) {
+                formType = formData.get('form_id');
+            }
+            
             const courseTitle = document.getElementById('classCodeSelect').value
                              || document.getElementById('classCodeInput').value.trim();
 
@@ -1808,6 +1874,7 @@
         async function submitNewForm() {
             const resultDiv = document.getElementById('createFormResult');
             const title    = document.getElementById('newFormTitle').value.trim();
+            const language = document.getElementById('newFormLanguage').value.trim() || 'English';
             const formNumber = document.getElementById('newFormNumber').value.trim();
             const description = document.getElementById('newFormDescription').value.trim();
             const copyFrom = document.getElementById('newFormCopyFrom').value;
@@ -1846,13 +1913,13 @@
                 const response = await fetch('/api/forms', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, formNumber, description, copy_from: copyFrom, sections, qr_fields: qrFields })
+                    body: JSON.stringify({ title, language, formNumber, description, copy_from: copyFrom, sections, qr_fields: qrFields })
                 });
                 const result = await response.json();
                 if (result.success) {
-                    resultDiv.innerHTML = `<span style="color:green;">✓ Form "<strong>${result.form.title}</strong>" created! (ID: <code>${result.form.id}</code>)</span>`;
-                    const opt1 = new Option(result.form.title, result.form.id);
-                    const opt2 = new Option(result.form.title, result.form.id);
+                    resultDiv.innerHTML = `<span style="color:green;">✓ Form "<strong>${result.form.title}</strong>" (${language}) created! (ID: <code>${result.form.id}</code>)</span>`;
+                    const opt1 = new Option(`${result.form.title} [${language}]`, result.form.id);
+                    const opt2 = new Option(`${result.form.title} [${language}]`, result.form.id);
                     document.getElementById('editFormSelect').add(opt1);
                     document.getElementById('formSelect').add(opt2);
                     const isAssessor = result.form.sections && result.form.sections.some(s => s.type === 'assessor_rating');
@@ -1869,6 +1936,7 @@
                     document.getElementById('editFormSelect').value = result.form.id;
                     loadFormForEdit();
                     document.getElementById('newFormTitle').value = '';
+                    document.getElementById('newFormLanguage').value = 'English';
                     document.getElementById('newFormNumber').value = '';
                     document.getElementById('newFormDescription').value = '';
                     document.getElementById('newFormCopyFrom').value = '';

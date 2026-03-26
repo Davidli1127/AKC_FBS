@@ -72,6 +72,7 @@ _FIXED_COLUMNS_SQL = """\
     [course_title]     NVARCHAR(500) NULL,
     [course_date]      DATE NULL,
     [venue]            NVARCHAR(200) NULL,
+    [language]         NVARCHAR(50) NULL DEFAULT 'English',
     [participant_name] NVARCHAR(200) NULL,
     [id_number]        NVARCHAR(100) NULL,
     [position_title]   NVARCHAR(200) NULL"""
@@ -641,7 +642,7 @@ def get_submitted_ids_for_courses(course_ids, form_titles):
         print(f"Error fetching submitted IDs: {e}")
         return ids
 
-def save_response_to_db(form_id, course_id, course, participant_name, id_number, position, data, form_title, form_config):
+def save_response_to_db(form_id, course_id, course, participant_name, id_number, position, data, form_title, form_config, language='English'):
     table = _get_table_name(form_title)
     conn  = get_fbs_connection()
     if not conn:
@@ -656,7 +657,7 @@ def save_response_to_db(form_id, course_id, course, participant_name, id_number,
                        course.get('venue') or '')
 
         fixed_col_names = [
-            'course_id', 'course_title', 'course_date', 'venue',
+            'course_id', 'course_title', 'course_date', 'venue', 'language',
             'participant_name', 'id_number', 'position_title',
             'instructor1_name', 'instructor2_name', 'instructor3_name',
             'assessor1_name',   'assessor2_name',
@@ -666,6 +667,7 @@ def save_response_to_db(form_id, course_id, course, participant_name, id_number,
             course.get('course_title', ''),
             course.get('course_date', ''),
             venue,
+            language,
             participant_name or '',
             (id_number or '').strip().upper(),
             position or '',
