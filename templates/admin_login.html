@@ -18,132 +18,638 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            overflow: hidden;
         }
-        
-        .login-container {
+
+        .login-wrapper {
+            display: flex;
+            width: 90%;
+            max-width: 1000px;
             background: white;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            box-shadow: 0 20px 70px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            min-height: 600px;
+        }
+
+        /* Left Panel - Characters */
+        .characters-panel {
+            flex: 1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .characters-panel::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            animation: floatBg 20s linear infinite;
+        }
+
+        @keyframes floatBg {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(20px, 20px); }
+        }
+
+        .characters-container {
+            position: relative;
+            z-index: 2;
             width: 100%;
-            max-width: 400px;
-            text-align: center;
+            height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
         }
-        
-        .logo {
+
+        /* Character Styles */
+        .character {
+            position: relative;
             width: 120px;
-            height: auto;
-            margin-bottom: 20px;
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
         }
-        
-        h1 {
+
+        .character-body {
+            position: relative;
+            width: 100px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 15px;
+        }
+
+        .character-body.purple { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .character-body.blue { background: linear-gradient(135deg, #5299d9 0%, #407ab2 100%); }
+        .character-body.orange { background: linear-gradient(135deg, #ff9a56 0%, #ff7a3d 100%); }
+        .character-body.yellow { background: linear-gradient(135deg, #ffd584 0%, #ffb84d 100%); }
+
+        .eyes-container {
+            display: flex;
+            gap: 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .eye {
+            position: relative;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid rgba(0,0,0,0.1);
+        }
+
+        .pupil {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #333;
+            border-radius: 50%;
+            top: 4px;
+            left: 4px;
+            transition: all 0.05s ease-out;
+        }
+
+        .mouth {
+            position: absolute;
+            width: 20px;
+            height: 8px;
+            border: 2px solid rgba(0,0,0,0.2);
+            border-top: none;
+            border-radius: 0 0 20px 20px;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .character-label {
+            font-size: 11px;
+            color: white;
+            margin-top: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Right Panel - Login Form */
+        .login-panel {
+            flex: 1;
+            padding: 50px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .login-header {
+            margin-bottom: 40px;
+        }
+
+        .login-header h1 {
+            font-size: 28px;
             color: #333;
-            font-size: 24px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
-        
-        .subtitle {
+
+        .login-header p {
             color: #666;
             font-size: 14px;
-            margin-bottom: 30px;
         }
-        
+
         .form-group {
-            margin-bottom: 20px;
-            text-align: left;
+            margin-bottom: 24px;
         }
-        
+
         .form-group label {
             display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-weight: 500;
+            margin-bottom: 10px;
+            color: #333;
+            font-weight: 600;
             font-size: 14px;
         }
-        
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
         .form-group input {
             width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e1e1e1;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s, box-shadow 0.3s;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s;
+            padding-right: 45px;
         }
-        
+
         .form-group input:focus {
             outline: none;
             border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+            background: #f9fbff;
         }
-        
-        .login-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+
+        .password-toggle {
+            position: absolute;
+            right: 14px;
+            background: none;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
+            cursor: pointer;
+            color: #667eea;
+            font-size: 18px;
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .password-toggle:hover {
+            color: #764ba2;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 32px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s;
         }
-        
-        .login-btn:hover {
+
+        .btn-login {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
-        
-        .login-btn:active {
-            transform: translateY(0);
+
+        .btn-signup {
+            background: #f0f0f0;
+            color: #333;
+            border: 2px solid #e0e0e0;
         }
-        
-        .error-message {
-            background: #fee;
-            color: #c00;
-            padding: 12px;
+
+        .btn-signup:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .message {
+            padding: 12px 16px;
             border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            font-weight: 600;
+            border-left: 4px solid;
+        }
+
+        .message.error {
+            background: #fee;
+            color: #c33;
+            border-left-color: #c33;
+        }
+
+        .message.info {
+            background: #eef;
+            color: #33c;
+            border-left-color: #33c;
+        }
+
+        .signup-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .signup-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .signup-link a:hover {
+            text-decoration: underline;
+        }
+
+        .modal {
             display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
         }
-        
-        .error-message.show {
-            display: block;
+
+        .modal.active {
+            display: flex;
         }
-        
-        .footer-text {
-            margin-top: 30px;
-            color: #999;
-            font-size: 12px;
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-content h2 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .login-wrapper {
+                flex-direction: column;
+                min-height: auto;
+            }
+
+            .characters-panel {
+                min-height: 300px;
+            }
+
+            .characters-container {
+                height: 200px;
+            }
+
+            .character {
+                width: 80px;
+                height: 70px;
+            }
+
+            .character-body {
+                width: 70px;
+                height: 60px;
+                padding-top: 10px;
+            }
+
+            .login-panel {
+                padding: 30px 25px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="AKC Logo" class="logo">
-        <h1>Admin Login</h1>
-        <p class="subtitle">AKC Feedback Management System</p>
-        
-        <div class="error-message {% if error %}show{% endif %}" id="errorMessage">
-            {{ error }}
+    <div class="login-wrapper">
+        <!-- Left Panel - Characters -->
+        <div class="characters-panel">
+            <div class="characters-container" id="charactersContainer">
+                <!-- Characters will be generated by JavaScript -->
+            </div>
         </div>
-        
-        <form method="POST" action="{{ url_for('login') }}">
-            <div class="form-group">
-                <label for="account">Account Number</label>
-                <input type="text" id="account" name="account" placeholder="Enter your account number" required>
+
+        <!-- Right Panel - Login Form -->
+        <div class="login-panel">
+            <div class="login-header">
+                <h1>Welcome back!</h1>
+                <p>Please log in to your account</p>
             </div>
-            
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="Enter your password" required>
+
+            <div id="messageContainer"></div>
+
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Enter your username" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                        <button type="button" class="password-toggle" id="passwordToggle" onclick="togglePasswordVisibility()">
+                            👁️
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-login">Login</button>
+                    <button type="button" class="btn btn-signup" onclick="showSignupPanel()">Create Account</button>
+                </div>
+            </form>
+
+            <div class="signup-link">
+                <p>First time? <a href="#" onclick="showSignupPanel(); return false;">Create new admin account</a></p>
             </div>
-            
-            <button type="submit" class="login-btn">Login</button>
-        </form>
-        
-        <p class="footer-text">&copy; 2026 AKC. All rights reserved.</p>
+        </div>
     </div>
+
+    <!-- Signup Modal -->
+    <div id="signupModal" class="modal">
+        <div class="modal-content">
+            <h2>Create New Admin Account</h2>
+            <div id="signupMessage"></div>
+            <form id="signupForm" onsubmit="handleSignup(event)">
+                <div class="form-group">
+                    <label for="newUsername">Username</label>
+                    <input type="text" id="newUsername" placeholder="Enter username" required>
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">Password</label>
+                    <input type="password" id="newPassword" placeholder="Enter password" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" placeholder="Confirm password" required>
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 28px;">
+                    <button type="submit" class="btn btn-login" style="flex: 1;">Create Account</button>
+                    <button type="button" class="btn btn-signup" style="flex: 1;" onclick="closeSignupModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Character data
+        const characters = [
+            { color: '#667eea', label: 'Security Guard' },
+            { color: '#5299d9', label: 'Monitor' },
+            { color: '#ff9a56', label: 'Watchdog' },
+            { color: '#ffd584', label: 'Keeper' }
+        ];
+
+        let isPasswordVisible = false;
+        let charactersEyes = [];
+
+        // Initialize characters
+        function initCharacters() {
+            const container = document.getElementById('charactersContainer');
+            container.innerHTML = '';
+
+            characters.forEach((char, idx) => {
+                const charDiv = document.createElement('div');
+                charDiv.className = 'character';
+                charDiv.innerHTML = `
+                    <div class="character-body ${getColorClass(char.color)}">
+                        <div class="eyes-container">
+                            <div class="eye">
+                                <div class="pupil" data-char="${idx}" data-eye="0"></div>
+                            </div>
+                            <div class="eye">
+                                <div class="pupil" data-char="${idx}" data-eye="1"></div>
+                            </div>
+                        </div>
+                        <div class="mouth"></div>
+                    </div>
+                    <div class="character-label">${char.label}</div>
+                `;
+                container.appendChild(charDiv);
+            });
+
+            charactersEyes = document.querySelectorAll('.pupil');
+        }
+
+        function getColorClass(color) {
+            if (color.includes('667eea')) return 'purple';
+            if (color.includes('5299d9')) return 'blue';
+            if (color.includes('ff9a56')) return 'orange';
+            if (color.includes('ffd584')) return 'yellow';
+        }
+
+        // Eye tracking - follow mouse
+        document.addEventListener('mousemove', (e) => {
+            if (!isPasswordVisible) {
+                updateEyes(e.clientX, e.clientY);
+            }
+        });
+
+        // Eye tracking - follow input focus
+        document.getElementById('password')?.addEventListener('focus', () => {
+            if (!isPasswordVisible) {
+                reactToPasswordInput(true);
+            }
+        });
+
+        document.getElementById('password')?.addEventListener('blur', () => {
+            // Return to normal looking
+            if (!isPasswordVisible) {
+                updateEyes(window.innerWidth / 2, window.innerHeight / 2);
+            }
+        });
+
+        function reactToPasswordInput(isPeekingPassword) {
+            if (isPeekingPassword && !isPasswordVisible) {
+                // Peeking at password - eyes look down/towards input
+                document.querySelectorAll('.pupil').forEach(pupil => {
+                    pupil.style.left = '6px';
+                    pupil.style.top = '7px';
+                });
+            }
+        }
+
+        function updateEyes(x, y) {
+            charactersEyes.forEach(pupil => {
+                const eye = pupil.parentElement;
+                const eyeRect = eye.getBoundingClientRect();
+                const eyeCenterX = eyeRect.left + eyeRect.width / 2;
+                const eyeCenterY = eyeRect.top + eyeRect.height / 2;
+
+                const angle = Math.atan2(y - eyeCenterY, x - eyeCenterX);
+                const distance = 4;
+
+                const pupilX = Math.cos(angle) * distance;
+                const pupilY = Math.sin(angle) * distance;
+
+                pupil.style.left = (4 + pupilX) + 'px';
+                pupil.style.top = (4 + pupilY) + 'px';
+            });
+        }
+
+        // Password visibility toggle
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const toggleBtn = document.getElementById('passwordToggle');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleBtn.textContent = '🙈';
+                isPasswordVisible = true;
+                // Eyes look away when password is shown
+                document.querySelectorAll('.pupil').forEach(pupil => {
+                    pupil.style.left = '2px';
+                    pupil.style.top = '2px';
+                });
+            } else {
+                passwordInput.type = 'password';
+                toggleBtn.textContent = '👁️';
+                isPasswordVisible = false;
+                // Resume normal tracking
+                updateEyes(window.innerWidth / 2, window.innerHeight / 2);
+            }
+        }
+
+        // Login handler
+        async function handleLogin(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/api/admin-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    window.location.href = '/admin';
+                } else {
+                    showMessage(result.error || 'Login failed', 'error');
+                }
+            } catch (err) {
+                showMessage('Error: ' + err.message, 'error');
+            }
+        }
+
+        // Signup handlers
+        function showSignupPanel() {
+            document.getElementById('signupModal').classList.add('active');
+            document.getElementById('signupForm').reset();
+            document.getElementById('signupMessage').innerHTML = '';
+        }
+
+        function closeSignupModal() {
+            document.getElementById('signupModal').classList.remove('active');
+        }
+
+        async function handleSignup(event) {
+            event.preventDefault();
+            const newUsername = document.getElementById('newUsername').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (newPassword !== confirmPassword) {
+                showSignupMessage('Passwords do not match!', 'error');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showSignupMessage('Password must be at least 6 characters', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin-signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: newUsername, password: newPassword })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showSignupMessage('✓ Account created successfully! You can now login.', 'info');
+                    setTimeout(() => {
+                        closeSignupModal();
+                        document.getElementById('loginForm').reset();
+                    }, 2000);
+                } else {
+                    showSignupMessage(result.error || 'Signup failed', 'error');
+                }
+            } catch (err) {
+                showSignupMessage('Error: ' + err.message, 'error');
+            }
+        }
+
+        function showMessage(msg, type) {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = `<div class="message ${type}">${msg}</div>`;
+        }
+
+        function showSignupMessage(msg, type) {
+            const container = document.getElementById('signupMessage');
+            container.innerHTML = `<div class="message ${type}">${msg}</div>`;
+        }
+
+        // Initialize
+        initCharacters();
+
+        // Close modal on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeSignupModal();
+            }
+        });
+    </script>
 </body>
 </html>

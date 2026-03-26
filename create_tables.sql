@@ -1,3 +1,21 @@
+-- Admin Users Table for new login system
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name = 'AdminUsers' AND xtype = 'U')
+CREATE TABLE AdminUsers (
+    admin_id         UNIQUEIDENTIFIER NOT NULL PRIMARY KEY DEFAULT NEWID(),
+    username         NVARCHAR(100)    NOT NULL UNIQUE,
+    password_hash    NVARCHAR(255)    NOT NULL,
+    email            NVARCHAR(200)    NULL,
+    created_at       DATETIME         NOT NULL DEFAULT GETDATE(),
+    is_active        BIT              NOT NULL DEFAULT 1
+);
+
+-- Default admin account (password: 'akc2026')
+IF NOT EXISTS (SELECT * FROM AdminUsers WHERE username = 'admin')
+BEGIN
+    INSERT INTO AdminUsers (username, password_hash, email, is_active)
+    VALUES ('admin', '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5', 'admin@akc.local', 1);
+END
+
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name = 'FBS_Forms' AND xtype = 'U')
 CREATE TABLE FBS_Forms (
     form_id      NVARCHAR(100) NOT NULL,

@@ -9,6 +9,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 import uuid
 from functools import wraps
+import hashlib
 from dotenv import load_dotenv
 load_dotenv()
 import db
@@ -522,6 +523,100 @@ def logout():
     """Admin logout"""
     session.clear()
     return redirect(url_for('login'))
+
+# New Admin API endpoints for the interactive login page
+def _hash_password(password):
+    """Hash password using SHA256"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+@app.route('/api/admin-login', methods=['POST'])
+def api_admin_login():
+    """API endpoint for admin login"""
+    data = request.json
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+    
+    if not username or not password:
+        return jsonify({'success': False, 'error': 'Username and password required'}), 400
+    
+    conn = db.get_fbs_connection()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database connection error'}), 500
+    
+    try:
+        cursor = conn.cursor()
+        password_hash = _hash_password(password)
+        cursor.execute(
+            "SELECT admin_id, username, is_active FROM AdminUsers WHERE username = ? AND password_hash = ?",
+            (username, password_hash)
+        )
+        row = cursor.fetchone()
+        cursor.close()
+        
+        if row:
+            admin_id, admin_username, is_active = row
+            if is_active:
+                session['logged_in'] = True
+                session['admin_account'] = admin_username
+                session['admin_id'] = str(admin_id)
+                return jsonify({'success': True, 'message': 'Login successful'})
+            else:
+                return jsonify({'success': False, 'error': 'Account is inactive'}), 403
+        else:
+            return jsonify({'success': False, 'error': 'Invalid username or password'}), 401
+    except Exception as e:
+        print(f"Login error: {e}")
+        return jsonify({'success': False, 'error': 'Server error'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/admin-signup', methods=['POST'])
+def api_admin_signup():
+    """API endpoint for admin signup"""
+    data = request.json
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+    
+    # Validation
+    if not username or not password:
+        return jsonify({'success': False, 'error': 'Username and password required'}), 400
+    
+    if len(username) < 3:
+        return jsonify({'success': False, 'error': 'Username must be at least 3 characters'}), 400
+    
+    if len(password) < 6:
+        return jsonify({'success': False, 'error': 'Password must be at least 6 characters'}), 400
+    
+    if not re.match(r'^[a-zA-Z0-9_]+$', username):
+        return jsonify({'success': False, 'error': 'Username can only contain letters, numbers, and underscores'}), 400
+    
+    conn = db.get_fbs_connection()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database connection error'}), 500
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Check if username already exists
+        cursor.execute("SELECT COUNT(*) FROM AdminUsers WHERE username = ?", (username,))
+        if cursor.fetchone()[0] > 0:
+            return jsonify({'success': False, 'error': 'Username already exists'}), 409
+        
+        # Create new admin account
+        password_hash = _hash_password(password)
+        cursor.execute(
+            "INSERT INTO AdminUsers (username, password_hash, is_active) VALUES (?, ?, 1)",
+            (username, password_hash)
+        )
+        conn.commit()
+        cursor.close()
+        
+        return jsonify({'success': True, 'message': 'Account created successfully'})
+    except Exception as e:
+        print(f"Signup error: {e}")
+        return jsonify({'success': False, 'error': 'Server error: ' + str(e)}), 500
+    finally:
+        conn.close()
 
 @app.route('/admin')
 @login_required
