@@ -1729,9 +1729,10 @@
                 return;
             }
             
+            const titleLower = title.toLowerCase();
             let matchingFormId = null;
             for (const opt of copySelect.options) {
-                if (opt.value && opt.text.includes(title)) {
+                if (opt.value && opt.text.toLowerCase().includes(titleLower)) {
                     matchingFormId = opt.value;
                     break;
                 }

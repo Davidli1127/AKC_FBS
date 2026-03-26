@@ -1724,8 +1724,9 @@ def create_form():
     qr_fields = data.get('qr_fields')
     auto_copy_from_id = None
     if not template_id:
+        title_lower = title.lower()
         for fid, f in config['forms'].items():
-            if f.get('title') == title and f.get('base_form_id') == base_form_id:
+            if f.get('title', '').lower() == title_lower and f.get('base_form_id') == base_form_id:
                 auto_copy_from_id = fid
                 break
     
