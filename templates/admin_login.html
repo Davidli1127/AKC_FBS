@@ -116,7 +116,8 @@
             border-radius: 50%;
             top: 3px;
             left: 3px;
-            transition: all 0.05s ease-out;
+            transition: transform 0.08s ease-out;
+            transform: translate(0, 0);
         }
 
         
@@ -163,15 +164,23 @@
         
         .password-toggle {
             position: absolute;
-            right: 12px;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
             background: none;
             border: none;
             cursor: pointer;
             color: #667eea;
-            font-size: 16px;
-            padding: 6px;
+            font-size: 18px;
+            padding: 8px 12px;
             display: flex;
             align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+        
+        .password-toggle:hover {
+            color: #764ba2;
         }
         
         .input-wrapper {
@@ -352,32 +361,29 @@
                 const eyeCenterY = eyeRect.top + eyeRect.height / 2;
 
                 const angle = Math.atan2(y - eyeCenterY, x - eyeCenterX);
-                const distance = 3;
+                const distance = 2.5;
 
                 const pupilX = Math.cos(angle) * distance;
                 const pupilY = Math.sin(angle) * distance;
 
-                pupil.style.transition = 'left 0.1s ease-out, top 0.1s ease-out';
-                pupil.style.left = (3 + pupilX) + 'px';
-                pupil.style.top = (3 + pupilY) + 'px';
+                pupil.style.transform = 'translate(' + pupilX + 'px, ' + pupilY + 'px)';
             });
         }
 
         // 调皮偷看密码动画
         function animateEyesSneaky() {
             charactersEyes.forEach((pupil, index) => {
-                pupil.style.transition = 'left 0.4s ease-in-out, top 0.4s ease-in-out';
+                pupil.style.transition = 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
                 // 眼睛向下和向右看（偷看密码框方向）
-                pupil.style.left = '5px';
-                pupil.style.top = '5px';
+                pupil.style.transform = 'translate(3px, 3px)';
                 
                 // 每个眼睛有微妙的延迟，增加生动感
                 setTimeout(() => {
                     if (eyeState === 'sneaky' && isPasswordFocused) {
                         // 轻微的抖动，表示"紧张地偷看"
-                        const jitter = Math.random() * 0.5 - 0.25;
-                        pupil.style.left = (5 + jitter) + 'px';
-                        pupil.style.top = (5 + jitter) + 'px';
+                        const jitter = Math.random() * 0.3 - 0.15;
+                        pupil.style.transition = 'transform 0.08s ease-out';
+                        pupil.style.transform = 'translate(' + (3 + jitter) + 'px, ' + (3 + jitter) + 'px)';
                     }
                 }, 450 + index * 50);
             });
@@ -386,16 +392,15 @@
         // 转移视线动画（显示密码时）
         function animateEyesLookingAway() {
             charactersEyes.forEach((pupil, index) => {
-                pupil.style.transition = 'left 0.5s ease-in-out, top 0.5s ease-in-out';
+                pupil.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
                 // 眼睛向左上看（转移视线，不看密码）
-                pupil.style.left = '1px';
-                pupil.style.top = '1px';
+                pupil.style.transform = 'translate(-2px, -2px)';
 
                 // 添加一个"眨眼"效果
                 setTimeout(() => {
                     if (isPasswordVisible) {
-                        pupil.style.left = '2px';
-                        pupil.style.top = '2px';
+                        pupil.style.transition = 'transform 0.08s ease-out';
+                        pupil.style.transform = 'translate(-1px, -1px)';
                     }
                 }, 250 + index * 30);
             });
@@ -404,11 +409,9 @@
         // 平滑回到中心视图
         function smoothReturnToCenterView() {
             charactersEyes.forEach(pupil => {
-                pupil.style.transition = 'left 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                pupil.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
                 // 自然地回到中心
-                const center = 3; // 眼睛中心默认位置
-                pupil.style.left = center + 'px';
-                pupil.style.top = center + 'px';
+                pupil.style.transform = 'translate(0, 0)';
             });
         }
 
