@@ -204,7 +204,8 @@
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 24px;">
                             <div class="form-group">
                                 <label>Form Title <small style="color:#888;">(ID will be auto-generated from title)</small></label>
-                                <input type="text" id="newFormTitle" placeholder="Course Evaluation Form">
+                                <input type="text" id="newFormTitle" placeholder="Course Evaluation Form" oninput="checkFormTitleForMultilang()">
+                                <small id="multiLangHint" style="color:#0066cc; margin-top:5px; display:none;">ℹ️ Detected existing form with same title. Structure will be automatically reused.</small>
                             </div>
                             <div class="form-group">
                                 <label>Language <small style="color:#888;">(e.g., English, Chinese, Thai)</small></label>
@@ -1684,9 +1685,68 @@
             }
         }
 
-        function onCopyFromChange() {
-            const val = document.getElementById('newFormCopyFrom').value;
-            document.getElementById('sectionBuilder').style.display = val ? 'none' : 'block';
+        async function onCopyFromChange() {
+            const formId = document.getElementById('newFormCopyFrom').value;
+            const builderDiv = document.getElementById('sectionBuilder');
+            
+            if (!formId) {
+                builderDiv.style.display = 'none';
+                newFormSections = [];
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/forms/${encodeURIComponent(formId)}/structure`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    newFormSections = JSON.parse(JSON.stringify(result.sections || []));
+                    builderSectionCounter = newFormSections.length;
+                    
+                    builderDiv.style.display = 'block';
+                    builderRender();
+                    
+                    setTimeout(() => { builderDiv.scrollIntoView({ behavior: 'smooth' }); }, 100);
+                } else {
+                    alert('Error: Unable to load form structure');
+                    document.getElementById('newFormCopyFrom').value = '';
+                    builderDiv.style.display = 'none';
+                }
+            } catch (err) {
+                alert('Failed to load form structure: ' + err.message);
+                document.getElementById('newFormCopyFrom').value = '';
+                builderDiv.style.display = 'none';
+            }
+        }
+
+        function checkFormTitleForMultilang() {
+            const title = document.getElementById('newFormTitle').value.trim();
+            const copySelect = document.getElementById('newFormCopyFrom');
+            const hintEl = document.getElementById('multiLangHint');
+            
+            if (!title) {
+                hintEl.style.display = 'none';
+                return;
+            }
+            
+            let matchingFormId = null;
+            for (const opt of copySelect.options) {
+                if (opt.value && opt.text.includes(title)) {
+                    matchingFormId = opt.value;
+                    break;
+                }
+            }
+            
+            if (matchingFormId) {
+                hintEl.style.display = 'block';
+                copySelect.value = matchingFormId;
+                onCopyFromChange();
+            } else {
+                hintEl.style.display = 'none';
+                copySelect.value = '';
+                document.getElementById('sectionBuilder').style.display = 'none';
+                newFormSections = [];
+            }
         }
 
         function builderAddSection() {
@@ -1891,7 +1951,7 @@
                 }
             }
 
-            const sections = copyFrom ? [] : newFormSections.map(s => ({
+            const sections = newFormSections.map(s => ({
                 id: s.id, title: s.title, type: s.type,
                 questions: s.questions.map(q => {
                     const out = { id: q.id, text: q.text };

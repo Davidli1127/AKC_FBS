@@ -1684,6 +1684,26 @@ def get_analysis_dashboard():
     })
 
 
+@app.route('/api/forms/<form_id>/structure', methods=['GET'])
+@api_login_required
+def get_form_structure(form_id):
+    """Get the structure (sections and questions) of an existing form for copying/editing."""
+    config = load_config()
+    if form_id not in config['forms']:
+        return jsonify({'error': 'Form not found'}), 404
+    
+    form = config['forms'][form_id]
+    return jsonify({
+        'success': True,
+        'form_id': form_id,
+        'title': form.get('title', ''),
+        'language': form.get('language', 'English'),
+        'sections': form.get('sections', []),
+        'headerFields': form.get('headerFields', []),
+        'ratingOptions': form.get('ratingOptions', [])
+    })
+
+
 @app.route('/api/forms', methods=['POST'])
 @api_login_required
 def create_form():
@@ -1697,27 +1717,31 @@ def create_form():
     lang_code = _language_to_code(language)
     form_id = f"{base_form_id}_{lang_code}"
     
-    existing = db.find_form_by_title(title)
-    if existing and not existing['is_deleted']:
-        if data.get('copy_from'):
-            pass
-        else:
-            return jsonify({'error': f'A form titled "{title}" already exists. Consider copying and changing the language.'}), 400
-
     if form_id in config['forms']:
         return jsonify({'error': f'Form "{title}" in language "{language}" already exists.'}), 400
 
     template_id = data.get('copy_from', '')
     qr_fields = data.get('qr_fields')
+    auto_copy_from_id = None
+    if not template_id:
+        for fid, f in config['forms'].items():
+            if f.get('title') == title and f.get('base_form_id') == base_form_id:
+                auto_copy_from_id = fid
+                break
     
-    if template_id and template_id in config['forms']:
-        new_form = copy.deepcopy(config['forms'][template_id])
-        new_form['id'] = form_id
-        new_form['title'] = title
-        new_form['language'] = language
-        new_form['base_form_id'] = base_form_id
-        new_form['formNumber'] = data.get('formNumber', new_form.get('formNumber', ''))
-        new_form['description'] = data.get('description', new_form.get('description', ''))
+    if template_id or auto_copy_from_id:
+        source_form_id = template_id or auto_copy_from_id
+        if source_form_id in config['forms']:
+            new_form = copy.deepcopy(config['forms'][source_form_id])
+            new_form['id'] = form_id
+            new_form['title'] = title
+            new_form['language'] = language
+            new_form['base_form_id'] = base_form_id
+            new_form['formNumber'] = data.get('formNumber', new_form.get('formNumber', ''))
+            new_form['description'] = data.get('description', new_form.get('description', ''))
+    
+            if data.get('sections'):
+                new_form['sections'] = data.get('sections', [])
         
         if qr_fields:
             new_form['qr_fields'] = qr_fields
