@@ -635,7 +635,15 @@ def admin():
         for fid, f in config['forms'].items()
         if 'qr_fields' in f
     }
-    return render_template('admin.html', config=config, form_personnel=form_personnel, form_qr_fields=form_qr_fields)
+    forms_config = {
+        fid: {
+            'title': f.get('title', fid),
+            'is_archived': f.get('is_archived', False),
+            'language': f.get('language', 'English')
+        }
+        for fid, f in config['forms'].items()
+    }
+    return render_template('admin.html', config=config, form_personnel=form_personnel, form_qr_fields=form_qr_fields, forms_config=forms_config)
 
 @app.route('/admin/form/<form_id>')
 @login_required

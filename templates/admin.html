@@ -569,7 +569,8 @@
 
     <div id="appData" style="display:none"
          data-form-personnel='{{ form_personnel | tojson }}'
-         data-form-qr-fields='{{ form_qr_fields | tojson }}'></div>
+         data-form-qr-fields='{{ form_qr_fields | tojson }}'
+         data-forms-config='{{ forms_config | tojson }}'></div>
 
     <script>
         const _appData = document.getElementById('appData').dataset;
@@ -1379,20 +1380,27 @@
 
         const FORM_TITLE_MAP = {};
         const FORM_BY_TITLE = {};
-        let title;
-        {% for form_id, form in config.forms.items() %}
-        {% if not form.is_archived %}
-        FORM_TITLE_MAP['{{ form_id }}'] = {{ form.title | tojson }};
-        title = {{ form.title | tojson }};
-        if (!FORM_BY_TITLE[title]) {
-            FORM_BY_TITLE[title] = [];
+        
+        try {
+            const formsConfigJson = _appData.formsConfig || '{}';
+            const formsConfig = JSON.parse(formsConfigJson);
+            for (const formId in formsConfig) {
+                const form = formsConfig[formId];
+                if (!form.is_archived) {
+                    FORM_TITLE_MAP[formId] = form.title;
+                    const title = form.title;
+                    if (!FORM_BY_TITLE[title]) {
+                        FORM_BY_TITLE[title] = [];
+                    }
+                    FORM_BY_TITLE[title].push({
+                        id: formId,
+                        language: form.language || 'English'
+                    });
+                }
+            }
+        } catch (err) {
+            console.error('Error parsing forms configuration:', err);
         }
-        FORM_BY_TITLE[title].push({
-            id: '{{ form_id }}',
-            language: {{ form.get("language", "English") | tojson }}
-        });
-        {% endif %}
-        {% endfor %}
 
         async function loadFormForEdit() {
             let selectedFormId = document.getElementById('editFormSelect').value;
@@ -2129,7 +2137,7 @@
             const alertType = document.getElementById('alertTypeFilter').value;
             let url = '/api/alerts';
             const params = [];
-            if (status)    params.push('status='     + status);
+            if (status) params.push('status=' + status);
             if (alertType) params.push('alert_type=' + alertType);
             if (params.length) url += '?' + params.join('&');
             try {
