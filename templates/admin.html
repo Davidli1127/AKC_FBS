@@ -474,7 +474,7 @@
                     <div id="analysisInsights" style="margin-top:16px;"></div>
                     
                     <div style="margin-top:20px;background:#f5f7ff;border:1px solid #d4e0ff;border-radius:10px;padding:16px;">
-                        <div style="font-weight:700;color:#003366;margin-bottom:12px;font-size:14px;">📊 Satisfaction Category Scale</div>
+                        <div style="font-weight:700;color:#003366;margin-bottom:12px;font-size:14px;">Satisfaction Category Scale</div>
                         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">
                             <div style="background:#fff;border-left:4px solid #dc2626;padding:10px 12px;border-radius:6px;">
                                 <div style="font-size:12px;font-weight:600;color:#666;">Rating 1</div>
@@ -1688,7 +1688,7 @@
             }
         }
 
-        async function onCopyFromChange() {
+        async function onCopyFromChange(shouldScroll = true) {
             const formId = document.getElementById('newFormCopyFrom').value;
             const builderDiv = document.getElementById('sectionBuilder');
             
@@ -1709,7 +1709,9 @@
                     builderDiv.style.display = 'block';
                     builderRender();
                     
-                    setTimeout(() => { builderDiv.scrollIntoView({ behavior: 'smooth' }); }, 100);
+                    if (shouldScroll) {
+                        setTimeout(() => { builderDiv.scrollIntoView({ behavior: 'smooth' }); }, 100);
+                    }
                 } else {
                     alert('Error: Unable to load form structure');
                     document.getElementById('newFormCopyFrom').value = '';
@@ -1744,7 +1746,7 @@
             if (matchingFormId) {
                 hintEl.style.display = 'block';
                 copySelect.value = matchingFormId;
-                onCopyFromChange();
+                onCopyFromChange(false);
             } else {
                 hintEl.style.display = 'none';
                 copySelect.value = '';
