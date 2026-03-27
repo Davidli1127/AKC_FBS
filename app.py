@@ -28,7 +28,6 @@ ADMIN_ACCOUNT = os.environ.get('ADMIN_ACCOUNT', 'admin')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'akc2026')
 
 # Language code mapping for form IDs
-# Maps full language name to short code and back
 LANGUAGE_CODE_MAP = {
     'English': 'en',
     'Chinese': 'zh',
@@ -43,11 +42,11 @@ LANGUAGE_CODE_MAP = {
 CODE_TO_LANGUAGE = {v: k for k, v in LANGUAGE_CODE_MAP.items()}
 
 def _language_to_code(language_name):
-    """Convert full language name to code (e.g., 'English' -> 'en')"""
+    """Convert full language name to code"""
     return LANGUAGE_CODE_MAP.get(language_name, 'en')
 
 def _code_to_language(code):
-    """Convert language code to full name (e.g., 'en' -> 'English')"""
+    """Convert language code to full name"""
     return CODE_TO_LANGUAGE.get(code, 'English')
 
 def _get_default_instructor_section(max_instructors=3):
@@ -194,8 +193,7 @@ def save_alerts_data(alerts):
 
 def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
     """Detect low ratings (≤ 2) and negative sentiment in free-text responses,
-    creating alert records for admin review.
-    """
+    creating alert records for admin review"""
     alerts = load_alerts()
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     rating_labels = {1: 'Poor', 2: 'Unsatisfactory'}
@@ -392,9 +390,9 @@ def save_response(form_id, course_id, data, id_number='', language='English'):
     course = db.get_course_by_id(course_id)
     config = load_config()
     form_config = config['forms'].get(form_id, {})
-    form_title  = form_config.get('title', form_id)
+    form_title = form_config.get('title', form_id)
     participant_name = data.get('name', '')
-    position         = data.get('position', '')
+    position = data.get('position', '')
 
     table_ok, table_msg = db.create_form_response_table(form_title, form_config)
     if not table_ok:
@@ -413,10 +411,7 @@ def save_response(form_id, course_id, data, id_number='', language='English'):
 
 
 def _extract_language_from_form_id(form_id):
-    """Extract language from form config using form_id.
-    
-    Returns the language as stored in form config, or 'English' as default.
-    """
+    """Extract language from form config using form_id"""
     config = load_config()
     form_config = config['forms'].get(form_id, {})
     return form_config.get('language', 'English')
@@ -526,7 +521,6 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# New Admin API endpoints for the interactive login page
 def _hash_password(password):
     """Hash password using SHA256"""
     return hashlib.sha256(password.encode()).hexdigest()
@@ -986,10 +980,7 @@ def create_course():
 @app.route('/api/forms/by-base/<base_form_id>', methods=['GET'])
 @api_login_required
 def get_form_languages(base_form_id):
-    """Get all language versions of a base form.
-    
-    Returns array of forms with same base_form_id, grouped by language.
-    """
+    """Get all language versions of a base form."""
     config = load_config()
     form_versions = []
     
@@ -1088,7 +1079,6 @@ def student_login(course_id):
 @app.route('/form/<course_id>')
 def form_page(course_id):
     """Public form page for participants to fill"""
-    # Students must pass through the login page first
     if session.get('student_course_id') != course_id:
         return redirect(url_for('student_login', course_id=course_id))
 
@@ -1784,7 +1774,7 @@ def get_analysis_dashboard():
 @app.route('/api/forms/<form_id>/structure', methods=['GET'])
 @api_login_required
 def get_form_structure(form_id):
-    """Get the structure (sections and questions) of an existing form for copying/editing."""
+    """Get the structure of an existing form for copying/editing."""
     config = load_config()
     if form_id not in config['forms']:
         return jsonify({'error': 'Form not found'}), 404
@@ -2083,7 +2073,7 @@ def get_rating_questions():
 @app.route('/api/hotspot-analysis')
 @api_login_required
 def get_hotspot_analysis():
-    """Get hotspot analysis - questions ranked by priority. Includes BOTH rating questions and text questions."""
+    """Get hotspot analysis - questions ranked by priority. For both rating questions and text questions."""
     forms_str = request.args.get('forms', '').strip()
     
     alerts = load_alerts()
@@ -2206,8 +2196,7 @@ Status: {status}
 We take your feedback seriously and will work to improve our services.
 
 Best regards,
-AKC Training Team
-postcourse.enquiries@SG-AKC.com"""
+AKC Training Team"""
         
         from urllib.parse import quote
         subject_encoded = quote(email_subject)
