@@ -432,7 +432,7 @@ def reactivate_course(course_id):
         print(f"Error reactivating course {course_id}: {e}")
         return False
 
-def register_form(form_id, form_title, form_number, description, config_dict):
+def register_form(form_id, form_title, form_number, description, config_dict, language='English'):
     """
     Upsert a form in FBS_Forms.
     If the form was previously soft-deleted, it is restored (is_deleted -> 0).
@@ -448,16 +448,16 @@ def register_form(form_id, form_title, form_number, description, config_dict):
         if cur.fetchone():
             cur.execute("""
                 UPDATE FBS_Forms
-                SET form_title = ?, form_number = ?, description = ?,
+                SET form_title = ?, language = ?, form_number = ?, description = ?,
                     config_json = ?, updated_at = ?, is_deleted = 0, deleted_at = NULL
                 WHERE form_id = ?
-            """, (form_title, form_number or '', description or '', cfg, now, form_id))
+            """, (form_title, language, form_number or '', description or '', cfg, now, form_id))
         else:
             cur.execute("""
                 INSERT INTO FBS_Forms
-                    (form_id, form_title, form_number, description, config_json, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (form_id, form_title, form_number or '', description or '', cfg, now, now))
+                    (form_id, form_title, language, form_number, description, config_json, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (form_id, form_title, language, form_number or '', description or '', cfg, now, now))
         conn.commit()
         conn.close()
         return True

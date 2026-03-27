@@ -369,12 +369,14 @@ def sync_forms_registry_with_config(config):
     for form_id, form in config.get('forms', {}).items():
         if form.get('is_archived'):
             continue
+        language = form.get('language', 'English')
         ok = db.register_form(
             form_id,
             form.get('title', form_id),
             form.get('formNumber', ''),
             form.get('description', ''),
             form,
+            language,
         )
         results[form_id] = ok
     all_ok = all(results.values()) if results else True
@@ -1929,6 +1931,7 @@ def create_form():
         new_form.get('formNumber', ''),
         new_form.get('description', ''),
         new_form,
+        language,
     )
     if not form_ok:
         return jsonify({'error': 'Could not save new form to FBS_Forms'}), 500

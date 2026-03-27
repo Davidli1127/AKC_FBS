@@ -20,6 +20,7 @@ IF NOT EXISTS (SELECT * FROM sysobjects WHERE name = 'FBS_Forms' AND xtype = 'U'
 CREATE TABLE FBS_Forms (
     form_id      NVARCHAR(100) NOT NULL,
     form_title   NVARCHAR(300) NOT NULL,
+    language     NVARCHAR(50)  NOT NULL DEFAULT 'English',
     form_number  NVARCHAR(100) NULL,
     description  NVARCHAR(MAX) NULL,
     config_json  NVARCHAR(MAX) NULL,

@@ -296,8 +296,8 @@
             <div class="card" style="margin-top:18px;">
                 <div class="card-header">Edit Form Questions</div>
                 <div class="card-body">
-                    <div class="form-group" style="display:flex; gap:10px; align-items:center;">
-                        <div style="flex:1;">
+                    <div class="form-group" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:300px;">
                             <label>Select Form to Edit:</label>
                             <select id="editFormSelect" onchange="loadFormForEdit()">
                                 {% for form_id, form in config.forms.items() %}
@@ -305,6 +305,12 @@
                                 <option value="{{ form_id }}">{{ form.title }}</option>
                                 {% endif %}
                                 {% endfor %}
+                            </select>
+                        </div>
+                        <div style="flex:0; min-width:200px;">
+                            <label>Language Version:</label>
+                            <select id="editFormLanguageSelect" onchange="loadFormForEdit()">
+                                <option value="">All Languages</option>
                             </select>
                         </div>
                         <div style="display:flex; gap:8px; padding-top:22px;">
@@ -1371,8 +1377,50 @@
             }
         }
 
+        const FORM_TITLE_MAP = {};
+        const FORM_BY_TITLE = {};
+        let title;
+        {% for form_id, form in config.forms.items() %}
+        {% if not form.is_archived %}
+        FORM_TITLE_MAP['{{ form_id }}'] = {{ form.title | tojson }};
+        title = {{ form.title | tojson }};
+        if (!FORM_BY_TITLE[title]) {
+            FORM_BY_TITLE[title] = [];
+        }
+        FORM_BY_TITLE[title].push({
+            id: '{{ form_id }}',
+            language: {{ form.get("language", "English") | tojson }}
+        });
+        {% endif %}
+        {% endfor %}
+
         async function loadFormForEdit() {
-            currentFormId = document.getElementById('editFormSelect').value;
+            let selectedFormId = document.getElementById('editFormSelect').value;
+            const languageSelect = document.getElementById('editFormLanguageSelect');
+            const selectedTitle = FORM_TITLE_MAP[selectedFormId];
+            if (!selectedTitle) {
+                languageSelect.style.display = 'none';
+                return;
+            }
+            
+            const languageVersions = FORM_BY_TITLE[selectedTitle] || [];
+            
+            languageSelect.innerHTML = '';
+            if (languageVersions.length === 0) {
+                languageSelect.style.display = 'none';
+            } else {
+                languageSelect.style.display = 'inline-block';
+                languageVersions.forEach(version => {
+                    const opt = document.createElement('option');
+                    opt.value = version.id;
+                    opt.textContent = version.language;
+                    languageSelect.appendChild(opt);
+                });
+            }
+            
+            languageSelect.value = selectedFormId;
+            
+            currentFormId = selectedFormId;
             
             try {
                 const response = await fetch(`/api/forms/${currentFormId}`);
