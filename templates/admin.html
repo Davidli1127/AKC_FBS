@@ -13,13 +13,13 @@
             <div style="display: flex; align-items: center; gap: 15px;">
                 <img src="{{ url_for('static', filename='logo.png') }}" alt="AKC Logo" style="max-height: 50px;">
                 <div>
-                    <h1 style="margin: 0; font-size: 28px; font-weight: 700;">AKC Feedback Management System</h1>
-                    <p style="margin: 5px 0 0 0; font-size: 13px; opacity: 0.9;">Administration Dashboard</p>
+                    <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #1a1a2e;">AKC Feedback Management System</h1>
+                    <p style="margin: 5px 0 0 0; font-size: 13px; color: #6b7280;">Administration Dashboard</p>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
-                <a href="{{ url_for('low_ratings_page') }}" style="background: rgba(255, 255, 255, 0.2); color: white; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s; border: 1px solid rgba(255, 255, 255, 0.3); font-size: 14px;">📊 Low Rating Feedback</a>
-                <a href="{{ url_for('logout') }}" style="background: rgba(239, 68, 68, 0.9); color: white; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s; font-size: 14px;">Logout</a>
+                <a href="{{ url_for('low_ratings_page') }}" style="background: transparent; color: #1a56db; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s; border: 2px solid #1a56db; font-size: 14px;">📊 Low Rating Feedback</a>
+                <a href="{{ url_for('logout') }}" style="background: #ef4444; color: white; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s; font-size: 14px; border: none;">Logout</a>
             </div>
         </div>
 
