@@ -8,25 +8,26 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: #f3f4f6;
             min-height: 100vh;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .low-ratings-container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 30px 20px;
         }
 
         .low-ratings-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: 32px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 24px 28px;
+            padding: 28px 32px;
             border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
         }
 
         .low-ratings-header h2 {
@@ -34,40 +35,57 @@
             font-size: 28px;
             color: white;
             font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .low-ratings-header a {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .low-ratings-header a:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
 
         .form-selector {
-            margin-bottom: 24px;
+            margin-bottom: 28px;
             background: white;
-            padding: 20px;
+            padding: 24px;
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            border-left: 4px solid #667eea;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid #e5e7eb;
         }
 
         .form-selector-controls {
             display: flex;
-            gap: 14px;
+            gap: 16px;
             align-items: center;
             flex-wrap: wrap;
         }
 
         .form-selector-controls label {
             font-weight: 600;
-            color: #333;
+            color: #1a1a2e;
             margin: 0;
             font-size: 14px;
         }
 
         .form-selector-controls select {
             padding: 10px 14px;
-            border: 2px solid #e0e0e0;
-            border-radius: 6px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
             font-size: 14px;
-            min-width: 250px;
             background: white;
             cursor: pointer;
             transition: all 0.3s;
+            font-family: inherit;
         }
 
         .form-selector-controls select:hover {
@@ -81,27 +99,30 @@
         }
 
         .form-selector-controls button {
-            padding: 10px 18px;
+            padding: 10px 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s;
             font-size: 14px;
+            font-family: inherit;
         }
 
         .form-selector-controls button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 14px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
         }
 
         #courseCodeSearch {
             padding: 10px 14px !important;
-            border: 2px solid #e0e0e0 !important;
-            border-radius: 6px !important;
+            border: 2px solid #e5e7eb !important;
+            border-radius: 8px !important;
             transition: all 0.3s !important;
+            font-size: 14px !important;
+            font-family: inherit !important;
         }
 
         #courseCodeSearch:focus {
@@ -116,19 +137,21 @@
         }
 
         .view-mode-buttons button {
-            padding: 10px 16px;
-            background: #f0f0f0;
-            color: #666;
-            border: none;
-            border-radius: 6px;
+            padding: 10px 18px;
+            background: #f0f2f5;
+            color: #6b7280;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
             font-size: 13px;
             transition: all 0.3s;
+            font-family: inherit;
         }
 
         .view-mode-buttons button:hover {
-            background: #e0e0e0;
+            background: #e9ecef;
+            border-color: #667eea;
         }
 
         .view-mode-buttons button.active {
@@ -159,21 +182,25 @@
         }
 
         .panel-header {
-            background: linear-gradient(135deg, #f5f7fa 0%, #f0f0f0 100%);
-            padding: 16px 20px;
-            border-bottom: 2px solid #e9ecef;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 18px 24px;
+            border: none;
             font-weight: 700;
-            color: #333;
-            font-size: 15px;
+            color: white;
+            font-size: 16px;
             display: flex;
             align-items: center;
             gap: 8px;
+            letter-spacing: 0.5px;
         }
 
         .panel-body {
-            padding: 16px;
+            padding: 20px;
             max-height: 600px;
             overflow-y: auto;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-top: none;
         }
 
         .ratings-table {
@@ -183,18 +210,18 @@
         }
 
         .ratings-table thead {
-            background: #f8f9fa;
+            background: #f0f2f5;
             position: sticky;
             top: 0;
         }
 
         .ratings-table th {
-            padding: 12px;
+            padding: 14px;
             text-align: left;
             font-weight: 700;
-            color: #333;
+            color: #1a1a2e;
             border-bottom: 2px solid #667eea;
-            background: linear-gradient(135deg, #f5f7fa 0%, #f0f0f0 100%);
+            background: #f0f2f5;
         }
 
         .ratings-table td {
@@ -293,34 +320,36 @@
         }
 
         .hotspot-section {
-            margin-top: 20px;
-            border-top: 2px solid #e9ecef;
-            padding-top: 16px;
+            margin-top: 28px;
+            border-top: 2px solid #e5e7eb;
+            padding-top: 20px;
         }
 
         .hotspot-header {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             cursor: pointer;
             user-select: none;
             font-weight: 700;
-            color: #333;
-            margin-bottom: 12px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 6px;
+            color: #1a1a2e;
+            margin-bottom: 14px;
+            padding: 12px 14px;
+            background: #f3f4f6;
+            border-radius: 8px;
             transition: all 0.3s;
+            border: 1px solid #e5e7eb;
         }
 
         .hotspot-header:hover {
-            background: rgba(102, 126, 234, 0.1);
-            color: #667eea;
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
         }
 
         .hotspot-toggle {
             font-size: 14px;
-            color: #667eea;
+            color: inherit;
             transition: transform 0.2s;
         }
 
@@ -337,33 +366,33 @@
         }
 
         .hotspot-item {
-            padding: 12px;
-            margin-bottom: 10px;
-            background: linear-gradient(135deg, #fff5f5 0%, #fffbfb 100%);
-            border-left: 4px solid #ff6b6b;
-            border-radius: 6px;
+            padding: 14px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #fef3c7 0%, #fef9e7 100%);
+            border-left: 4px solid #f59e0b;
+            border-radius: 8px;
             font-size: 13px;
             transition: all 0.3s;
-            border: 1px solid #ffd9d9;
+            border: 1px solid #fed7aa;
         }
 
         .hotspot-item:hover {
-            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.2);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);
             transform: translateX(4px);
         }
 
         .hotspot-question {
             font-weight: 700;
-            color: #333;
-            margin-bottom: 6px;
+            color: #1a1a2e;
+            margin-bottom: 8px;
         }
 
         .hotspot-stats {
             display: flex;
-            gap: 12px;
+            gap: 14px;
             font-size: 12px;
-            color: #666;
-            margin-bottom: 6px;
+            color: #6b7280;
+            margin-bottom: 8px;
         }
 
         .hotspot-stat {
@@ -373,13 +402,13 @@
         }
 
         .hotspot-info-text {
-            background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
-            border-left: 4px solid #4caf50;
-            padding: 10px 12px;
-            border-radius: 6px;
+            background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+            border-left: 4px solid #10b981;
+            padding: 12px 14px;
+            border-radius: 8px;
             font-size: 12px;
-            color: #558b2f;
-            border: 1px solid #c5e1a5;
+            color: #065f46;
+            border: 1px solid #d1fae5;
         }
 
         .detail-form {
@@ -467,53 +496,56 @@
         .form-actions button {
             flex: 1;
             min-width: 140px;
-            padding: 12px 18px;
+            padding: 12px 20px;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 700;
             font-size: 13px;
             transition: all 0.3s;
+            font-family: inherit;
         }
 
         .btn-preview {
-            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
             color: white;
-            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
         }
 
         .btn-preview:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(23, 162, 184, 0.4);
+            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
         }
 
         .btn-submit {
-            background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             color: white;
-            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
         }
 
         .btn-submit:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
         }
 
         .btn-submit:disabled {
-            background: #ccc;
+            background: #d1d5db;
             cursor: not-allowed;
             box-shadow: none;
             transform: none;
         }
 
         .btn-clear {
-            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
-            color: white;
-            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+            background: #f0f2f5;
+            color: #6b7280;
+            border: 1.5px solid #e5e7eb;
+            box-shadow: none;
         }
 
         .btn-clear:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(108, 117, 125, 0.4);
+            background: #e9ecef;
+            border-color: #667eea;
         }
 
         .message {
@@ -526,10 +558,10 @@
         }
 
         .message.error {
-            background: #fee;
-            color: #c33;
-            border-left-color: #c33;
-            border: 1px solid #fcc;
+            background: #fef2f2;
+            color: #dc2626;
+            border-left-color: #dc2626;
+            border: 1px solid #fee2e2;
         }
 
         .message.success {

@@ -4,19 +4,55 @@
     box-sizing: border-box;
 }
 
+:root {
+    --primary-color: #667eea;
+    --primary-dark: #764ba2;
+    --primary-light: #8b9eef;
+    --text-primary: #1a1a2e;
+    --text-secondary: #6b7280;
+    --border-color: #e5e7eb;
+    --background-light: #f9fafb;
+    --background-white: #ffffff;
+    --success-color: #10b981;
+    --error-color: #ef4444;
+    --warning-color: #f59e0b;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f5f5f5;
-    color: #333;
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f3f4f6;
+    color: var(--text-primary);
     line-height: 1.6;
+}
+
+/* Headers and Navigation */
+.admin-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    padding: 20px 30px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    box-shadow: var(--shadow-lg);
+}
+
+.admin-header h1,
+.admin-header h2 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
 }
 
 .form-container {
     max-width: 900px;
     margin: 20px auto;
-    background: white;
+    background: var(--background-white);
     padding: 30px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
+    border-radius: 12px;
 }
 
 .form-header {
@@ -315,33 +351,40 @@ body {
 }
 
 .card {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
+    background: var(--background-white);
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+    margin-bottom: 24px;
     overflow: hidden;
+    border: 1px solid var(--border-color);
+    transition: box-shadow 0.3s;
+}
+
+.card:hover {
+    box-shadow: var(--shadow-lg);
 }
 
 .card-header {
-    background: #003366;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
     color: white;
-    padding: 15px 20px;
+    padding: 18px 24px;
     font-size: 18px;
-    font-weight: bold;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 
 .card-body {
-    padding: 20px;
+    padding: 24px;
 }
 
 .form-group {
-    margin-bottom: 15px;
+    margin-bottom: 18px;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
+    margin-bottom: 8px;
+    font-weight: 600;
     color: #333;
 }
 
@@ -496,22 +539,25 @@ body {
 }
 
 .tab {
-    padding: 10px 25px;
+    padding: 12px 24px;
     cursor: pointer;
-    background: #f5f5f5;
+    background: transparent;
     border: none;
-    font-size: 14px;
-    font-weight: bold;
-    color: #333;
+    border-bottom: 3px solid transparent;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: all 0.3s;
 }
 
 .tab.active {
-    background: #003366;
-    color: white;
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
 }
 
 .tab:hover:not(.active) {
-    background: #e0e0e0;
+    color: var(--text-primary);
+    border-bottom-color: var(--border-color);
 }
 
 .tab-content {
