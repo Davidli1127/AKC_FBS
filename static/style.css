@@ -8,6 +8,8 @@
     --primary-color: #667eea;
     --primary-dark: #764ba2;
     --primary-light: #8b9eef;
+    --formal-blue: #1a56db;
+    --formal-blue-dark: #0d2d6b;
     --text-primary: #1a1a2e;
     --text-secondary: #6b7280;
     --border-color: #e5e7eb;
@@ -31,7 +33,7 @@ body {
 
 /* Headers and Navigation */
 .admin-header {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    background: linear-gradient(135deg, var(--formal-blue) 0%, var(--formal-blue-dark) 100%);
     color: white;
     padding: 20px 30px;
     border-radius: 12px;
