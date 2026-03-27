@@ -699,14 +699,14 @@
             <div class="right-panel">
                 <div class="panel-header">Rating Distribution & Hotspot Analysis</div>
                 <div class="panel-body">
-                    <div id="chartSection">
+                    <div style="font-size: 12px; font-weight: 600; color: #333; margin-bottom: 12px;">Questions</div>
+                    <div class="rating-checkbox-group" id="ratingCheckboxes" style="margin: 0; padding: 0; background: transparent; flex-direction: column; margin-bottom: 20px;">
+                    </div>
+
+                    <div id="chartSection" style="display: none;">
                         <div style="font-size: 12px; font-weight: 600; color: #333; margin-bottom: 10px;">Total Count of Rating by Rating Score</div>
                         <div class="chart-container">
                             <canvas id="ratingChart"></canvas>
-                        </div>
-
-                        <div style="font-size: 12px; font-weight: 600; color: #333; margin-bottom: 8px;">Questions</div>
-                        <div class="rating-checkbox-group" id="ratingCheckboxes" style="margin: 0; padding: 0; background: transparent; flex-direction: column;">
                         </div>
                     </div>
 
@@ -918,7 +918,6 @@
                 displayFeedback();
                 updateStatistics();
                 buildRatingFilter();
-                // Hide chart initially until a question is selected
                 document.getElementById('chartSection').style.display = 'none';
                 displayHotspots();
 
@@ -1222,6 +1221,7 @@ AKC Training Team`;
             const allQuestions = new Map();
             const seen = new Set();
 
+            // First, extract questions from feedback data
             allFeedback.forEach(item => {
                 if (item.ratings) {
                     item.ratings.forEach(r => {
@@ -1239,14 +1239,17 @@ AKC Training Team`;
                 <label for="selectAll">Select All</label>
             </div>`;
 
-            allQuestions.forEach((text, id) => {
-                html += `<div class="rating-checkbox">
-                    <input type="checkbox" id="q-${id}" value="${id}" onchange="filterByQuestion()">
-                    <label for="q-${id}">${text}</label>
-                </div>`;
-            });
-
-            container.innerHTML = html || '<p style="color: #888; font-size: 12px;">No rating questions found.</p>';
+            if (allQuestions.size > 0) {
+                allQuestions.forEach((text, id) => {
+                    html += `<div class="rating-checkbox">
+                        <input type="checkbox" id="q-${id}" value="${id}" onchange="filterByQuestion()">
+                        <label for="q-${id}">${text}</label>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = html + '<p style="color: #888; font-size: 12px;">No rating questions found.</p>';
+            }
         }
 
         function toggleAllQuestions(checked) {
@@ -1257,15 +1260,12 @@ AKC Training Team`;
         }
 
         function filterByQuestion() {
-            // Check if any question is selected
             const selectedQuestions = document.querySelectorAll('#ratingCheckboxes input[type="checkbox"]:not(#selectAll):checked');
             const chartSection = document.getElementById('chartSection');
             
             if (selectedQuestions.length === 0) {
-                // Hide chart if no questions selected
                 chartSection.style.display = 'none';
             } else {
-                // Show chart if questions are selected
                 chartSection.style.display = 'block';
                 updateChart();
             }
@@ -1273,11 +1273,15 @@ AKC Training Team`;
 
         function updateChart() {
             const ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+            const selectedQuestions = Array.from(document.querySelectorAll('#ratingCheckboxes input[type="checkbox"]:not(#selectAll):checked'))
+                .map(cb => cb.value);
             
             allFeedback.forEach(item => {
                 if (item.ratings) {
                     item.ratings.forEach(r => {
-                        ratingCounts[r.rating_value]++;
+                        if (selectedQuestions.includes(String(r.question_id))) {
+                            ratingCounts[r.rating_value]++;
+                        }
                     });
                 }
             });

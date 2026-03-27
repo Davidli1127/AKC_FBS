@@ -40,7 +40,6 @@
             gap: 15px;
         }
         
-        /* Character Styles - Exact Match to Screenshot */
         .character {
             position: relative;
             display: flex;
@@ -58,7 +57,6 @@
             overflow: hidden;
         }
         
-        /* Purple Character - Tallest, rounded rectangle */
         .character-body.char-purple {
             width: 50px;
             height: 90px;
@@ -66,7 +64,6 @@
             border-radius: 14px;
         }
         
-        /* Dark Blue Character - Tall, more rectangular */
         .character-body.char-blue {
             width: 45px;
             height: 75px;
@@ -74,7 +71,6 @@
             border-radius: 10px;
         }
         
-        /* Orange Character - Short and round */
         .character-body.char-orange {
             width: 70px;
             height: 55px;
@@ -82,7 +78,6 @@
             border-radius: 14px;
         }
         
-        /* Yellow Character - Short, rounded */
         .character-body.char-yellow {
             width: 50px;
             height: 60px;
@@ -211,6 +206,143 @@
             transform: translateY(0);
         }
         
+        .signup-link {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            margin-top: 12px;
+        }
+        
+        .signup-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .signup-link a:hover {
+            text-decoration: underline;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 30px;
+            border: 1px solid #888;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-header {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .close-modal {
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .close-modal:hover {
+            color: #333;
+        }
+        
+        .modal-form-group {
+            margin-bottom: 16px;
+        }
+        
+        .modal-form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .modal-form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e1e1e1;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .modal-form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .modal-btn-submit {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .modal-btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .modal-btn-cancel {
+            background: #f0f0f0;
+            color: #666;
+        }
+        
+        .modal-btn-cancel:hover {
+            background: #e0e0e0;
+        }
+        
+        .signup-error {
+            background: #fee;
+            color: #c00;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            display: none;
+            border-left: 3px solid #c00;
+        }
+        
+        .signup-error.show {
+            display: block;
+        }
+        
         .error-message {
             background: #fee;
             color: #c00;
@@ -312,7 +444,38 @@
             <button type="submit" class="login-btn">Login</button>
         </form>
         
+        <p class="signup-link">Don't have an account? <a onclick="openSignupModal()">Sign up here</a></p>
+        
         <p class="footer-text">&copy; 2026 AKC. All rights reserved.</p>
+    </div>
+
+    <!-- Sign Up Modal -->
+    <div id="signupModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Create Admin Account</span>
+                <span class="close-modal" onclick="closeSignupModal()">&times;</span>
+            </div>
+            <div class="signup-error" id="signupError"></div>
+            <form id="signupForm" onsubmit="handleSignup(event)">
+                <div class="modal-form-group">
+                    <label for="signupUsername">Username</label>
+                    <input type="text" id="signupUsername" name="username" placeholder="Enter username (3+ characters)" required>
+                </div>
+                <div class="modal-form-group">
+                    <label for="signupPassword">Password</label>
+                    <input type="password" id="signupPassword" name="password" placeholder="Enter password (6+ characters)" required>
+                </div>
+                <div class="modal-form-group">
+                    <label for="signupPasswordConfirm">Confirm Password</label>
+                    <input type="password" id="signupPasswordConfirm" name="passwordConfirm" placeholder="Confirm password" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit" class="modal-btn modal-btn-submit">Create Account</button>
+                    <button type="button" class="modal-btn modal-btn-cancel" onclick="closeSignupModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script>
@@ -325,34 +488,29 @@
             charactersEyes = document.querySelectorAll('.pupil');
         }
 
-        // 正常追踪鼠标（只在不是密码框和normal状态时）
+        // 正常追踪鼠标
         document.addEventListener('mousemove', (e) => {
             if (eyeState === 'normal' && !isPasswordVisible && !isPasswordFocused) {
                 updateEyes(e.clientX, e.clientY);
             }
         });
 
-        // 密码框获得焦点 → 眼睛变成"调皮"状态
         document.getElementById('password')?.addEventListener('focus', () => {
             if (!isPasswordVisible) {
                 isPasswordFocused = true;
                 eyeState = 'sneaky';
-                // 眼睛立即看向下方（偷看密码）
                 animateEyesSneaky();
             }
         });
 
-        // 密码框失去焦点 → 眼睛恢复正常
         document.getElementById('password')?.addEventListener('blur', () => {
             isPasswordFocused = false;
             if (!isPasswordVisible) {
                 eyeState = 'normal';
-                // 平滑过渡回到中心
                 smoothReturnToCenterView();
             }
         });
 
-        // 正常眼睛追踪
         function updateEyes(x, y) {
             charactersEyes.forEach(pupil => {
                 const eye = pupil.parentElement;
@@ -370,17 +528,13 @@
             });
         }
 
-        // 调皮偷看密码动画
         function animateEyesSneaky() {
             charactersEyes.forEach((pupil, index) => {
                 pupil.style.transition = 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
-                // 眼睛向下和向右看（偷看密码框方向）
                 pupil.style.transform = 'translate(3px, 3px)';
                 
-                // 每个眼睛有微妙的延迟，增加生动感
                 setTimeout(() => {
                     if (eyeState === 'sneaky' && isPasswordFocused) {
-                        // 轻微的抖动，表示"紧张地偷看"
                         const jitter = Math.random() * 0.3 - 0.15;
                         pupil.style.transition = 'transform 0.08s ease-out';
                         pupil.style.transform = 'translate(' + (3 + jitter) + 'px, ' + (3 + jitter) + 'px)';
@@ -389,28 +543,37 @@
             });
         }
 
-        // 转移视线动画（显示密码时）
+        let lookAwayInterval;
         function animateEyesLookingAway() {
+            clearInterval(lookAwayInterval);
             charactersEyes.forEach((pupil, index) => {
                 pupil.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
-                // 眼睛向左上看（转移视线，不看密码）
-                pupil.style.transform = 'translate(-2px, -2px)';
-
-                // 添加一个"眨眼"效果
-                setTimeout(() => {
-                    if (isPasswordVisible) {
-                        pupil.style.transition = 'transform 0.08s ease-out';
-                        pupil.style.transform = 'translate(-1px, -1px)';
-                    }
-                }, 250 + index * 30);
+                pupil.style.transform = 'translate(-3px, -3px)';
             });
+            
+            let moveIndex = 0;
+            lookAwayInterval = setInterval(() => {
+                if (!isPasswordVisible) {
+                    clearInterval(lookAwayInterval);
+                    return;
+                }
+                
+                charactersEyes.forEach((pupil, index) => {
+                    pupil.style.transition = 'transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                    const angle = (moveIndex * 45 + index * 90) * Math.PI / 180;
+                    const distance = 2 + Math.random() * 2;
+                    const x = Math.cos(angle) * distance - 3;
+                    const y = Math.sin(angle) * distance - 3;
+                    
+                    pupil.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+                });
+                moveIndex++;
+            }, 900);
         }
 
-        // 平滑回到中心视图
         function smoothReturnToCenterView() {
             charactersEyes.forEach(pupil => {
                 pupil.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
-                // 自然地回到中心
                 pupil.style.transform = 'translate(0, 0)';
             });
         }
@@ -420,25 +583,22 @@
             const btn = event.currentTarget;
             
             if (input.type === 'password') {
-                // 打开密码显示
                 input.type = 'text';
                 btn.textContent = '🙈';
                 isPasswordVisible = true;
                 eyeState = 'looking_away';
-                // 眼睛优雅地转向侧面
                 animateEyesLookingAway();
             } else {
                 // 关闭密码显示
                 input.type = 'password';
                 btn.textContent = '👁️';
                 isPasswordVisible = false;
+                clearInterval(lookAwayInterval);
                 
                 if (isPasswordFocused) {
-                    // 如果还在密码框，回到偷看状态
                     eyeState = 'sneaky';
                     animateEyesSneaky();
                 } else {
-                    // 否则回到正常追踪
                     eyeState = 'normal';
                     smoothReturnToCenterView();
                 }
@@ -475,7 +635,59 @@
             setTimeout(() => errorDiv.classList.remove('show'), 5000);
         }
 
-        // Initialize
+        function openSignupModal() {
+            document.getElementById('signupModal').style.display = 'block';
+            document.getElementById('signupError').classList.remove('show');
+            document.getElementById('signupForm').reset();
+        }
+
+        function closeSignupModal() {
+            document.getElementById('signupModal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('signupModal');
+            if (event.target === modal) {
+                closeSignupModal();
+            }
+        }
+
+        async function handleSignup(event) {
+            event.preventDefault();
+            const username = document.getElementById('signupUsername').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
+            const errorDiv = document.getElementById('signupError');
+
+            if (password !== passwordConfirm) {
+                errorDiv.textContent = 'Passwords do not match';
+                errorDiv.classList.add('show');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin-signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    errorDiv.classList.remove('show');
+                    closeSignupModal();
+                    showError('✓ Account created successfully! You can now log in.');
+                    document.getElementById('username').focus();
+                } else {
+                    errorDiv.textContent = result.error || 'Sign up failed';
+                    errorDiv.classList.add('show');
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Error: ' + err.message;
+                errorDiv.classList.add('show');
+            }
+        }
+
         initCharacters();
     </script>
 </body>
