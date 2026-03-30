@@ -1981,8 +1981,16 @@ def low_ratings_page():
     """Render the low ratings feedback page."""
     config = load_config()
     forms_dict = db.get_active_forms_map()
+    forms_config = {
+        fid: {
+            'title': f.get('title', fid),
+            'is_archived': f.get('is_archived', False),
+            'language': f.get('language', 'English')
+        }
+        for fid, f in forms_dict.items()
+    }
     
-    return render_template('low_ratings.html', forms=forms_dict)
+    return render_template('low_ratings.html', forms=forms_dict, forms_config=forms_config)
 
 
 @app.route('/api/low-ratings-data')

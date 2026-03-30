@@ -682,6 +682,12 @@
                     <option value="{{ form_id }}">{{ form_data.get('title', form_id) }}</option>
                     {% endfor %}
                 </select>
+                <div id="lowRatingsLanguageGroup" style="display:none; margin-left: 12px; display:flex; align-items:center; gap:8px;">
+                    <label for="lowRatingsLanguageSelect" style="margin:0;">Language:</label>
+                    <select id="lowRatingsLanguageSelect" onchange="updateLowRatingsLanguage()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; min-width: 150px;">
+                        <option value="">Select language...</option>
+                    </select>
+                </div>
                 <button onclick="loadFeedback()">🔄Refresh Data</button>
                 <label for="courseCodeSearch" style="margin-left: 20px;">Search by Class Code:</label>
                 <input type="text" id="courseCodeSearch" placeholder="e.g., HT26ACSRABD012" onchange="onCourseCodeChange()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 200px;">
@@ -884,12 +890,39 @@
         </div>
     </div>
 
+    <div id="appData" style="display:none" data-forms-config='{{ forms_config | tojson }}'></div>
+
     <script>
         let allFeedback = [];
         let selectedFeedback = null;
         let ratingChart = null;
         let allHotspots = [];
         let viewMode = 'all';
+        
+        const FORM_TITLE_MAP = {};
+        const FORM_BY_TITLE = {};
+        
+        // Parse forms configuration from appData
+        try {
+            const appDataEl = document.getElementById('appData');
+            if (appDataEl && appDataEl.dataset.formsConfig) {
+                const formsConfig = JSON.parse(appDataEl.dataset.formsConfig);
+                for (const formId in formsConfig) {
+                    const form = formsConfig[formId];
+                    FORM_TITLE_MAP[formId] = form.title;
+                    const title = form.title;
+                    if (!FORM_BY_TITLE[title]) {
+                        FORM_BY_TITLE[title] = [];
+                    }
+                    FORM_BY_TITLE[title].push({
+                        id: formId,
+                        language: form.language || 'English'
+                    });
+                }
+            }
+        } catch (err) {
+            console.error('Error parsing forms configuration:', err);
+        }
 
         document.addEventListener('DOMContentLoaded', function() {
             loadFeedback();
@@ -907,7 +940,41 @@
         }
 
         function onFormSelectionChange() {
+            updateLowRatingsLanguageSelector();
             loadFeedback();
+        }
+        
+        function updateLowRatingsLanguageSelector() {
+            const formId = document.getElementById('formFilterSelect').value;
+            const languageSelect = document.getElementById('lowRatingsLanguageSelect');
+            const languageGroup = document.getElementById('lowRatingsLanguageGroup');
+            
+            languageSelect.innerHTML = '<option value="">Select language...</option>';
+            languageGroup.style.display = 'none';
+            
+            if (!formId) return;
+            
+            const formTitle = FORM_TITLE_MAP[formId];
+            if (!formTitle) return;
+            
+            const languageVersions = FORM_BY_TITLE[formTitle] || [];
+            
+            if (languageVersions.length > 1) {
+                languageVersions.forEach(version => {
+                    const opt = new Option(version.language, version.id);
+                    languageSelect.add(opt);
+                });
+                languageSelect.value = formId;
+                languageGroup.style.display = 'flex';
+            }
+        }
+        
+        function updateLowRatingsLanguage() {
+            const selectedFormId = document.getElementById('lowRatingsLanguageSelect').value;
+            if (selectedFormId) {
+                document.getElementById('formFilterSelect').value = selectedFormId;
+                loadFeedback();
+            }
         }
 
         function onRatingThresholdChange() {

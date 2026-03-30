@@ -488,7 +488,6 @@
             charactersEyes = document.querySelectorAll('.pupil');
         }
 
-        // 正常追踪鼠标
         document.addEventListener('mousemove', (e) => {
             if (eyeState === 'normal' && !isPasswordVisible && !isPasswordFocused) {
                 updateEyes(e.clientX, e.clientY);
