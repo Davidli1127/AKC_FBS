@@ -38,7 +38,7 @@
                     <form id="createCourseForm">
                         <div class="form-group">
                             <label>Select Form Type:</label>
-                            <select id="formSelect" name="form_id" required onchange="updateFormFields()">
+                            <select id="formSelect" name="form_id" required onchange="updateQRFormFields()">
                                 {% for form_id, form in config.forms.items() %}
                                 {% if not form.is_archived %}
                                 <option value="{{ form_id }}">{{ form.title }}</option>
@@ -308,9 +308,8 @@
                             </select>
                         </div>
                         <div style="flex:0; min-width:200px;">
-                            <label>Language Version:</label>
-                            <select id="editFormLanguageSelect" onchange="loadFormForEdit()">
-                                <option value="">All Languages</option>
+                            <label for="editFormLanguageSelect" style="display:none;">Language Version:</label>
+                            <select id="editFormLanguageSelect" onchange="loadFormForEdit('language')" style="display:none;">
                             </select>
                         </div>
                         <div style="display:flex; gap:8px; padding-top:22px;">
@@ -408,7 +407,7 @@
                             </select>
                         </div>
                         <div id="analysisLanguageGroup" style="display:none;">
-                            <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Language Version</label>
+                            <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Language</label>
                             <select id="analysisLanguageSelect" onchange="updateAnalysisLanguage()" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:180px;">
                                 <option value="">Select language...</option>
                             </select>
@@ -992,7 +991,7 @@
             document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
             document.getElementById(tabId).classList.add('active');
             
-            if (tabId === 'forms') loadFormForEdit();
+            if (tabId === 'forms') loadFormForEdit('main');
             if (tabId === 'existing') loadCoursesOnStartup();
             if (tabId === 'alerts') loadAlertsAll();
             if (tabId === 'analysis') initializeAnalysisDashboard();
@@ -1026,7 +1025,32 @@
         }
         
         function updateQRFormFields() {
-            const selectedFormId = document.getElementById('languageSelect').value || document.getElementById('formSelect').value;
+            const formId = document.getElementById('formSelect').value;
+            const languageSelect = document.getElementById('languageSelect');
+            const languageGroup = document.getElementById('languageGroup');
+            
+            // Update language selector based on form selection
+            languageSelect.innerHTML = '<option value="">Select a language...</option>';
+            languageGroup.style.display = 'none';
+            
+            if (!formId) return;
+            
+            const formTitle = FORM_TITLE_MAP[formId];
+            if (!formTitle) return;
+            
+            const languageVersions = FORM_BY_TITLE[formTitle] || [];
+            
+            if (languageVersions.length > 1) {
+                languageVersions.forEach(version => {
+                    const opt = new Option(version.language, version.id);
+                    languageSelect.add(opt);
+                });
+                languageSelect.value = formId;
+                languageGroup.style.display = 'block';
+            }
+            
+            // Now load the QR fields for the selected form (or its language version)
+            const selectedFormId = languageSelect.value || formId;
             const qf = FORM_QR_FIELDS[selectedFormId];
 
             if (qf) {
@@ -1080,7 +1104,8 @@
             const selectedFormId = document.getElementById('languageSelect').value;
             if (selectedFormId) {
                 document.getElementById('formSelect').value = selectedFormId;
-                updateQRFormFields();
+                // Update the QR fields for the newly selected language version
+                loadClassCodes(); // This will show class code group if date is set
             }
         }
 
@@ -1394,34 +1419,51 @@
             console.error('Error parsing forms configuration:', err);
         }
 
-        async function loadFormForEdit() {
+        async function loadFormForEdit(source = 'main') {
             let selectedFormId = document.getElementById('editFormSelect').value;
             const languageSelect = document.getElementById('editFormLanguageSelect');
-            const selectedTitle = FORM_TITLE_MAP[selectedFormId];
-            if (!selectedTitle) {
-                languageSelect.style.display = 'none';
+            const languageLabel = languageSelect.previousElementSibling;
+            
+            // If called from language dropdown, update the main dropdown
+            if (source === 'language') {
+                selectedFormId = languageSelect.value;
+                if (document.getElementById('editFormSelect').value !== selectedFormId) {
+                    document.getElementById('editFormSelect').value = selectedFormId;
+                }
+            } else {
+                // Called from main dropdown - populate the language selector
+                const selectedTitle = FORM_TITLE_MAP[selectedFormId];
+                if (!selectedTitle) {
+                    languageSelect.style.display = 'none';
+                    languageLabel.style.display = 'none';
+                    languageSelect.innerHTML = '';
+                } else {
+                    const languageVersions = FORM_BY_TITLE[selectedTitle] || [];
+                    languageSelect.innerHTML = '';
+                    
+                    if (languageVersions.length > 1) {
+                        languageVersions.forEach(version => {
+                            const opt = document.createElement('option');
+                            opt.value = version.id;
+                            opt.textContent = version.language;
+                            languageSelect.appendChild(opt);
+                        });
+                        languageSelect.value = selectedFormId;
+                        languageSelect.style.display = 'inline-block';
+                        languageLabel.style.display = 'inline-block';
+                    } else {
+                        languageSelect.style.display = 'none';
+                        languageLabel.style.display = 'none';
+                    }
+                }
+            }
+            
+            if (!selectedFormId) {
+                document.getElementById('formEditor').innerHTML = '<p>Please select a form to edit.</p>';
                 return;
             }
             
-            const languageVersions = FORM_BY_TITLE[selectedTitle] || [];
-            
-            languageSelect.innerHTML = '';
-            if (languageVersions.length === 0) {
-                languageSelect.style.display = 'none';
-            } else {
-                languageSelect.style.display = 'inline-block';
-                languageVersions.forEach(version => {
-                    const opt = document.createElement('option');
-                    opt.value = version.id;
-                    opt.textContent = version.language;
-                    languageSelect.appendChild(opt);
-                });
-            }
-            
-            languageSelect.value = selectedFormId;
-            
             currentFormId = selectedFormId;
-            
             try {
                 const response = await fetch(`/api/forms/${currentFormId}`);
                 currentFormData = await response.json();
@@ -1429,7 +1471,8 @@
                 renderFormEditor();
                 checkFormTableStatus(currentFormId);
             } catch (error) {
-                alert('Error loading form data');
+                console.error('Error loading form:', error);
+                document.getElementById('formEditor').innerHTML = `<p style="color:red;">Error loading form: ${error.message}</p>`;
             }
         }
 
@@ -2581,6 +2624,7 @@
 
         async function refreshAnalysisFilters() {
             const formId = document.getElementById('analysisFormId').value;
+            // Update the language selector based on the currently selected form
             updateAnalysisLanguageSelector(formId);
             
             const monthSelect = document.getElementById('analysisMonth');
@@ -2995,4 +3039,3 @@
     </script>
 </body>
 </html>
-

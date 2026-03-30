@@ -98,6 +98,16 @@
             box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1);
         }
 
+        #lowRatingsLanguageGroup {
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #lowRatingsLanguageGroup.visible {
+            display: flex;
+        }
+
         .form-selector-controls button {
             padding: 10px 20px;
             background: linear-gradient(135deg, #1a56db 0%, #0d2d6b 100%);
@@ -682,8 +692,8 @@
                     <option value="{{ form_id }}">{{ form_data.get('title', form_id) }}</option>
                     {% endfor %}
                 </select>
-                <div id="lowRatingsLanguageGroup" style="display:none; margin-left: 12px; display:flex; align-items:center; gap:8px;">
-                    <label for="lowRatingsLanguageSelect" style="margin:0;">Language:</label>
+                <div id="lowRatingsLanguageGroup">
+                    <label for="lowRatingsLanguageSelect">Language:</label>
                     <select id="lowRatingsLanguageSelect" onchange="updateLowRatingsLanguage()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; min-width: 150px;">
                         <option value="">Select language...</option>
                     </select>
@@ -925,6 +935,8 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            const initialFormId = document.getElementById('formFilterSelect').value;
+            updateLowRatingsLanguageSelector(initialFormId);
             loadFeedback();
         });
 
@@ -940,40 +952,47 @@
         }
 
         function onFormSelectionChange() {
-            updateLowRatingsLanguageSelector();
-            loadFeedback();
-        }
-        
-        function updateLowRatingsLanguageSelector() {
             const formId = document.getElementById('formFilterSelect').value;
+            updateLowRatingsLanguageSelector(formId);
+            loadFeedback(); // Always reload feedback when the main form changes
+        }
+
+        function updateLowRatingsLanguageSelector(formId) {
             const languageSelect = document.getElementById('lowRatingsLanguageSelect');
             const languageGroup = document.getElementById('lowRatingsLanguageGroup');
-            
+
             languageSelect.innerHTML = '<option value="">Select language...</option>';
-            languageGroup.style.display = 'none';
-            
-            if (!formId) return;
-            
+            languageGroup.classList.remove('visible');
+
+            if (!formId) {
+                return;
+            }
+
             const formTitle = FORM_TITLE_MAP[formId];
-            if (!formTitle) return;
-            
+            if (!formTitle) {
+                return;
+            }
+
             const languageVersions = FORM_BY_TITLE[formTitle] || [];
-            
+
             if (languageVersions.length > 1) {
                 languageVersions.forEach(version => {
                     const opt = new Option(version.language, version.id);
                     languageSelect.add(opt);
                 });
                 languageSelect.value = formId;
-                languageGroup.style.display = 'flex';
+                languageGroup.classList.add('visible');
             }
         }
-        
+
         function updateLowRatingsLanguage() {
             const selectedFormId = document.getElementById('lowRatingsLanguageSelect').value;
-            if (selectedFormId) {
-                document.getElementById('formFilterSelect').value = selectedFormId;
-                loadFeedback();
+            const mainSelect = document.getElementById('formFilterSelect');
+
+            // Only trigger a change if the language selection is different from the main selection
+            if (selectedFormId && mainSelect.value !== selectedFormId) {
+                mainSelect.value = selectedFormId;
+                loadFeedback(); // Reload data for the specific language version
             }
         }
 
