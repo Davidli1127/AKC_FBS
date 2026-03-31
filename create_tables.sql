@@ -63,6 +63,7 @@ CREATE TABLE Feedback_Form1 (
     
     course_id VARCHAR(50),
     course_title NVARCHAR(255),
+    course_code NVARCHAR(50),
     course_date VARCHAR(50),
     classroom NVARCHAR(255),
     language NVARCHAR(50),
@@ -121,6 +122,7 @@ CREATE TABLE Feedback_Form2 (
     
     course_id VARCHAR(50),
     course_title NVARCHAR(255),
+    course_code NVARCHAR(50),
     course_date VARCHAR(50),
     classroom NVARCHAR(255),
     language NVARCHAR(50),

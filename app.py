@@ -1535,25 +1535,13 @@ def get_analysis_dashboard_filters():
     rows = db.get_responses_for_analysis(form_id, form, dt_from, dt_to, None)
     rating_q_map = _build_rating_question_map(form)
 
-    course_ids = {r.get('course_id', '') for r in rows if r.get('course_id')}
-    course_id_to_class_code = db.get_fbs_course_title_map(course_ids)
-
-    normalized_codes = {
-        str(_resolve_analysis_class_code(r, course_id_to_class_code) or '').strip().upper()
-        for r in rows
-    }
-    normalized_codes.discard('')
-
-    nav_name_map = db.get_nav_course_name_map(normalized_codes)
-
+    # Use course_code which contains the actual Course Code (OBLCMN, SIPFDID, etc.) looked up from NAV
     course_titles = set()
     question_counts = defaultdict(int)
     for row in rows:
-        class_code = str(_resolve_analysis_class_code(row, course_id_to_class_code) or '').strip()
-        class_code_key = class_code.upper()
-        course_title = (nav_name_map.get(class_code_key) or class_code or '').strip()
-        if course_title:
-            course_titles.add(course_title)
+        course_code = str(row.get('course_code', '') or '').strip()
+        if course_code:
+            course_titles.add(course_code)
 
         answers = row.get('answers', {})
         for qid in rating_q_map.keys():
@@ -1602,33 +1590,21 @@ def get_analysis_dashboard():
     rows = db.get_responses_for_analysis(form_id, form, dt_from, dt_to, None)
     rating_q_map = _build_rating_question_map(form)
 
-    course_ids = {r.get('course_id', '') for r in rows if r.get('course_id')}
-    course_id_to_class_code = db.get_fbs_course_title_map(course_ids)
-
-    normalized_codes = {
-        str(_resolve_analysis_class_code(r, course_id_to_class_code) or '').strip().upper()
-        for r in rows
-    }
-    normalized_codes.discard('')
-
-    nav_name_map = db.get_nav_course_name_map(normalized_codes)
-
+    # Use stored course_code from database (looked up from NAV when response was saved)
     course_titles_available = set()
     prepared_rows = []
     for row in rows:
-        class_code = str(_resolve_analysis_class_code(row, course_id_to_class_code) or '').strip()
-        class_code_key = class_code.upper()
-        resolved_title = (nav_name_map.get(class_code_key) or class_code or 'Unknown Course').strip()
-        if resolved_title:
-            course_titles_available.add(resolved_title)
+        course_code = str(row.get('course_code', '') or '').strip()
+        if course_code:
+            course_titles_available.add(course_code)
         prepared_rows.append({
-            'course_title_resolved': resolved_title,
+            'course_code': course_code,
             'answers': row.get('answers', {})
         })
 
     if selected_course_titles:
         selected_set = set(selected_course_titles)
-        prepared_rows = [r for r in prepared_rows if r.get('course_title_resolved') in selected_set]
+        prepared_rows = [r for r in prepared_rows if r.get('course_code') in selected_set]
 
     question_ids = selected_questions if selected_questions else list(rating_q_map.keys())
 
@@ -2263,4 +2239,10 @@ if __name__ == '__main__':
         if not _form.get('is_archived'):
             _ok, _msg = db.create_form_response_table(_form.get('title', _fid), _form)
             print(f"  [{_form.get('title', _fid)}]: {_msg}")
+            # Add course_code column if it doesn't exist
+            db.add_course_code_column(_form.get('title', _fid))
+            # Backfill course codes for existing responses
+            _bf_ok, _bf_msg = db.backfill_course_codes(_form.get('title', _fid))
+            if _bf_ok and 'Updated' in _bf_msg:
+                print(f"  [Backfill]: {_bf_msg}")
     app.run(debug=True, host='0.0.0.0', port=5000)

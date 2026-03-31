@@ -99,7 +99,7 @@
         }
 
         #lowRatingsLanguageGroup {
-            display: none;
+            display: flex;
             align-items: center;
             gap: 8px;
         }
@@ -698,7 +698,7 @@
                         <option value="">Select language...</option>
                     </select>
                 </div>
-                <button onclick="loadFeedback()">🔄Refresh Data</button>
+                <button onclick="loadFeedback()">🔄 Refresh Data</button>
                 <label for="courseCodeSearch" style="margin-left: 20px;">Search by Class Code:</label>
                 <input type="text" id="courseCodeSearch" placeholder="e.g., HT26ACSRABD012" onchange="onCourseCodeChange()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 200px;">
                 <label for="ratingThresholdSelect" style="margin-left: auto;">Show ratings:</label>
@@ -912,7 +912,6 @@
         const FORM_TITLE_MAP = {};
         const FORM_BY_TITLE = {};
         
-        // Parse forms configuration from appData
         try {
             const appDataEl = document.getElementById('appData');
             if (appDataEl && appDataEl.dataset.formsConfig) {
@@ -954,7 +953,7 @@
         function onFormSelectionChange() {
             const formId = document.getElementById('formFilterSelect').value;
             updateLowRatingsLanguageSelector(formId);
-            loadFeedback(); // Always reload feedback when the main form changes
+            loadFeedback(); 
         }
 
         function updateLowRatingsLanguageSelector(formId) {
@@ -962,7 +961,6 @@
             const languageGroup = document.getElementById('lowRatingsLanguageGroup');
 
             languageSelect.innerHTML = '<option value="">Select language...</option>';
-            languageGroup.classList.remove('visible');
 
             if (!formId) {
                 return;
@@ -975,7 +973,8 @@
 
             const languageVersions = FORM_BY_TITLE[formTitle] || [];
 
-            if (languageVersions.length > 1) {
+            // Always show language selector, even if there's only one version
+            if (languageVersions.length >= 1) {
                 languageVersions.forEach(version => {
                     const opt = new Option(version.language, version.id);
                     languageSelect.add(opt);
@@ -989,10 +988,9 @@
             const selectedFormId = document.getElementById('lowRatingsLanguageSelect').value;
             const mainSelect = document.getElementById('formFilterSelect');
 
-            // Only trigger a change if the language selection is different from the main selection
             if (selectedFormId && mainSelect.value !== selectedFormId) {
                 mainSelect.value = selectedFormId;
-                loadFeedback(); // Reload data for the specific language version
+                loadFeedback();
             }
         }
 

@@ -470,7 +470,7 @@
 
                             <div style="background:#fff;border:1px solid #e0e8ff;border-radius:10px;padding:12px;">
                                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                                    <strong style="font-size:14px;color:#333;">Class Code</strong>
+                                    <strong style="font-size:14px;color:#333;">Course Code</strong>
                                     <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:6px;cursor:pointer;">
                                         <input type="checkbox" id="analysisSelectAllCourses" onchange="toggleAllAnalysisCheckboxes('course', this.checked)" checked>
                                         Select All
@@ -1534,34 +1534,81 @@
             const container = document.getElementById('formEditor');
             let html = '';
             
-            for (const section of currentFormData.sections) {
+            
+            if (!currentFormData.sections) {
+                currentFormData.sections = [];
+            }
+            
+            if (currentFormData.sections.length === 0) {
                 html += `
-                    <div class="card" style="margin-top: 20px;">
-                        <div class="card-header">
-                            ${escHtml(section.id)} - ${escHtml(section.title || 'Questions')}
-                            <span style="font-size: 12px; margin-left: 10px;">(${escHtml(section.type)})</span>
+                    <div class="card" style="margin-top: 0; border: 2px dashed #c7d7ff; background: #f9fbff;">
+                        <div class="card-body" style="text-align: center; padding: 32px 20px;">
+                            <p style="color: #666; font-size: 16px; margin-bottom: 16px;">This form has no sections yet.</p>
+                            <p style="color: #888; font-size: 13px; margin-bottom: 20px;">Add sections and questions to build out your form.</p>
+                            <button class="btn btn-success" style="font-size: 15px; padding: 10px 24px;" 
+                                    onclick="editFormAddSection()">+ Add First Section</button>
                         </div>
-                        <div class="card-body">
-                            <div class="question-editor">
+                    </div>
                 `;
-                
-                for (const question of section.questions) {
+            } else {
+                for (const section of currentFormData.sections) {
                     html += `
-                        <div class="question-item" id="q-${escHtml(section.id)}-${escHtml(question.id)}">
-                            <strong style="min-width: 50px;">${escHtml(question.id)}</strong>
-                            <input type="text" value="${escHtml(question.text)}" 
-                                   onchange="updateQuestion('${section.id}', '${question.id}', this.value)">
-                            <button class="btn btn-danger btn-sm" 
-                                    onclick="deleteQuestion('${section.id}', '${question.id}')">Delete</button>
+                        <div class="card" style="margin-top: 20px;">
+                            <div class="card-header" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <label style="font-size: 12px; font-weight: 600; color: #555;">ID:</label>
+                                    <input type="text" value="${escHtml(section.id)}" 
+                                           style="width: 60px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;"
+                                           onchange="updateSectionId('${section.id}', this.value)">
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 200px;">
+                                    <label style="font-size: 12px; font-weight: 600; color: #555;">Title:</label>
+                                    <input type="text" value="${escHtml(section.title || '')}" 
+                                           placeholder="e.g., Course Content"
+                                           style="flex: 1; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;"
+                                           onchange="updateSectionTitle('${section.id}', this.value)">
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <label style="font-size: 12px; font-weight: 600; color: #555;">Type:</label>
+                                    <select style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;"
+                                            onchange="updateSectionType('${section.id}', this.value)">
+                                        <option value="rating" ${section.type === 'rating' ? 'selected' : ''}>Rating</option>
+                                        <option value="instructor_rating" ${section.type === 'instructor_rating' ? 'selected' : ''}>Instructor Rating</option>
+                                        <option value="assessor_rating" ${section.type === 'assessor_rating' ? 'selected' : ''}>Assessor Rating</option>
+                                        <option value="text_questions" ${section.type === 'text_questions' ? 'selected' : ''}>Text Questions</option>
+                                        <option value="multiple_choice" ${section.type === 'multiple_choice' ? 'selected' : ''}>Multiple Choice</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-danger btn-sm" onclick="deleteSection('${section.id}')" style="margin-left: auto;">Delete Section</button>
+                            </div>
+                            <div class="card-body">
+                                <div class="question-editor">
+                    `;
+                    
+                    for (const question of section.questions) {
+                        html += `
+                            <div class="question-item" id="q-${escHtml(section.id)}-${escHtml(question.id)}">
+                                <strong style="min-width: 50px;">${escHtml(question.id)}</strong>
+                                <input type="text" value="${escHtml(question.text)}" 
+                                       onchange="updateQuestion('${section.id}', '${question.id}', this.value)">
+                                <button class="btn btn-danger btn-sm" 
+                                        onclick="deleteQuestion('${section.id}', '${question.id}')">Delete</button>
+                            </div>
+                        `;
+                    }
+                    
+                    html += `
+                                </div>
+                                <button class="btn btn-success btn-sm" style="margin-top: 10px;" 
+                                        onclick="openAddQuestionModal('${section.id}')">+ Add Question</button>
+                            </div>
                         </div>
                     `;
                 }
                 
                 html += `
-                            </div>
-                            <button class="btn btn-success btn-sm" style="margin-top: 10px;" 
-                                    onclick="openAddQuestionModal('${section.id}')">+ Add Question</button>
-                        </div>
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button class="btn btn-success btn-sm" onclick="editFormAddSection()">+ Add Another Section</button>
                     </div>
                 `;
             }
@@ -1573,6 +1620,28 @@
             `;
             
             container.innerHTML = html;
+        }
+
+        function editFormAddSection() {
+            if (!currentFormData.sections) {
+                currentFormData.sections = [];
+            }
+            
+            let sectionCounter = currentFormData.sections.length;
+            let sectionId = String.fromCharCode(65 + sectionCounter);
+            while (currentFormData.sections.find(s => s.id === sectionId)) {
+                sectionCounter++;
+                sectionId = String.fromCharCode(65 + sectionCounter);
+            }
+            
+            currentFormData.sections.push({
+                id: sectionId,
+                title: '',
+                type: 'rating',
+                questions: []
+            });
+            
+            renderFormEditor();
         }
 
         function updateQuestion(sectionId, questionId, newText) {
@@ -1587,6 +1656,49 @@
                     break;
                 }
             }
+        }
+
+        function updateSectionId(oldId, newId) {
+            if (!newId.trim()) {
+                alert('Section ID cannot be empty');
+                renderFormEditor();
+                return;
+            }
+            for (const section of currentFormData.sections) {
+                if (section.id === oldId) {
+                    section.id = newId;
+                    section.questions.forEach((q, idx) => {
+                        q.id = newId + (idx + 1);
+                    });
+                    break;
+                }
+            }
+            renderFormEditor();
+        }
+
+        function updateSectionTitle(sectionId, newTitle) {
+            for (const section of currentFormData.sections) {
+                if (section.id === sectionId) {
+                    section.title = newTitle;
+                    break;
+                }
+            }
+        }
+
+        function updateSectionType(sectionId, newType) {
+            for (const section of currentFormData.sections) {
+                if (section.id === sectionId) {
+                    section.type = newType;
+                    break;
+                }
+            }
+            renderFormEditor();
+        }
+
+        function deleteSection(sectionId) {
+            if (!confirm(`Delete section "${sectionId}" and all its questions? This change will be applied when you click "Save All Changes".`)) return;
+            currentFormData.sections = currentFormData.sections.filter(s => s.id !== sectionId);
+            renderFormEditor();
         }
 
         function deleteQuestion(sectionId, questionId) {
@@ -1819,9 +1931,11 @@
             const title = document.getElementById('newFormTitle').value.trim();
             const copySelect = document.getElementById('newFormCopyFrom');
             const hintEl = document.getElementById('multiLangHint');
+            const builderDiv = document.getElementById('sectionBuilder');
             
             if (!title) {
                 hintEl.style.display = 'none';
+                builderDiv.style.display = 'none';
                 return;
             }
             
@@ -1841,8 +1955,9 @@
             } else {
                 hintEl.style.display = 'none';
                 copySelect.value = '';
-                document.getElementById('sectionBuilder').style.display = 'none';
+                builderDiv.style.display = 'block';
                 newFormSections = [];
+                builderRender();
             }
         }
 

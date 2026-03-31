@@ -70,6 +70,7 @@ _FIXED_COLUMNS_SQL = """\
     [submission_time]  DATETIME2(7) NOT NULL,
     [course_id]        NVARCHAR(20) NOT NULL,
     [course_title]     NVARCHAR(500) NULL,
+    [course_code]      NVARCHAR(50) NULL,
     [course_date]      DATE NULL,
     [venue]            NVARCHAR(200) NULL,
     [language]         NVARCHAR(50) NULL DEFAULT 'English',
@@ -188,6 +189,17 @@ def sync_form_response_table(form_title, form_config):
 
         desired_cols = _get_form_columns(form_config)
         added = []
+        
+        # Check for missing fixed columns
+        fixed_cols = [
+            ('course_code', 'NVARCHAR(50) NULL'),
+        ]
+        
+        for col, sql_type in fixed_cols:
+            if col.lower() not in existing_cols:
+                cur.execute(f"ALTER TABLE [{table}] ADD [{col}] {sql_type}")
+                added.append(col)
+        
         for col, sql_type in desired_cols:
             if col.lower() not in existing_cols:
                 cur.execute(f"ALTER TABLE [{table}] ADD [{col}] {sql_type}")
@@ -656,16 +668,21 @@ def save_response_to_db(form_id, course_id, course, participant_name, id_number,
         venue       = (course.get('classroom') or
                        course.get('assessment_location') or
                        course.get('venue') or '')
+        
+        # Look up Course Code from NAV based on Class Code
+        class_code = course.get('course_title', '')
+        course_code = get_course_code_for_class_code(class_code) or ''
 
         fixed_col_names = [
-            'course_id', 'course_title', 'course_date', 'venue', 'language',
+            'course_id', 'course_title', 'course_code', 'course_date', 'venue', 'language',
             'participant_name', 'id_number', 'position_title',
             'instructor1_name', 'instructor2_name', 'instructor3_name',
             'assessor1_name',   'assessor2_name',
         ]
         fixed_vals = [
             course_id,
-            course.get('course_title', ''),
+            class_code,
+            course_code,
             course.get('course_date', ''),
             venue,
             language,
@@ -763,7 +780,7 @@ def get_responses_for_analysis(form_id, form_config, date_from=None, date_to=Non
         q_col_sql   = (', ' + ', '.join(f'[{c}]' for c in q_col_names)) if q_col_names else ''
 
         cur.execute(f"""
-            SELECT course_id, course_title, course_date, submission_time,
+            SELECT course_id, course_title, course_code, course_date, submission_time,
                    instructor1_name, instructor2_name, instructor3_name,
                    assessor1_name, assessor2_name{q_col_sql}
             FROM [{table}]
@@ -771,7 +788,7 @@ def get_responses_for_analysis(form_id, form_config, date_from=None, date_to=Non
             ORDER BY submission_time DESC
         """, params)
 
-        fixed_keys = ['course_id', 'course_title', 'course_date', 'submission_time',
+        fixed_keys = ['course_id', 'course_title', 'course_code', 'course_date', 'submission_time',
                       'instructor1_name', 'instructor2_name', 'instructor3_name',
                       'assessor1_name', 'assessor2_name']
         all_keys   = fixed_keys + q_col_names
@@ -783,14 +800,10 @@ def get_responses_for_analysis(form_id, form_config, date_from=None, date_to=Non
             date_str = raw.strftime('%Y-%m-%d') if isinstance(raw, datetime) else str(raw or '')[:10]
             raw_course_id = str(row_dict.get('course_id', '') or '').strip()
             raw_course_title = str(row_dict.get('course_title', '') or '').strip()
-            class_code = raw_course_title
-            if not class_code:
-                class_code = raw_course_id
-            if class_code and re.fullmatch(r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}', class_code):
-                class_code = ''
+            raw_course_code = str(row_dict.get('course_code', '') or '').strip()
 
             rows.append({
-                'class_code':   class_code,
+                'course_code':  raw_course_code,
                 'course_title': raw_course_title,
                 'course_id':    raw_course_id,
                 'course_date':  str(row_dict.get('course_date',  '') or '').strip() or date_str,
@@ -938,6 +951,207 @@ def get_nav_course_name_map(class_codes):
         return result
     except Exception as e:
         print(f"Error mapping NAV course names by class code: {e}")
+        return {}
+
+def add_course_code_column(form_title):
+    """Add course_code column to form table if it doesn't exist."""
+    table = _get_table_name(form_title)
+    conn  = get_fbs_connection()
+    if not conn:
+        return False
+    
+    try:
+        cur = conn.cursor()
+        
+        # Check if column exists
+        cur.execute("""
+            SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_NAME = ? AND COLUMN_NAME = 'course_code'
+        """, (table,))
+        
+        if cur.fetchone()[0] == 0:
+            # Column doesn't exist, add it
+            cur.execute(f"ALTER TABLE [{table}] ADD [course_code] NVARCHAR(50) NULL")
+            conn.commit()
+            print(f"Added course_code column to [{table}]")
+        
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error adding course_code column to {table}: {e}")
+        return False
+
+def backfill_course_codes(form_title):
+    """Populate course_code column for existing responses using their class codes."""
+    table = _get_table_name(form_title)
+    conn  = get_fbs_connection()
+    if not conn:
+        return False, "Could not connect to AKC_FBS"
+    
+    try:
+        cur = conn.cursor()
+        
+        # Get all rows with empty course_code
+        cur.execute(f"""
+            SELECT [id], [course_title] 
+            FROM [{table}]
+            WHERE [course_code] IS NULL OR [course_code] = ''
+        """)
+        
+        rows = cur.fetchall()
+        updated = 0
+        
+        for row_id, class_code in rows:
+            if not class_code:
+                continue
+            
+            # Look up course code from NAV
+            course_code = get_course_code_for_class_code(class_code)
+            if course_code:
+                cur.execute(f"""
+                    UPDATE [{table}]
+                    SET [course_code] = ?
+                    WHERE [id] = ?
+                """, (course_code, row_id))
+                updated += 1
+        
+        conn.commit()
+        conn.close()
+        return True, f"Updated {updated} responses with course codes"
+    except Exception as e:
+        print(f"Error backfilling course codes for {table}: {e}")
+        return False, str(e)
+
+def get_course_code_for_class_code(class_code):
+    """Get the Course Code from NAV for a given Class Code. Returns course_code or None."""
+    if not class_code:
+        return None
+    
+    class_code = str(class_code or '').strip()
+    if not class_code:
+        return None
+    
+    conn = get_connection()
+    if not conn:
+        print(f"NAV connection failed for class_code lookup: {class_code}")
+        return None
+    
+    try:
+        cur = conn.cursor()
+        # Debug: Try simple select first
+        sql = f"SELECT TOP 1 [{chr(91)}Course Code{chr(93)}] FROM {PARTICIPANT_TABLE} WHERE UPPER(LTRIM(RTRIM([{chr(91)}Class Code{chr(93)}]))) = ?"
+        
+        # Let's use a simpler approach with proper escaping
+        query = f"""
+            SELECT TOP 1 [Course Code]
+            FROM {PARTICIPANT_TABLE}
+            WHERE UPPER(RTRIM(LTRIM([Class Code]))) = ?
+        """
+        
+        print(f"DEBUG: Executing query for class_code: {class_code}")
+        cur.execute(query, (class_code.upper().strip(),))
+        
+        row = cur.fetchone()
+        conn.close()
+        
+        if row:
+            result = str(row[0] or '').strip()
+            print(f"DEBUG: Found course code '{result}' for class code '{class_code}'")
+            return result if result else None
+        else:
+            print(f"DEBUG: No match found for class code '{class_code}'")
+            return None
+    except Exception as e:
+        print(f"Error getting course code for class code '{class_code}': {e}")
+        return None
+
+def get_nav_course_code_map(class_codes):
+    """Get Course Code from NAV database by Class Code. Returns {class_code_upper: course_code}"""
+    if not class_codes:
+        return {}
+
+    codes = sorted({str(c).strip().upper() for c in class_codes if str(c).strip()})
+    if not codes:
+        return {}
+
+    conn = get_connection()
+    if not conn:
+        return {}
+
+    try:
+        placeholders = ','.join('?' for _ in codes)
+        cur = conn.cursor()
+        cur.execute(f"""
+            WITH req AS (
+                SELECT ? AS class_code
+                {''.join(' UNION ALL SELECT ?' for _ in range(len(codes) - 1))}
+            ), mapped AS (
+                SELECT
+                    req.class_code,
+                    NULLIF(LTRIM(RTRIM(c_ts.[Code])), '') AS course_code,
+                    1 AS source_rank,
+                    COUNT(*) AS hit_count
+                FROM req
+                LEFT JOIN {PARTICIPANT_TABLE} p
+                    ON UPPER(LTRIM(RTRIM(p.[Class Code]))) = req.class_code
+                LEFT JOIN {COURSE_TABLE} c_ts
+                    ON p.[Timestamp] = c_ts.[Timestamp]
+                GROUP BY req.class_code, NULLIF(LTRIM(RTRIM(c_ts.[Code])), '')
+
+                UNION ALL
+
+                SELECT
+                    req.class_code,
+                    NULLIF(LTRIM(RTRIM(c_code.[Code])), '') AS course_code,
+                    2 AS source_rank,
+                    COUNT(*) AS hit_count
+                FROM req
+                LEFT JOIN {PARTICIPANT_TABLE} p
+                    ON UPPER(LTRIM(RTRIM(p.[Class Code]))) = req.class_code
+                LEFT JOIN {COURSE_TABLE} c_code
+                    ON UPPER(LTRIM(RTRIM(p.[Class Code]))) = UPPER(LTRIM(RTRIM(c_code.[Code])))
+                GROUP BY req.class_code, NULLIF(LTRIM(RTRIM(c_code.[Code])), '')
+
+                UNION ALL
+
+                SELECT
+                    req.class_code,
+                    NULLIF(LTRIM(RTRIM(c_direct.[Code])), '') AS course_code,
+                    3 AS source_rank,
+                    COUNT(*) AS hit_count
+                FROM req
+                LEFT JOIN {COURSE_TABLE} c_direct
+                    ON UPPER(LTRIM(RTRIM(c_direct.[Code]))) = req.class_code
+                GROUP BY req.class_code, NULLIF(LTRIM(RTRIM(c_direct.[Code])), '')
+            ), ranked AS (
+                SELECT
+                    class_code,
+                    course_code,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY class_code
+                        ORDER BY CASE WHEN course_code IS NULL THEN 1 ELSE 0 END,
+                                 source_rank ASC,
+                                 hit_count DESC,
+                                 course_code ASC
+                    ) AS rn
+                FROM mapped
+            )
+            SELECT class_code, course_code
+            FROM ranked
+            WHERE rn = 1
+        """, codes)
+
+        result = {}
+        for row in cur.fetchall():
+            class_code = str(row[0] or '').strip().upper()
+            course_code = str(row[1] or '').strip()
+            if class_code:
+                result[class_code] = course_code
+
+        conn.close()
+        return result
+    except Exception as e:
+        print(f"Error mapping NAV course codes by class code: {e}")
         return {}
 
 def get_courses_from_db(search_term=None, limit=50):
