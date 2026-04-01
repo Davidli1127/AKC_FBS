@@ -685,32 +685,43 @@
 
         <div class="form-selector">
             <div class="form-selector-controls">
-                <label for="formFilterSelect">Filter by Form:</label>
-                <select id="formFilterSelect" onchange="onFormSelectionChange()">
-                    <option value="">-- All Forms --</option>
-                    {% for form_id, form_data in forms.items() %}
-                    <option value="{{ form_id }}">{{ form_data.get('title', form_id) }}</option>
-                    {% endfor %}
-                </select>
-                <div id="lowRatingsLanguageGroup">
-                    <label for="lowRatingsLanguageSelect">Language:</label>
-                    <select id="lowRatingsLanguageSelect" onchange="updateLowRatingsLanguage()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; min-width: 150px;">
-                        <option value="">Select language...</option>
-                    </select>
+                <!-- First row: Filter by Form, Language, Search by Class Code, Refresh -->
+                <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap; width: 100%; margin-bottom: 12px;">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <label for="formFilterSelect">Filter by Form:</label>
+                        <select id="formFilterSelect" onchange="onFormSelectionChange()" style="min-width: 200px;">
+                            <option value="">-- All Forms --</option>
+                            {% for form_id, form_data in forms.items() %}
+                            <option value="{{ form_id }}">{{ form_data.get('title', form_id) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="lowRatingsLanguageGroup" style="display: flex; gap: 8px; align-items: center;">
+                        <label for="lowRatingsLanguageSelect">Language:</label>
+                        <select id="lowRatingsLanguageSelect" onchange="updateLowRatingsLanguage()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; min-width: 150px;">
+                            <option value="">Select language...</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <label for="courseCodeSearch">Search by Class Code:</label>
+                        <input type="text" id="courseCodeSearch" placeholder="e.g., HT26ACSRABD012" onchange="onCourseCodeChange()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 180px;">
+                    </div>
+                    <button onclick="loadFeedback()" style="margin-left: auto; white-space: nowrap;">🔄 Refresh Data</button>
                 </div>
-                <button onclick="loadFeedback()">🔄 Refresh Data</button>
-                <label for="courseCodeSearch" style="margin-left: 20px;">Search by Class Code:</label>
-                <input type="text" id="courseCodeSearch" placeholder="e.g., HT26ACSRABD012" onchange="onCourseCodeChange()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 200px;">
-                <label for="ratingThresholdSelect" style="margin-left: auto;">Show ratings:</label>
-                <select id="ratingThresholdSelect" onchange="onRatingThresholdChange()">
-                    <option value="2">1-2 (Critical)</option>
-                    <option value="3">1-3 (Below Average)</option>
-                    <option value="4">1-4 (Needs Improvement)</option>
-                </select>
-                <div class="view-mode-buttons">
-                    <button id="viewAllBtn" class="active" onclick="setViewMode('all', this)">All</button>
-                    <button id="viewRatingsBtn" onclick="setViewMode('ratings', this)">Low Ratings Only</button>
-                    <button id="viewTextBtn" onclick="setViewMode('text', this)">Text Feedback Only</button>
+                <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap; width: 100%;">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <label for="ratingThresholdSelect">Show ratings:</label>
+                        <select id="ratingThresholdSelect" onchange="onRatingThresholdChange()">
+                            <option value="2">1-2 (Critical)</option>
+                            <option value="3">1-3 (Below Average)</option>
+                            <option value="4">1-4 (Needs Improvement)</option>
+                        </select>
+                    </div>
+                    <div class="view-mode-buttons" style="display: flex; gap: 8px;">
+                        <button id="viewAllBtn" class="active" onclick="setViewMode('all', this)">All</button>
+                        <button id="viewRatingsBtn" onclick="setViewMode('ratings', this)">Low Ratings Only</button>
+                        <button id="viewTextBtn" onclick="setViewMode('text', this)">Text Feedback Only</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -837,7 +848,6 @@
 
                         <div class="form-actions">
                             <button class="btn-preview" onclick="previewEmail()">Preview Email</button>
-                            <button class="btn-submit" id="submitBtn" onclick="submitRectification()">Submit & Send</button>
                             <button class="btn-clear" onclick="clearForm()">Clear</button>
                         </div>
                     </div>
@@ -973,7 +983,6 @@
 
             const languageVersions = FORM_BY_TITLE[formTitle] || [];
 
-            // Always show language selector, even if there's only one version
             if (languageVersions.length >= 1) {
                 languageVersions.forEach(version => {
                     const opt = new Option(version.language, version.id);

@@ -47,7 +47,7 @@
                             </select>
                         </div>
 
-                        <div class="form-group" id="languageGroup" style="display:none;">
+                        <div class="form-group" id="languageGroup">
                             <label>Language Version:</label>
                             <select id="languageSelect" name="language_version" required onchange="selectLanguageVersion()">
                                 <option value="">Select a language...</option>
@@ -308,8 +308,8 @@
                             </select>
                         </div>
                         <div style="flex:0; min-width:200px;">
-                            <label for="editFormLanguageSelect" style="display:none;">Language Version:</label>
-                            <select id="editFormLanguageSelect" onchange="loadFormForEdit('language')" style="display:none;">
+                            <label for="editFormLanguageSelect">Language Version:</label>
+                            <select id="editFormLanguageSelect" onchange="loadFormForEdit('language')">
                             </select>
                         </div>
                         <div style="display:flex; gap:8px; padding-top:22px;">
@@ -1040,7 +1040,7 @@
             
             const languageVersions = FORM_BY_TITLE[formTitle] || [];
             
-            if (languageVersions.length > 1) {
+            if (languageVersions.length >= 1) {
                 languageVersions.forEach(version => {
                     const opt = new Option(version.language, version.id);
                     languageSelect.add(opt);
@@ -1441,7 +1441,7 @@
                     const languageVersions = FORM_BY_TITLE[selectedTitle] || [];
                     languageSelect.innerHTML = '';
                     
-                    if (languageVersions.length > 1) {
+                    if (languageVersions.length >= 1) {
                         languageVersions.forEach(version => {
                             const opt = document.createElement('option');
                             opt.value = version.id;
