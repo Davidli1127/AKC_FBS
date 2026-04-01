@@ -1028,8 +1028,6 @@
             const formId = document.getElementById('formSelect').value;
             const languageSelect = document.getElementById('languageSelect');
             const languageGroup = document.getElementById('languageGroup');
-            
-            // Update language selector based on form selection
             languageSelect.innerHTML = '<option value="">Select a language...</option>';
             languageGroup.style.display = 'none';
             
@@ -1049,7 +1047,6 @@
                 languageGroup.style.display = 'block';
             }
             
-            // Now load the QR fields for the selected form (or its language version)
             const selectedFormId = languageSelect.value || formId;
             const qf = FORM_QR_FIELDS[selectedFormId];
 
@@ -1104,8 +1101,7 @@
             const selectedFormId = document.getElementById('languageSelect').value;
             if (selectedFormId) {
                 document.getElementById('formSelect').value = selectedFormId;
-                // Update the QR fields for the newly selected language version
-                loadClassCodes(); // This will show class code group if date is set
+                loadClassCodes();
             }
         }
 
@@ -1424,14 +1420,12 @@
             const languageSelect = document.getElementById('editFormLanguageSelect');
             const languageLabel = languageSelect.previousElementSibling;
             
-            // If called from language dropdown, update the main dropdown
             if (source === 'language') {
                 selectedFormId = languageSelect.value;
                 if (document.getElementById('editFormSelect').value !== selectedFormId) {
                     document.getElementById('editFormSelect').value = selectedFormId;
                 }
             } else {
-                // Called from main dropdown - populate the language selector
                 const selectedTitle = FORM_TITLE_MAP[selectedFormId];
                 if (!selectedTitle) {
                     languageSelect.style.display = 'none';
@@ -1533,7 +1527,6 @@
         function renderFormEditor() {
             const container = document.getElementById('formEditor');
             let html = '';
-            
             
             if (!currentFormData.sections) {
                 currentFormData.sections = [];

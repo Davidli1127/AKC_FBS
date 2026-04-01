@@ -1475,7 +1475,7 @@ def _parse_month_range(month_value):
     return start, end
 
 def _build_rating_question_map(form):
-    """Build ordered map {column_id: question_text} for all rating-like sections."""
+    """Build ordered map for all rating-like sections."""
     rating_q_map = {}
     for section in form.get('sections', []):
         s_type = section.get('type', '')
@@ -1589,8 +1589,6 @@ def get_analysis_dashboard():
     months_available = db.get_available_analysis_months(form_id, form)
     rows = db.get_responses_for_analysis(form_id, form, dt_from, dt_to, None)
     rating_q_map = _build_rating_question_map(form)
-
-    # Use stored course_code from database (looked up from NAV when response was saved)
     course_titles_available = set()
     prepared_rows = []
     for row in rows:
@@ -2239,9 +2237,7 @@ if __name__ == '__main__':
         if not _form.get('is_archived'):
             _ok, _msg = db.create_form_response_table(_form.get('title', _fid), _form)
             print(f"  [{_form.get('title', _fid)}]: {_msg}")
-            # Add course_code column if it doesn't exist
             db.add_course_code_column(_form.get('title', _fid))
-            # Backfill course codes for existing responses
             _bf_ok, _bf_msg = db.backfill_course_codes(_form.get('title', _fid))
             if _bf_ok and 'Updated' in _bf_msg:
                 print(f"  [Backfill]: {_bf_msg}")

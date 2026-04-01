@@ -990,8 +990,6 @@ def backfill_course_codes(form_title):
     
     try:
         cur = conn.cursor()
-        
-        # Get all rows with empty course_code
         cur.execute(f"""
             SELECT [id], [course_title] 
             FROM [{table}]
@@ -1038,10 +1036,7 @@ def get_course_code_for_class_code(class_code):
     
     try:
         cur = conn.cursor()
-        # Debug: Try simple select first
         sql = f"SELECT TOP 1 [{chr(91)}Course Code{chr(93)}] FROM {PARTICIPANT_TABLE} WHERE UPPER(LTRIM(RTRIM([{chr(91)}Class Code{chr(93)}]))) = ?"
-        
-        # Let's use a simpler approach with proper escaping
         query = f"""
             SELECT TOP 1 [Course Code]
             FROM {PARTICIPANT_TABLE}
@@ -1263,10 +1258,7 @@ def get_participant_name_by_id(class_code, identification_number):
 
 
 def get_participants_by_class(class_code, offset=0, limit=20):
-    """
-    Fetch participants for a class with pagination.
-    Deduplicates on Identification Number (or Name when ID is absent).
-    """
+    """Fetch participants for a class with pagination. Deduplicates on Identification Number"""
     conn = get_connection()
     if not conn:
         return {'error': 'Could not connect to database'}
@@ -1312,7 +1304,6 @@ def get_participants_by_class(class_code, offset=0, limit=20):
         print(f"Error fetching participants: {e}")
         return {'error': str(e)}
 
-
 def update_survey_sent(course_code, participant_name, sent=True):
     """Update the Survey Sent flag for a participant in AKC_NAV."""
     conn = get_connection()
@@ -1331,7 +1322,6 @@ def update_survey_sent(course_code, participant_name, sent=True):
     except Exception as e:
         print(f"Error updating survey sent: {e}")
         return False
-
 
 def init_rectification_log_table():
     """Create the FBS_Rectification_Log table if it does not exist."""
