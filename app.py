@@ -22,10 +22,20 @@ except ImportError:
     print('Warning: qrcode library not installed. Run: pip install qrcode[pil]')
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'akc-feedback-secret-key-2026')
+app.secret_key = os.environ.get('SECRET_KEY')
+if not app.secret_key:
+    raise EnvironmentError(
+        'SECRET_KEY environment variable is not set. '
+        'Please configure your .env file with a SECRET_KEY.'
+    )
 
-ADMIN_ACCOUNT = os.environ.get('ADMIN_ACCOUNT', 'admin')
-ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'akc2026')
+ADMIN_ACCOUNT = os.environ.get('ADMIN_ACCOUNT')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
+if not ADMIN_ACCOUNT or not ADMIN_PASSWORD:
+    raise EnvironmentError(
+        'ADMIN_ACCOUNT and ADMIN_PASSWORD environment variables must be set. '
+        'Please configure your .env file with valid admin credentials.'
+    )
 
 # Language code mapping for form IDs
 LANGUAGE_CODE_MAP = {

@@ -7,13 +7,29 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DB_SERVER   = os.getenv('DB_SERVER',   '10.64.2.18')
-DB_USERNAME = os.getenv('DB_USERNAME', 'moodleLMSAdmin')
-DB_PASSWORD = os.getenv('DB_PASSWORD', '')
-DB_NAV_DATABASE  = os.getenv('DB_DATABASE',     'AKC_NAV')
+DB_SERVER   = os.getenv('DB_SERVER')
+DB_USERNAME = os.getenv('DB_USERNAME')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+DB_NAV_DATABASE  = os.getenv('DB_NAV_DATABASE', 'AKC_NAV')
 COURSE_TABLE      = '[Absolute Kinetics Consultancy$Course]'
 PARTICIPANT_TABLE = '[Absolute Kinetics Consultancy$Course Participant]'
 DB_FBS_DATABASE = os.getenv('DB_FBS_DATABASE', 'AKC_FBS')
+
+# Validate required environment variables
+def _validate_db_config():
+    """Validate that required database configuration is set."""
+    missing = []
+    if not DB_SERVER:
+        missing.append('DB_SERVER')
+    if not DB_USERNAME:
+        missing.append('DB_USERNAME')
+    if DB_PASSWORD is None:
+        missing.append('DB_PASSWORD')
+    if missing:
+        raise EnvironmentError(
+            f"Missing required environment variables: {', '.join(missing)}. "
+            f"Please ensure your .env file is properly configured in the project root."
+        )
 
 _CONN_TMPL = (
     'DRIVER={{ODBC Driver 18 for SQL Server}};'
@@ -23,6 +39,7 @@ _CONN_TMPL = (
 def get_connection():
     """Return a connection to AKC_NAV."""
     try:
+        _validate_db_config()
         return pyodbc.connect(_CONN_TMPL.format(
             server=DB_SERVER, db=DB_NAV_DATABASE,
             uid=DB_USERNAME, pwd=DB_PASSWORD))
@@ -34,6 +51,7 @@ def get_connection():
 def get_fbs_connection():
     """Return a connection to AKC_FBS."""
     try:
+        _validate_db_config()
         return pyodbc.connect(_CONN_TMPL.format(
             server=DB_SERVER, db=DB_FBS_DATABASE,
             uid=DB_USERNAME, pwd=DB_PASSWORD))
