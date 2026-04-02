@@ -11,7 +11,14 @@ import uuid
 from functools import wraps
 import hashlib
 from dotenv import load_dotenv
-load_dotenv()
+from pathlib import Path
+
+APP_DIR = Path(__file__).parent.absolute()
+ENV_PATH = APP_DIR / '.env'
+if ENV_PATH.exists():
+    load_dotenv(ENV_PATH)
+else:
+    load_dotenv()
 import db
 try:
     import qrcode

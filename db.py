@@ -4,8 +4,14 @@ import json
 import pyodbc
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from pathlib import Path
 
-load_dotenv()
+APP_DIR = Path(__file__).parent.absolute()
+ENV_PATH = APP_DIR / '.env'
+if ENV_PATH.exists():
+    load_dotenv(ENV_PATH)
+else:
+    load_dotenv()
 
 DB_SERVER   = os.getenv('DB_SERVER')
 DB_USERNAME = os.getenv('DB_USERNAME')
@@ -15,7 +21,6 @@ COURSE_TABLE      = '[Absolute Kinetics Consultancy$Course]'
 PARTICIPANT_TABLE = '[Absolute Kinetics Consultancy$Course Participant]'
 DB_FBS_DATABASE = os.getenv('DB_FBS_DATABASE', 'AKC_FBS')
 
-# Validate required environment variables
 def _validate_db_config():
     """Validate that required database configuration is set."""
     missing = []
