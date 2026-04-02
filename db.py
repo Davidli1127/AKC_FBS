@@ -38,18 +38,30 @@ def _validate_db_config():
 
 _CONN_TMPL = (
     'DRIVER={{ODBC Driver 18 for SQL Server}};'
-    'SERVER={server};DATABASE={db};UID={uid};PWD={pwd};TrustServerCertificate=yes'
+    'SERVER={server};DATABASE={db};UID={uid};PWD={pwd};TrustServerCertificate=yes;'
+    'Connection Timeout=10'
 )
 
 def get_connection():
     """Return a connection to AKC_NAV."""
     try:
         _validate_db_config()
-        return pyodbc.connect(_CONN_TMPL.format(
+        conn = pyodbc.connect(_CONN_TMPL.format(
             server=DB_SERVER, db=DB_NAV_DATABASE,
             uid=DB_USERNAME, pwd=DB_PASSWORD))
-    except pyodbc.Error as e:
-        print(f"AKC_NAV connection error: {e}")
+        return conn
+    except pyodbc.DatabaseError as e:
+        # Database access error
+        error_msg = f"AKC_NAV database error - Server: {DB_SERVER}, DB: {DB_NAV_DATABASE}, User: {DB_USERNAME}, Error: {e}"
+        print(error_msg)
+        return None
+    except pyodbc.OperationalError as e:
+        error_msg = f"AKC_NAV operational error - Cannot reach server {DB_SERVER}. Error: {e}"
+        print(error_msg)
+        return None
+    except Exception as e:
+        error_msg = f"AKC_NAV connection error - Server: {DB_SERVER}, DB: {DB_NAV_DATABASE}, User: {DB_USERNAME}, Error: {e}"
+        print(error_msg)
         return None
 
 
@@ -57,30 +69,66 @@ def get_fbs_connection():
     """Return a connection to AKC_FBS."""
     try:
         _validate_db_config()
-        return pyodbc.connect(_CONN_TMPL.format(
+        conn = pyodbc.connect(_CONN_TMPL.format(
             server=DB_SERVER, db=DB_FBS_DATABASE,
             uid=DB_USERNAME, pwd=DB_PASSWORD))
-    except pyodbc.Error as e:
-        print(f"AKC_FBS connection error: {e}")
+        return conn
+    except pyodbc.DatabaseError as e:
+        # Database access error
+        error_msg = f"AKC_FBS database error - Server: {DB_SERVER}, DB: {DB_FBS_DATABASE}, User: {DB_USERNAME}, Error: {e}"
+        print(error_msg)
+        return None
+    except pyodbc.OperationalError as e:
+        error_msg = f"AKC_FBS operational error - Cannot reach server {DB_SERVER}. Error: {e}"
+        print(error_msg)
+        return None
+    except Exception as e:
+        error_msg = f"AKC_FBS connection error - Server: {DB_SERVER}, DB: {DB_FBS_DATABASE}, User: {DB_USERNAME}, Error: {e}"
+        print(error_msg)
         return None
 
 
 def test_connection():
     """Test both database connections. Returns (ok: bool, message: str)."""
     results = {}
-    for label, fn in [('AKC_NAV', get_connection), ('AKC_FBS', get_fbs_connection)]:
-        conn = fn()
+    
+    try:
+        conn = get_connection()
         if conn:
             try:
                 conn.cursor().execute("SELECT 1")
                 conn.close()
-                results[label] = 'OK'
+                results['AKC_NAV'] = 'OK'
             except Exception as e:
-                results[label] = str(e)
+                results['AKC_NAV'] = f'Query failed: {e}'
         else:
-            results[label] = 'Could not connect'
-    ok = all(v == 'OK' for v in results.values())
-    return ok, ' | '.join(f'{k}: {v}' for k, v in results.items())
+            results['AKC_NAV'] = 'Connection returned None'
+    except Exception as e:
+        results['AKC_NAV'] = f'Exception: {e}'
+    
+    try:
+        conn = get_fbs_connection()
+        if conn:
+            try:
+                conn.cursor().execute("SELECT 1")
+                conn.close()
+                results['AKC_FBS'] = 'OK'
+            except Exception as e:
+                results['AKC_FBS'] = f'Query failed: {e}'
+        else:
+            results['AKC_FBS'] = 'Connection returned None'
+    except Exception as e:
+        results['AKC_FBS'] = f'Exception: {e}'
+    
+    results['Config_DB_SERVER'] = DB_SERVER or 'NOT SET'
+    results['Config_DB_USERNAME'] = DB_USERNAME or 'NOT SET'
+    results['Config_DB_PASSWORD'] = '***' if DB_PASSWORD else 'NOT SET'
+    
+    ok = all('OK' in v for v in [results['AKC_NAV'], results['AKC_FBS']])
+    message = ' | '.join(f'{k}: {v}' for k, v in results.items())
+    print(f"[DB TEST] {message}")
+    
+    return ok, message
 
 def _get_table_name(form_title):
     """Convert form title to a SQL table name."""
