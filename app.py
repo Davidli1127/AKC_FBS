@@ -534,6 +534,8 @@ def scan_select():
     course = db.get_course_by_id(course_id)
     if not course:
         return jsonify({'error': 'Session not found.'}), 404
+    if not course.get('is_active'):
+        return jsonify({'error': 'This QR session has been closed by the administrator.'}), 403
 
     if has_submitted(course_id, id_number):
         return jsonify({'error': 'You have already submitted feedback for this session. Thank you!'}), 400
@@ -1012,6 +1014,7 @@ def get_courses():
     courses = db.get_all_courses_from_db()
     # Add form_url to each course for direct access links
     public_base = os.environ.get('PUBLIC_URL', '').rstrip('/') or request.host_url.rstrip('/')
+    public_base = public_base.replace('https://', 'http://')
     for course in courses:
         course['form_url'] = public_base + f'/student-login/{course["id"]}'
     return jsonify(courses)
@@ -1083,7 +1086,8 @@ def create_course():
     form_url = None
     if QR_AVAILABLE:
         public_base = os.environ.get('PUBLIC_URL', '').rstrip('/') or request.host_url.rstrip('/')
-        form_url = public_base + f'/student-login/{course["id"]}'
+        public_base = public_base.replace('https://', 'http://')
+        form_url = public_base + f'/student-login/{course["id"]}' 
         qr = qrcode.QRCode(version=1, box_size=10, border=4)
         qr.add_data(form_url)
         qr.make(fit=True)
@@ -1137,6 +1141,7 @@ def get_course_qrcode(course_id):
     if not QR_AVAILABLE:
         return jsonify({'error': 'QR code library not installed'}), 500
     public_base = os.environ.get('PUBLIC_URL', '').rstrip('/') or request.host_url.rstrip('/')
+    public_base = public_base.replace('https://', 'http://')
     form_url = public_base + f'/student-login/{course_id}'
     qr = qrcode.QRCode(version=1, box_size=10, border=4)
     qr.add_data(form_url)
@@ -1154,6 +1159,7 @@ def get_universal_qrcode():
     if not QR_AVAILABLE:
         return jsonify({'error': 'QR code library not installed'}), 500
     public_base = os.environ.get('PUBLIC_URL', '').rstrip('/') or request.host_url.rstrip('/')
+    public_base = public_base.replace('https://', 'http://')
     scan_url = public_base + '/scan'
     qr = qrcode.QRCode(version=1, box_size=10, border=4)
     qr.add_data(scan_url)
@@ -1245,6 +1251,8 @@ def submit_form(course_id):
     course = db.get_course_by_id(course_id)
     if not course:
         return jsonify({'error': 'Course not found'}), 404
+    if not course.get('is_active'):
+        return jsonify({'error': 'This QR session has been closed by the administrator.'}), 403
 
     data = request.json
     language = _extract_language_from_form_id(course['form_id'])
@@ -1347,7 +1355,8 @@ def get_alerts_analysis():
     for qid, g in groups.items():
         ratings = g['ratings']
         avg = sum(ratings) / len(ratings) if ratings else 0
-        priority = round(g['count'] * (3 - avg), 2)
+        urgency = max(0, 3 - avg) + 1
+        priority = round(g['count'] * urgency, 2)
         result.append({
             'question_id': g['question_id'],
             'question_text': g['question_text'],
@@ -1671,8 +1680,6 @@ def get_analysis_dashboard_filters():
             rows = []
             
         rating_q_map = _build_rating_question_map(form)
-
-
         course_titles = set()
         question_counts = defaultdict(int)
         for row in rows:
@@ -1850,8 +1857,8 @@ def get_analysis_dashboard():
             'count': q['count'],
             'good_pct': q['good_pct']
         }
-        for q in ranked_questions[:5]
-    ]
+        for q in ranked_questions if q['avg'] <= 2 
+    ][:5]
     strongest_questions = [
         {
             'id': q['id'],
@@ -1860,8 +1867,9 @@ def get_analysis_dashboard():
             'count': q['count'],
             'good_pct': q['good_pct']
         }
-        for q in sorted(ranked_questions, key=lambda x: (-x['avg'], -x['count'], x['text']))[:5]
-    ]
+        for q in sorted(ranked_questions, key=lambda x: (-x['avg'], -x['count'], x['text']))
+        if q['avg'] >= 4
+    ][:5]
 
     return jsonify({
         'filters': {

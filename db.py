@@ -561,7 +561,7 @@ def deactivate_course(course_id):
         conn.close()
         return True
     except Exception as e:
-        print(f"Error deactivating course {course_id}: {e}")
+        logger.error(f"Error deactivating course {course_id}: {e}")
         return False
 
 
@@ -579,14 +579,11 @@ def reactivate_course(course_id):
         conn.close()
         return True
     except Exception as e:
-        print(f"Error reactivating course {course_id}: {e}")
+        logger.error(f"Error reactivating course {course_id}: {e}")
         return False
 
 def register_form(form_id, form_title, form_number, description, config_dict, language='English'):
-    """
-    Upsert a form in FBS_Forms.
-    If the form was previously soft-deleted, it is restored (is_deleted -> 0).
-    """
+    """Upsert a form in FBS_Forms."""
     conn = get_fbs_connection()
     if not conn:
         return False
@@ -655,7 +652,7 @@ def find_form_by_title(form_title):
 
 
 def get_active_forms_map():
-    """Return active (not soft-deleted) forms as {form_id: config_dict}."""
+    """Return active forms as {form_id: config_dict}."""
     conn = get_fbs_connection()
     if not conn:
         return {}
@@ -806,16 +803,10 @@ def save_response_to_db(form_id, course_id, course, participant_name, id_number,
         venue       = (course.get('classroom') or
                        course.get('assessment_location') or
                        course.get('venue') or '')
-        
-        # Look up Course Code from NAV based on Class Code
         class_code = course.get('course_title', '')
         course_code = get_course_code_for_class_code(class_code) or ''
-
-        # Check if form has instructor and/or assessor sections
         has_instructor_section = any(s.get('type') == 'instructor_rating' for s in form_config.get('sections', []))
         has_assessor_section = any(s.get('type') == 'assessor_rating' for s in form_config.get('sections', []))
-
-        # Build fixed columns dynamically based on form config
         fixed_col_names = [
             'id', 'submission_time', 'course_id', 'course_title', 'course_code', 'course_date', 'venue', 'language',
             'participant_name', 'id_number', 'position_title',
@@ -834,7 +825,6 @@ def save_response_to_db(form_id, course_id, course, participant_name, id_number,
             position or '',
         ]
 
-        # Only add instructor columns if form has instructor section
         if has_instructor_section:
             fixed_col_names.extend(['instructor1_name', 'instructor2_name', 'instructor3_name'])
             fixed_vals.extend([
@@ -843,7 +833,6 @@ def save_response_to_db(form_id, course_id, course, participant_name, id_number,
                 instructors[2] if len(instructors) > 2 else None,
             ])
 
-        # Only add assessor columns if form has assessor section
         if has_assessor_section:
             fixed_col_names.extend(['assessor1_name', 'assessor2_name'])
             fixed_vals.extend([
