@@ -12,6 +12,7 @@ from functools import wraps
 import hashlib
 from dotenv import load_dotenv
 from pathlib import Path
+import logging
 
 APP_DIR = Path(__file__).parent.absolute()
 ENV_PATH = APP_DIR / '.env'
@@ -36,12 +37,30 @@ if not app.secret_key:
         'Please configure your .env file with a SECRET_KEY.'
     )
 
-
-app.config['SESSION_COOKIE_SECURE'] = True
+# Configure session for IIS - use default Flask sessions with permanent flag
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
+
+# Configure file-based logging to track session issues
+log_dir = Path(APP_DIR) / 'logs'
+log_dir.mkdir(exist_ok=True)
+log_file = log_dir / 'session_debug.log'
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        logging.FileHandler(str(log_file)),
+        logging.StreamHandler()  # Also output to console
+    ]
+)
+logger = logging.getLogger(__name__)
+logger.info("="*80)
+logger.info("Application started - Logging enabled")
+logger.info(f"Log file: {log_file}")
+logger.info("="*80)
 
 ADMIN_ACCOUNT = os.environ.get('ADMIN_ACCOUNT')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
@@ -418,19 +437,22 @@ def save_response(form_id, course_id, data, id_number='', language='English'):
     participant_name = data.get('name', '')
     position = data.get('position', '')
 
+    logger.info(f"[SAVE_RESPONSE] Starting save for form_id={form_id}, participant={participant_name}, id_number={id_number}")
+    
     table_ok, table_msg = db.create_form_response_table(form_title, form_config)
     if not table_ok:
-        print(f"ERROR: Could not create response table [{form_title}]: {table_msg}")
+        logger.error(f"[SAVE_RESPONSE] ERROR: Could not create response table [{form_title}]: {table_msg}")
         return False
+    logger.info(f"[SAVE_RESPONSE] Table [{form_title}] verified")
     
     ok = db.save_response_to_db(
         form_id, course_id, course or {},
         participant_name, id_number, position, data, form_title, form_config, language)
     if not ok:
-        print(f"ERROR: Could not save response to database for form_id={form_id}")
+        logger.error(f"[SAVE_RESPONSE] ERROR: Could not save response to database for form_id={form_id}")
         return False
     
-    print(f"SUCCESS: Response saved to table [{form_title}] for participant {participant_name} (ID: {id_number}) in language {language}")
+    logger.info(f"[SAVE_RESPONSE] SUCCESS: Response saved to table [{form_title}] for participant {participant_name} (ID: {id_number}) in language {language}")
     return True
 
 
@@ -475,9 +497,11 @@ def scan_lookup():
         course = matches[0]
         if has_submitted(course['id'], id_number):
             return jsonify({'error': 'You have already submitted feedback for this class. Thank you!'}), 400
+        session.permanent = True
         session['student_name'] = participant_name
         session['student_id_number'] = id_number.upper()
         session['student_course_id'] = course['id']
+        logger.info(f"[LOGIN-SINGLE] Set session - name={participant_name}, id={id_number.upper()}, course_id={course['id']}")
         return jsonify({'redirect': url_for('form_page', course_id=course['id'])})
 
     options = []
@@ -514,9 +538,11 @@ def scan_select():
     if has_submitted(course_id, id_number):
         return jsonify({'error': 'You have already submitted feedback for this session. Thank you!'}), 400
 
+    session.permanent = True
     session['student_name'] = participant_name
     session['student_id_number'] = id_number.upper()
     session['student_course_id'] = course_id
+    logger.info(f"[LOGIN-MULTI] Set session - name={participant_name}, id={id_number.upper()}, course_id={course_id}")
     return jsonify({'redirect': url_for('form_page', course_id=course_id)})
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -584,7 +610,7 @@ def api_admin_login():
                 # Fall through to environment-based auth below
                 pass
         except Exception as e:
-            print(f"Database login error: {e}")
+            logger.error(f"Database login error: {e}")
             # Fall through to environment-based auth below
         finally:
             try:
@@ -650,7 +676,7 @@ def api_admin_signup():
         
         return jsonify({'success': True, 'message': 'Account created successfully'})
     except Exception as e:
-        print(f"Signup error: {e}")
+        logger.error(f"Signup error: {e}")
         return jsonify({'success': False, 'error': 'Server error: ' + str(e)}), 500
     finally:
         conn.close()
@@ -909,7 +935,7 @@ def auto_init_database():
             'results': results
         })
     except Exception as e:
-        print(f"Auto-init error: {e}")
+        logger.warning(f"Auto-init error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -1160,9 +1186,11 @@ def student_login(course_id):
                 course['course_title'], id_number
             )
             if participant_name:
+                session.permanent = True
                 session['student_name'] = participant_name
                 session['student_id_number'] = id_number.upper()
                 session['student_course_id'] = course_id
+                logger.info(f"[LOGIN-MANUAL] Set session - name={participant_name}, id={id_number.upper()}, course_id={course_id}")
                 return redirect(url_for('form_page', course_id=course_id))
             else:
                 error = 'Your Identification Number was not found in the participant list for this class. Please check and try again.'
@@ -1171,7 +1199,13 @@ def student_login(course_id):
 @app.route('/form/<course_id>')
 def form_page(course_id):
     """Public form page for participants to fill"""
-    if session.get('student_course_id') != course_id:
+    session_course_id = session.get('student_course_id')
+    session_name = session.get('student_name', '[NONE]')
+    session_id = session.get('student_id_number', '[NONE]')
+    logger.info(f"[FORM-PAGE] Loading form - request_course_id={course_id}, session_course_id={session_course_id}, student={session_name}/{session_id}")
+    
+    if session_course_id != course_id:
+        logger.info(f"[FORM-PAGE] Redirect to login - mismatch: {session_course_id} != {course_id}")
         return redirect(url_for('student_login', course_id=course_id))
 
     course = db.get_course_by_id(course_id)
@@ -1186,16 +1220,24 @@ def form_page(course_id):
         return "Form not found", 404
     
     student_name = session.get('student_name', '')
+    logger.info(f"[FORM-PAGE] Form loaded successfully for {student_name}")
     return render_template('form.html', form=form, course=course, student_name=student_name)
 
 @app.route('/api/submit/<course_id>', methods=['POST'])
 def submit_form(course_id):
     """Submit form response"""
-    if session.get('student_course_id') != course_id:
+    student_course_id = session.get('student_course_id')
+    student_name = session.get('student_name', '[NO_NAME]')
+    student_id = session.get('student_id_number', '[NO_ID]')
+    all_session_keys = list(session.keys())
+    
+    logger.info(f"[SUBMIT] Request - course_id={course_id}, session_course_id={student_course_id}, student={student_name}/{student_id}")
+    logger.info(f"[SUBMIT] All session keys available: {all_session_keys}")
+    
+    if student_course_id != course_id:
+        error_msg = f"SESSION MISMATCH: session course_id={student_course_id}, request course_id={course_id}, student={student_name}/{student_id}, all_keys={all_session_keys}"
+        logger.error(f"[SUBMIT] ERROR: {error_msg}")
         return jsonify({'error': 'Unauthorized. Please scan the QR code and log in first.'}), 401
-
-    student_name = session.get('student_name', '')
-    student_id = session.get('student_id_number', '')
 
     if has_submitted(course_id, student_id or student_name):
         return jsonify({'error': 'You have already submitted feedback for this class.'}), 400
@@ -1208,24 +1250,28 @@ def submit_form(course_id):
     language = _extract_language_from_form_id(course['form_id'])
     success = save_response(course['form_id'], course_id, data, student_id, language)
     if not success:
-        print(f"ABORT: Form submission failed for {student_name} (ID: {student_id})")
+        error_msg = f"Form submission failed for {student_name} (ID: {student_id}), form_id={course['form_id']}, course_id={course_id}"
+        logger.error(f"[SUBMIT] {error_msg}")
         session.pop('student_name', None)
         session.pop('student_id_number', None)
         session.pop('student_course_id', None)
         return jsonify({'error': 'Failed to save your feedback. Please try again.'}), 500
     
+    logger.info(f"[SUBMIT] Response saved successfully for {student_name} (ID: {student_id})")
+    
     config = load_config()
     form_config = config['forms'].get(course['form_id'], {})
     try:
         save_low_feedback_alerts(course['form_id'], course_id, course, data, form_config)
-        print(f"SUCCESS: Low feedback alerts saved for {student_name}")
+        logger.info(f"[SUBMIT] Low feedback alerts saved for {student_name}")
     except Exception as e:
-        print(f"Warning: Could not save low feedback alerts: {e}")
+        logger.warning(f"[SUBMIT] Warning: Could not save low feedback alerts: {e}")
 
     session.pop('student_name', None)
     session.pop('student_id_number', None)
     session.pop('student_course_id', None)
 
+    logger.info(f"[SUBMIT] SUCCESS: Form submission complete for {student_name}")
     return jsonify({'success': True, 'message': 'Thank you for your feedback!'})
 
 @app.route('/api/alerts', methods=['GET'])
@@ -1660,9 +1706,9 @@ def get_analysis_dashboard_filters():
             'questions_available': questions_available
         })
     except Exception as e:
-        print(f"Dashboard filters error: {e}")
+        logger.error(f"[ANALYSIS] Dashboard filters error: {e}")
         import traceback
-        traceback.print_exc()
+        logger.error(traceback.format_exc())
         return jsonify({'error': f'Server error: {str(e)}', 'months_available': [], 'course_titles_available': [], 'questions_available': []}), 500
 
 
@@ -2319,7 +2365,7 @@ AKC Training Team"""
         })
     
     except Exception as e:
-        print(f"Error sending rectification: {e}")
+        logger.error(f"Error sending rectification: {e}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -2328,13 +2374,13 @@ if __name__ == '__main__':
     db.init_rectification_log_table()
     _cfg = load_config()
     _forms_ok, _forms_sync = sync_forms_registry_with_config(_cfg)
-    print(f"[FBS_Forms sync] {sum(1 for ok in _forms_sync.values() if ok)}/{len(_forms_sync)} forms synced")
+    logger.info(f"[FBS_Forms sync] {sum(1 for ok in _forms_sync.values() if ok)}/{len(_forms_sync)} forms synced")
     for _fid, _form in _cfg['forms'].items():
         if not _form.get('is_archived'):
             _ok, _msg = db.create_form_response_table(_form.get('title', _fid), _form)
-            print(f"  [{_form.get('title', _fid)}]: {_msg}")
+            logger.info(f"  [{_form.get('title', _fid)}]: {_msg}")
             db.add_course_code_column(_form.get('title', _fid))
             _bf_ok, _bf_msg = db.backfill_course_codes(_form.get('title', _fid))
             if _bf_ok and 'Updated' in _bf_msg:
-                print(f"  [Backfill]: {_bf_msg}")
+                logger.info(f"  [Backfill]: {_bf_msg}")
     app.run(debug=True, host='0.0.0.0', port=5000)

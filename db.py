@@ -2,6 +2,8 @@
 import re
 import json
 import pyodbc
+import uuid
+import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from pathlib import Path
@@ -12,6 +14,17 @@ if ENV_PATH.exists():
     load_dotenv(ENV_PATH)
 else:
     load_dotenv()
+
+# Setup logger for db module (use same log file as app)
+logger = logging.getLogger('db')
+if not logger.handlers:  # Only add handlers if not already added
+    log_dir = Path(APP_DIR) / 'logs'
+    log_dir.mkdir(exist_ok=True)
+    log_file = log_dir / 'session_debug.log'
+    handler = logging.FileHandler(str(log_file))
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
 
 DB_SERVER   = os.getenv('DB_SERVER')
 DB_USERNAME = os.getenv('DB_USERNAME')
@@ -218,29 +231,59 @@ def _get_form_columns(form_config):
 
 
 def create_form_response_table(form_title, form_config):
-    """Create the per-form response table in AKC_FBS if it does not already exist."""
+    """Create the per-form response table in AKC_FBS if it does not already exist.
+    If it exists but is missing required columns, drop and recreate it."""
     table = _get_table_name(form_title)
     conn  = get_fbs_connection()
     if not conn:
         return False, "Could not connect to AKC_FBS"
     try:
         cur    = conn.cursor()
-        q_cols = _get_form_columns(form_config)
-        q_col_sql = '\n'.join(
-            f'    [{col}] {sql_type},' for col, sql_type in q_cols
-        )
-        sql = f"""IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='{table}' AND xtype='U')
-CREATE TABLE [{table}] (
+        
+        # Check if table exists and has the required id column
+        cur.execute(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? AND COLUMN_NAME = 'id'",
+            (table,))
+        has_id_column = cur.fetchone()[0] > 0
+        
+        # Check if table exists and has the language column
+        cur.execute(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? AND COLUMN_NAME = 'language'",
+            (table,))
+        has_language_column = cur.fetchone()[0] > 0
+        
+        # Check if table exists
+        cur.execute(
+            "SELECT COUNT(*) FROM sysobjects WHERE name=? AND xtype='U'",
+            (table,))
+        table_exists = cur.fetchone()[0] > 0
+        
+        # If table exists but missing required columns, drop it and recreate
+        if table_exists and (not has_id_column or not has_language_column):
+            logger.info(f"[DB] Dropping old table [{table}] (missing required columns - id:{has_id_column}, language:{has_language_column})")
+            cur.execute(f"DROP TABLE [{table}]")
+            conn.commit()
+            table_exists = False
+        
+        # Create table if it doesn't exist
+        if not table_exists:
+            q_cols = _get_form_columns(form_config)
+            q_col_sql = '\n'.join(
+                f'    [{col}] {sql_type},' for col, sql_type in q_cols
+            )
+            sql = f"""CREATE TABLE [{table}] (
 {_FIXED_COLUMNS_SQL},
 {q_col_sql}
     CONSTRAINT [PK_{table}] PRIMARY KEY ([id])
 )"""
-        cur.execute(sql)
-        conn.commit()
+            logger.info(f"[DB] Creating table [{table}]")
+            cur.execute(sql)
+            conn.commit()
+        
         conn.close()
         return True, f"Table [{table}] is ready."
     except Exception as e:
-        print(f"Error creating table {table}: {e}")
+        logger.error(f"[DB] Error creating table {table}: {e}")
         return False, str(e)
 
 
@@ -308,7 +351,7 @@ def sync_form_response_table(form_title, form_config):
             msg = f"Table [{table}] is up to date (no new columns needed)."
         return True, msg
     except Exception as e:
-        print(f"Error syncing table {table}: {e}")
+        logger.error(f"Error syncing table {table}: {e}")
         return False, str(e)
 
 
@@ -754,7 +797,7 @@ def save_response_to_db(form_id, course_id, course, participant_name, id_number,
     table = _get_table_name(form_title)
     conn  = get_fbs_connection()
     if not conn:
-        print(f"Error: Cannot connect to database for table [{table}]")
+        logger.error(f"[DB-SAVE] Cannot connect to database for table [{table}]")
         return False
     try:
         cur         = conn.cursor()
@@ -768,13 +811,18 @@ def save_response_to_db(form_id, course_id, course, participant_name, id_number,
         class_code = course.get('course_title', '')
         course_code = get_course_code_for_class_code(class_code) or ''
 
+        # Check if form has instructor and/or assessor sections
+        has_instructor_section = any(s.get('type') == 'instructor_rating' for s in form_config.get('sections', []))
+        has_assessor_section = any(s.get('type') == 'assessor_rating' for s in form_config.get('sections', []))
+
+        # Build fixed columns dynamically based on form config
         fixed_col_names = [
-            'course_id', 'course_title', 'course_code', 'course_date', 'venue', 'language',
+            'id', 'submission_time', 'course_id', 'course_title', 'course_code', 'course_date', 'venue', 'language',
             'participant_name', 'id_number', 'position_title',
-            'instructor1_name', 'instructor2_name', 'instructor3_name',
-            'assessor1_name',   'assessor2_name',
         ]
         fixed_vals = [
+            uuid.uuid4(),
+            datetime.now(),
             course_id,
             class_code,
             course_code,
@@ -784,12 +832,24 @@ def save_response_to_db(form_id, course_id, course, participant_name, id_number,
             participant_name or '',
             (id_number or '').strip().upper(),
             position or '',
-            instructors[0] if len(instructors) > 0 else None,
-            instructors[1] if len(instructors) > 1 else None,
-            instructors[2] if len(instructors) > 2 else None,
-            assessors[0]   if len(assessors)   > 0 else None,
-            assessors[1]   if len(assessors)   > 1 else None,
         ]
+
+        # Only add instructor columns if form has instructor section
+        if has_instructor_section:
+            fixed_col_names.extend(['instructor1_name', 'instructor2_name', 'instructor3_name'])
+            fixed_vals.extend([
+                instructors[0] if len(instructors) > 0 else None,
+                instructors[1] if len(instructors) > 1 else None,
+                instructors[2] if len(instructors) > 2 else None,
+            ])
+
+        # Only add assessor columns if form has assessor section
+        if has_assessor_section:
+            fixed_col_names.extend(['assessor1_name', 'assessor2_name'])
+            fixed_vals.extend([
+                assessors[0] if len(assessors) > 0 else None,
+                assessors[1] if len(assessors) > 1 else None,
+            ])
 
         q_cols      = _get_form_columns(form_config)
         q_col_names = [col for col, _ in q_cols]
@@ -818,14 +878,22 @@ def save_response_to_db(form_id, course_id, course, participant_name, id_number,
         cols_sql      = ', '.join(f'[{c}]' for c in all_col_names)
         params_sql    = ', '.join('?' for _ in all_vals)
 
+        logger.info(f"[DB-SAVE] Inserting into [{table}] for participant={participant_name}, id_number={id_number}")
+        logger.debug(f"[DB-SAVE] Columns: {all_col_names}")
+        
         cur.execute(
             f"INSERT INTO [{table}] ({cols_sql}) VALUES ({params_sql})",
             all_vals)
         conn.commit()
         conn.close()
+        logger.info(f"[DB-SAVE] SUCCESS: Saved for participant {participant_name}")
         return True
     except Exception as e:
-        print(f"Error saving response to [{table}]: {e}")
+        logger.error(f"[DB-SAVE] ERROR saving response to [{table}]: {type(e).__name__}: {str(e)}")
+        try:
+            conn.close()
+        except:
+            pass
         return False
 
 def get_response_count_by_form(forms_dict):
@@ -874,18 +942,29 @@ def get_responses_for_analysis(form_id, form_config, date_from=None, date_to=Non
         q_col_names = [col for col, _ in q_cols]
         q_col_sql   = (', ' + ', '.join(f'[{c}]' for c in q_col_names)) if q_col_names else ''
 
+        has_instructor_section = any(s.get('type') == 'instructor_rating' for s in form_config.get('sections', []))
+        has_assessor_section = any(s.get('type') == 'assessor_rating' for s in form_config.get('sections', []))
+        
+        fixed_select = ['course_id', 'course_title', 'course_code', 'course_date', 'submission_time']
+        fixed_keys = fixed_select.copy()
+        
+        if has_instructor_section:
+            fixed_select.extend(['instructor1_name', 'instructor2_name', 'instructor3_name'])
+            fixed_keys.extend(['instructor1_name', 'instructor2_name', 'instructor3_name'])
+        
+        if has_assessor_section:
+            fixed_select.extend(['assessor1_name', 'assessor2_name'])
+            fixed_keys.extend(['assessor1_name', 'assessor2_name'])
+        
+        fixed_select_sql = ', '.join(f'[{c}]' for c in fixed_select)
+
         cur.execute(f"""
-            SELECT course_id, course_title, course_code, course_date, submission_time,
-                   instructor1_name, instructor2_name, instructor3_name,
-                   assessor1_name, assessor2_name{q_col_sql}
+            SELECT {fixed_select_sql}{q_col_sql}
             FROM [{table}]
             WHERE {' AND '.join(where)}
             ORDER BY submission_time DESC
         """, params)
 
-        fixed_keys = ['course_id', 'course_title', 'course_code', 'course_date', 'submission_time',
-                      'instructor1_name', 'instructor2_name', 'instructor3_name',
-                      'assessor1_name', 'assessor2_name']
         all_keys   = fixed_keys + q_col_names
         rows = []
         for r in cur.fetchall():
@@ -903,17 +982,19 @@ def get_responses_for_analysis(form_id, form_config, date_from=None, date_to=Non
                 'course_id':    raw_course_id,
                 'course_date':  str(row_dict.get('course_date',  '') or '').strip() or date_str,
                 'submitted_at': date_str,
-                'instructor1':  str(row_dict.get('instructor1_name') or ''),
-                'instructor2':  str(row_dict.get('instructor2_name') or ''),
-                'instructor3':  str(row_dict.get('instructor3_name') or ''),
-                'assessor1':    str(row_dict.get('assessor1_name')   or ''),
-                'assessor2':    str(row_dict.get('assessor2_name')   or ''),
+                'instructor1':  str(row_dict.get('instructor1_name') or '') if has_instructor_section else '',
+                'instructor2':  str(row_dict.get('instructor2_name') or '') if has_instructor_section else '',
+                'instructor3':  str(row_dict.get('instructor3_name') or '') if has_instructor_section else '',
+                'assessor1':    str(row_dict.get('assessor1_name')   or '') if has_assessor_section else '',
+                'assessor2':    str(row_dict.get('assessor2_name')   or '') if has_assessor_section else '',
                 'answers':      answers,
             })
         conn.close()
         return rows
     except Exception as e:
-        print(f"Error fetching responses from [{table}]: {e}")
+        logger.error(f"[DB-ANALYSIS] Error fetching responses from [{table}]: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return []
 
 
@@ -932,7 +1013,7 @@ def get_distinct_courses_for_form(form_id, form_config):
         conn.close()
         return sorted(codes)
     except Exception as e:
-        print(f"Error fetching distinct courses from [{table}]: {e}")
+        logger.error(f"Error fetching distinct courses from [{table}]: {e}")
         return []
 
 
@@ -956,7 +1037,7 @@ def get_available_analysis_months(form_id, form_config):
         conn.close()
         return months
     except Exception as e:
-        print(f"Error fetching analysis months from [{table}]: {e}")
+        logger.error(f"Error fetching analysis months from [{table}]: {e}")
         return []
 
 
