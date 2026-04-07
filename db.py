@@ -42,16 +42,31 @@ _CONN_TMPL = (
     'Connection Timeout=10'
 )
 
+_CONN_TMPL_LEGACY = (
+    'DRIVER={{SQL Server}};'
+    'SERVER={server};DATABASE={db};UID={uid};PWD={pwd};'
+    'Connection Timeout=10'
+)
+
 def get_connection():
     """Return a connection to AKC_NAV."""
     try:
         _validate_db_config()
-        conn = pyodbc.connect(_CONN_TMPL.format(
-            server=DB_SERVER, db=DB_NAV_DATABASE,
-            uid=DB_USERNAME, pwd=DB_PASSWORD))
-        return conn
+
+        try:
+            conn = pyodbc.connect(_CONN_TMPL.format(
+                server=DB_SERVER, db=DB_NAV_DATABASE,
+                uid=DB_USERNAME, pwd=DB_PASSWORD))
+            print(f"[DB] Connected to AKC_NAV using ODBC Driver 18")
+            return conn
+        except pyodbc.Error as e1:
+            print(f"[DB] ODBC Driver 18 failed, trying legacy SQL Server driver: {e1}")
+            conn = pyodbc.connect(_CONN_TMPL_LEGACY.format(
+                server=DB_SERVER, db=DB_NAV_DATABASE,
+                uid=DB_USERNAME, pwd=DB_PASSWORD))
+            print(f"[DB] Connected to AKC_NAV using legacy SQL Server driver")
+            return conn
     except pyodbc.DatabaseError as e:
-        # Database access error
         error_msg = f"AKC_NAV database error - Server: {DB_SERVER}, DB: {DB_NAV_DATABASE}, User: {DB_USERNAME}, Error: {e}"
         print(error_msg)
         return None
@@ -69,12 +84,21 @@ def get_fbs_connection():
     """Return a connection to AKC_FBS."""
     try:
         _validate_db_config()
-        conn = pyodbc.connect(_CONN_TMPL.format(
-            server=DB_SERVER, db=DB_FBS_DATABASE,
-            uid=DB_USERNAME, pwd=DB_PASSWORD))
-        return conn
+
+        try:
+            conn = pyodbc.connect(_CONN_TMPL.format(
+                server=DB_SERVER, db=DB_FBS_DATABASE,
+                uid=DB_USERNAME, pwd=DB_PASSWORD))
+            print(f"[DB] Connected to AKC_FBS using ODBC Driver 18")
+            return conn
+        except pyodbc.Error as e1:
+            print(f"[DB] ODBC Driver 18 failed, trying legacy SQL Server driver: {e1}")
+            conn = pyodbc.connect(_CONN_TMPL_LEGACY.format(
+                server=DB_SERVER, db=DB_FBS_DATABASE,
+                uid=DB_USERNAME, pwd=DB_PASSWORD))
+            print(f"[DB] Connected to AKC_FBS using legacy SQL Server driver")
+            return conn
     except pyodbc.DatabaseError as e:
-        # Database access error
         error_msg = f"AKC_FBS database error - Server: {DB_SERVER}, DB: {DB_FBS_DATABASE}, User: {DB_USERNAME}, Error: {e}"
         print(error_msg)
         return None

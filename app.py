@@ -36,6 +36,13 @@ if not app.secret_key:
         'Please configure your .env file with a SECRET_KEY.'
     )
 
+
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True
+
 ADMIN_ACCOUNT = os.environ.get('ADMIN_ACCOUNT')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
 if not ADMIN_ACCOUNT or not ADMIN_PASSWORD:
@@ -976,7 +983,12 @@ def get_class_codes():
 @api_login_required
 def get_courses():
     """Get all course sessions from the database."""
-    return jsonify(db.get_all_courses_from_db())
+    courses = db.get_all_courses_from_db()
+    # Add form_url to each course for direct access links
+    public_base = os.environ.get('PUBLIC_URL', '').rstrip('/') or request.host_url.rstrip('/')
+    for course in courses:
+        course['form_url'] = public_base + f'/student-login/{course["id"]}'
+    return jsonify(courses)
 
 @app.route('/api/courses', methods=['POST'])
 @api_login_required
@@ -1042,6 +1054,7 @@ def create_course():
 
     # Generate QR code
     qr_data = None
+    form_url = None
     if QR_AVAILABLE:
         public_base = os.environ.get('PUBLIC_URL', '').rstrip('/') or request.host_url.rstrip('/')
         form_url = public_base + f'/student-login/{course["id"]}'
@@ -1054,7 +1067,7 @@ def create_course():
         buf.seek(0)
         qr_data = base64.b64encode(buf.read()).decode('utf-8')
 
-    return jsonify({'success': True, 'course': course, 'qr_code': qr_data})
+    return jsonify({'success': True, 'course': course, 'qr_code': qr_data, 'form_url': form_url})
 
 @app.route('/api/forms/by-base/<base_form_id>', methods=['GET'])
 @api_login_required
