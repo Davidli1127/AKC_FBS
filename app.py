@@ -199,40 +199,43 @@ _NEGATIVE_FEEDBACK_RE = re.compile(
     re.IGNORECASE
 )
 
-_POSITIVE_KEYWORDS = {
+_STRONG_POSITIVE = {
     'good', 'great', 'excellent', 'amazing', 'wonderful', 'fantastic', 'outstanding',
-    'perfect', 'best', 'awesome', 'superb', 'brilliant', 'exceptional', 'well', 'nice',
-    'love', 'loved', 'enjoyed', 'helpful', 'useful', 'informative', 'interesting',
-    'engaging', 'inspiring', 'professional', 'organized', 'clear', 'well-structured',
-    'positive', 'recommend', 'recommend', 'suitable', 'appropriate', 'effective',
-    'impressed', 'satisfied', 'happy', 'pleased', 'content', 'grateful', 'appreciate',
-    'n/a', 'na', 'none', 'nothing', '–', 'no', 'ok', 'okay', 'fine', 'average',
-    '1', '2', '3', '4', '5'
+    'perfect', 'best', 'awesome', 'superb', 'brilliant', 'exceptional', 
+    'love', 'loved', 'enjoyed', 'impressed', 'loved', 'appreciate'
+}
+
+_NEUTRAL_KEYWORDS = {
+    'n/a', 'na', 'none', 'nothing', 'ok', 'okay', 'fine', 'average',
+    '1', '2', '3', '4', '5', 'clean'
+}
+
+_SKIP_PHRASES = {
+    'not bad', 'not poorly', 'not terrible', 'no problem', 'no issues'
 }
 
 def _extract_negative_matches(text):
-    """Return deduplicated list of matched negative phrases found in text.
-    
-    Returns empty list if:
-    - Text contains ONLY positive/neutral keywords
-    - Text is empty or too short
-    """
+    """Direct negative feedback detection - find negative keywords only."""
     if not text or len(text.strip()) < 2:
         return []
     
     text_lower = text.lower()
+    logger.info(f"[NEGATIVE_MATCH] Processing text: '{text_lower[:80]}'")
+    
+    for skip_phrase in _SKIP_PHRASES:
+        if skip_phrase in text_lower:
+            logger.info(f"[NEGATIVE_MATCH] SKIP - contains skip phrase: '{skip_phrase}'")
+            return []
+    
     words = re.findall(r'\b\w+\b', text_lower)
-    
-    if words and all(word in _POSITIVE_KEYWORDS for word in words):
-        logger.info(f"[NEGATIVE_MATCH] Skipping: all words positive/neutral: {words}")
+    if not words:
+        return []
+    positive_set = _STRONG_POSITIVE.union(_NEUTRAL_KEYWORDS)
+
+    if all(w in positive_set for w in words):
+        logger.info(f"[NEGATIVE_MATCH] SKIP - all words are positive/neutral")
         return []
     
-    positive_count = sum(1 for word in words if word in _POSITIVE_KEYWORDS)
-    if words and len(words) > 0 and (positive_count / len(words)) > 0.7:
-        logger.info(f"[NEGATIVE_MATCH] Skipping: mostly positive ({positive_count}/{len(words)}): {text_lower[:60]}")
-        return []
-    
-    # Now find negative matches
     seen = set()
     results = []
     for m in _NEGATIVE_FEEDBACK_RE.finditer(text):
@@ -242,7 +245,11 @@ def _extract_negative_matches(text):
             seen.add(key)
             results.append(matched_phrase)
     
-    logger.info(f"[NEGATIVE_MATCH] Text: '{text_lower[:80]}' → Matches: {results if results else 'NONE'}")
+    if results:
+        logger.info(f"[NEGATIVE_MATCH] ALERT - negative keywords: {results}")
+    else:
+        logger.info(f"[NEGATIVE_MATCH] SKIP - no negative keywords")
+    
     return results
 
 
@@ -281,6 +288,10 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
             elif s_type == 'text_questions':
                 text_q_ids.add(q['id'])
                 text_q_map[q['id']] = q['text']
+    
+    logger.info(f"[ALERT_INIT] Form {form_id}: Found {len(rating_q_ids)} rating questions, {len(text_q_map)} text questions")
+    logger.debug(f"[ALERT_INIT] Text question IDs: {list(text_q_map.keys())}")
+    logger.debug(f"[ALERT_INIT] Form data keys: {list(data.keys())}")
 
     new_rating_alert_q_ids = set()
     for key, value in data.items():
@@ -328,12 +339,16 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
 
     for qid, q_text in text_q_map.items():
         response_val = str(data.get(qid, '')).strip()
+        logger.debug(f"[ALERT_TEXT] Question {qid}: '{q_text[:50]}' → Response: '{response_val[:80]}'")
         if len(response_val) < 2:
+            logger.debug(f"[ALERT_TEXT] Skipping {qid}: response too short ({len(response_val)} chars)")
             continue
         matches = _extract_negative_matches(response_val)
-        if not matches:  # Only create alert if negative keywords found
+        if not matches:
+            logger.debug(f"[ALERT_TEXT] Skipping {qid}: no negative matches")
             continue
         matched_keywords = ', '.join(dict.fromkeys(m.lower() for m in matches))[:300]
+        logger.info(f"[ALERT_TEXT] Creating alert for {qid}: {matched_keywords}")
         
         alerts.append({
             'id': str(uuid.uuid4())[:12],
