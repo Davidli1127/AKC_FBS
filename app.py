@@ -27,7 +27,6 @@ try:
     QR_AVAILABLE = True
 except ImportError:
     QR_AVAILABLE = False
-    print('Warning: qrcode library not installed. Run: pip install qrcode[pil]')
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY')
@@ -176,47 +175,74 @@ _NEGATIVE_FEEDBACK_RE = re.compile(
     r'|\b(?:complaint|complain|complaining|grievance)\b'
     r'|\b(?:neglected|overlooked|ignored)\b'
     r'|\b(?:poorly|badly)\b'
-    # Compound negative phrases
     r'|(?:not|no)\s+(?:good|great|helpful|clear|organi[sz]ed|prepared|relevant|professional|effective|sufficient|satisfactory|adequate|engaging|interesting|useful|informative|well)\b'
     r'|not\s+up\s+to\s+(?:date|standard|scratch|par|expectation)'
     r'|out[\s-]of[\s-]date'
     r'|no\s+(?:improvement|progress|update|support|guidance|feedback|direction|structure)'
-    r'|could\s+(?:be|use)\s+(?:better|improved?|clearer|more\s+\w+|enhanced)'
-    r'|should\s+(?:be|have\s+been)\s+(?:better|improved?|clearer|more\s+\w+)'
-    r'|need[s]?\s+(?:to\s+be\s+)?(?:improved?|better|updated?|fixed?|revised?|restructured?)'
+    r'|could\s+(?:be|use)\s+(?:better|improved?|clearer)'
+    r'|should\s+(?:be|have\s+been)\s+(?:better)'
+    r'|need[s]?\s+(?:to\s+be\s+)?improved?'
     r'|room\s+for\s+improvement'
     r'|could\s+(?:do|be)\s+better'
     r'|waste\s+of\s+(?:time|money|resources)'
     r'|wasting\s+(?:my\s+|our\s+)?(?:time|money)'
-    r'|too\s+(?:fast|slow|long|short|rushed|technical|complicated|complex|difficult|hard|easy|loud|quiet|hot|cold|strict|harsh|boring|advanced|basic|wordy|general|narrow|vague|broad)'
-    r'|(?:hard|difficult)\s+to\s+(?:understand|follow|see|hear|read|concentrate|focus|keep\s+up)'
-    r'|not\s+enough\s+(?:time|detail|content|practice|examples?|breaks?|information|feedback|depth|clarity|activities)'
-    r'|need[s]?\s+more\s+(?:time|detail|content|practice|examples?|information|depth|clarity|activities|engagement|materials?|resources|exercises?)'
-    r'|(?:did\s+not|didn[\']t|couldn[\']t|can[\']t|cannot|was\s+not|wasn[\']t)\s+(?:understand|follow|hear|learn|see|focus|engage|benefit|grasp|participate)'
-    r'|would\s+not\s+recommend|cannot\s+recommend|not\s+recommend(?:ed)?'
-    r'|lack\s+of\s+(?:clarity|organi[sz]ation|preparation|engagement|examples?|support|content|materials?|professionalism|structure|direction|communication|variety|depth|relevance)'
-    r'|poor\s+(?:quality|performance|organi[sz]ation|facilities|equipment|materials?|content|delivery|communication|management|presentation|audio|ventilation|lighting)'
-    r'|bad\s+(?:quality|experience|delivery|content|environment|facilities?|behaviour|behavior|attitude|examples?|management)'
-    r'|very\s+(?:bad|poor|disappointing|confusing|unclear|boring|slow|fast|harsh|strict|difficult|loud|noisy|hot|cold)'
-    r'|extremely\s+(?:bad|poor|disappointing|confusing|unclear|boring|difficult|slow|fast)'
-    r'|so\s+(?:bad|poor|boring|confusing|slow|fast|difficult|long|short)'
+    r'|too\s+(?:fast|slow|long|short|rushed|technical|complicated|complex|difficult|hard)'
+    r'|(?:hard|difficult)\s+to\s+(?:understand|follow|see|hear|read)'
+    r'|not\s+enough\s+(?:time|detail|content|practice|examples?|information)'
+    r'|lack\s+of\s+(?:clarity|organi[sz]ation|preparation|engagement|support)'
+    r'|poor\s+(?:quality|performance|delivery)'
+    r'|bad\s+(?:quality|experience|delivery)'
+    r'|very\s+(?:bad|poor|disappointing|confusing|unclear|boring)'
     r'|need[s]?\s+(?:a\s+lot\s+of\s+)?improvement'
     r'|not\s+satisfied|not\s+happy|not\s+pleased'
-    r'|more\s+(?:preparation|practice|examples?|time|clarity|structure|engagement)\s+(?:is|are|was|were)?\s*needed'
     r')',
     re.IGNORECASE
 )
 
+_POSITIVE_KEYWORDS = {
+    'good', 'great', 'excellent', 'amazing', 'wonderful', 'fantastic', 'outstanding',
+    'perfect', 'best', 'awesome', 'superb', 'brilliant', 'exceptional', 'well', 'nice',
+    'love', 'loved', 'enjoyed', 'helpful', 'useful', 'informative', 'interesting',
+    'engaging', 'inspiring', 'professional', 'organized', 'clear', 'well-structured',
+    'positive', 'recommend', 'recommend', 'suitable', 'appropriate', 'effective',
+    'impressed', 'satisfied', 'happy', 'pleased', 'content', 'grateful', 'appreciate',
+    'n/a', 'na', 'none', 'nothing', '–', 'no', 'ok', 'okay', 'fine', 'average',
+    '1', '2', '3', '4', '5'
+}
+
 def _extract_negative_matches(text):
-    """Return deduplicated list of matched negative phrases found in text."""
+    """Return deduplicated list of matched negative phrases found in text.
+    
+    Returns empty list if:
+    - Text contains ONLY positive/neutral keywords
+    - Text is empty or too short
+    """
+    if not text or len(text.strip()) < 2:
+        return []
+    
+    text_lower = text.lower()
+    words = re.findall(r'\b\w+\b', text_lower)
+    
+    if words and all(word in _POSITIVE_KEYWORDS for word in words):
+        logger.info(f"[NEGATIVE_MATCH] Skipping: all words positive/neutral: {words}")
+        return []
+    
+    positive_count = sum(1 for word in words if word in _POSITIVE_KEYWORDS)
+    if words and len(words) > 0 and (positive_count / len(words)) > 0.7:
+        logger.info(f"[NEGATIVE_MATCH] Skipping: mostly positive ({positive_count}/{len(words)}): {text_lower[:60]}")
+        return []
+    
+    # Now find negative matches
     seen = set()
     results = []
-    for m in _NEGATIVE_FEEDBACK_RE.finditer(text or ''):
-        word = m.group(0).strip()
-        key  = word.lower()
+    for m in _NEGATIVE_FEEDBACK_RE.finditer(text):
+        matched_phrase = m.group(0).strip()
+        key = matched_phrase.lower()
         if key not in seen:
             seen.add(key)
-            results.append(word)
+            results.append(matched_phrase)
+    
+    logger.info(f"[NEGATIVE_MATCH] Text: '{text_lower[:80]}' → Matches: {results if results else 'NONE'}")
     return results
 
 
@@ -305,7 +331,9 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
         if len(response_val) < 2:
             continue
         matches = _extract_negative_matches(response_val)
-        matched_keywords = ', '.join(dict.fromkeys(m.lower() for m in matches))[:300] if matches else ''
+        if not matches:  # Only create alert if negative keywords found
+            continue
+        matched_keywords = ', '.join(dict.fromkeys(m.lower() for m in matches))[:300]
         
         alerts.append({
             'id': str(uuid.uuid4())[:12],
@@ -337,7 +365,9 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
         if base_q_id in new_rating_alert_q_ids:
             continue 
         matches = _extract_negative_matches(comment_val)
-        matched_keywords = ', '.join(dict.fromkeys(m.lower() for m in matches))[:300] if matches else ''
+        if not matches:  # Only create alert if negative keywords found
+            continue
+        matched_keywords = ', '.join(dict.fromkeys(m.lower() for m in matches))[:300]
         
         q_text = q_texts.get(base_q_id, base_q_id)
         alerts.append({
@@ -620,14 +650,14 @@ def api_admin_login():
             except:
                 pass
     else:
-        print("Could not connect to FBS database for login")
+        logger.warning("Could not connect to FBS database for login")
     
     # Fallback: Check against environment variables
     # This allows login using configured ADMIN_ACCOUNT and ADMIN_PASSWORD
-    env_admin = os.environ.get('ADMIN_ACCOUNT', 'admin')
-    env_password = os.environ.get('ADMIN_PASSWORD', 'akc2026')
+    env_admin = os.environ.get('ADMIN_ACCOUNT')
+    env_password = os.environ.get('ADMIN_PASSWORD')
     
-    if username.lower() == env_admin.lower() and password == env_password:
+    if env_admin and env_password and username.lower() == env_admin.lower() and password == env_password:
         session['logged_in'] = True
         session['admin_account'] = username
         session['admin_id'] = '0'
@@ -1025,6 +1055,11 @@ def create_course():
     """Create a new course and generate QR code"""
     config = load_config()
     data = request.json
+    
+    # Validate required fields
+    if not data.get('form_id') or not data.get('course_title') or not data.get('course_date'):
+        return jsonify({'error': 'form_id, course_title, and course_date are required'}), 400
+    
     course = {
         'form_id': data['form_id'],
         'course_title': data['course_title'],

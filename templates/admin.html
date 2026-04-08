@@ -997,6 +997,7 @@
             document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
             document.getElementById(tabId).classList.add('active');
             
+            if (tabId === 'courses') updateQRFormFields();
             if (tabId === 'forms') loadFormForEdit('main');
             if (tabId === 'existing') loadCoursesOnStartup();
             if (tabId === 'alerts') loadAlertsAll();
@@ -3162,6 +3163,12 @@
                     b.style.display = 'inline';
                 }
             } catch(e) {}
+        })();
+        
+        (function initQRFormOnLoad() {
+            setTimeout(() => {
+                updateQRFormFields();
+            }, 100);
         })();
     </script>
 </body>
