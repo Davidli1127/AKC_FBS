@@ -498,10 +498,59 @@ def get_all_courses_from_db():
         cur.execute(
             "SELECT course_id, form_id, course_title, course_date, created_at, "
             "is_active, deactivated_at, extra_fields "
-            "FROM FBS_Courses ORDER BY created_at DESC")
-        rows = cur.fetchall()
+            "FROM FBS_Courses ORDER BY created_at DESC"
+        )
+        courses = [_course_row_to_dict(row) for row in cur.fetchall()]
         conn.close()
-        return [_course_row_to_dict(r) for r in rows]
+        return courses
+    except Exception as e:
+        print(f"Error getting all courses: {e}")
+        return []
+
+
+def register_form(form_id, form_title, form_number, description, config_json, language='English'):
+    """Create or update a form in the FBS_Forms registry."""
+    conn = get_fbs_connection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "MERGE INTO FBS_Forms AS target "
+            "USING (SELECT ? AS form_id, ? AS language) AS source "
+            "ON (target.form_id = source.form_id AND target.language = source.language) "
+            "WHEN MATCHED THEN "
+            "    UPDATE SET form_title = ?, form_number = ?, description = ?, config_json = ?, updated_at = GETDATE(), is_deleted = 0 "
+            "WHEN NOT MATCHED THEN "
+            "    INSERT (form_id, language, form_title, form_number, description, config_json) "
+            "    VALUES (source.form_id, source.language, ?, ?, ?, ?);",
+            (form_id, language,
+             form_title, form_number, description, json.dumps(config_json, ensure_ascii=False),
+             form_title, form_number, description, json.dumps(config_json, ensure_ascii=False))
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        logger.error(f"Error registering form {form_id} ({language}): {e}")
+        return False
+
+
+def get_all_courses_from_db():
+    """Return all course sessions (active and closed), newest first."""
+    conn = get_fbs_connection()
+    if not conn:
+        return []
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT course_id, form_id, course_title, course_date, created_at, "
+            "is_active, deactivated_at, extra_fields "
+            "FROM FBS_Courses ORDER BY created_at DESC"
+        )
+        courses = [_course_row_to_dict(row) for row in cur.fetchall()]
+        conn.close()
+        return courses
     except Exception as e:
         print(f"Error getting all courses: {e}")
         return []

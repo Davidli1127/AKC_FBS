@@ -28,7 +28,7 @@
             <button class="tab" onclick="showTab('participants')">View Participants</button>
             <button class="tab" onclick="showTab('forms')">Edit Form Questions</button>
             <button class="tab" onclick="showTab('existing')">Generated QR Codes</button>
-            <button class="tab" onclick="showTab('analysis')">&#128202; Data Analysis</button>
+            <button class="tab" onclick="showTab('analysis')">Data Analysis</button>
         </div>
 
         <div id="courses" class="tab-content active">
@@ -150,9 +150,20 @@
                             <br><br>
                             <em>You still need to create a per-class QR session first (above) before participants can use this.</em>
                         </p>
-                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                            <a href="/api/scan/qrcode" download="AKC_Universal_QR.png" class="btn btn-primary">⬇ Download Universal QR</a>
-                            <button class="btn btn-secondary" onclick="showUniversalQR()">Preview</button>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; flex-direction:column;">
+                            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                <a href="/api/scan/qrcode" download="AKC_Universal_QR.png" class="btn btn-primary">⬇ Download Universal QR</a>
+                                <button class="btn btn-secondary" onclick="showUniversalQR()">Preview</button>
+                            </div>
+                            <div id="universalLinkContainer" style="display:none;">
+                                <p style="margin: 10px 0 5px 0; color:#666; font-size:13px; font-weight:600;">Public Scan Link (share with participants):</p>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <input type="text" id="universalScanLink" readonly 
+                                           style="flex:1; padding:8px 12px; border:1px solid #ddd; border-radius:4px; font-size:13px; font-family:monospace;"
+                                           value="">
+                                    <button class="btn btn-secondary" onclick="copyUniversalLink()" style="padding:8px 12px; font-size:13px;">📋 Copy</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div id="universalQRPreview" style="display:none; text-align:center;">
@@ -395,7 +406,7 @@
 
         <div id="analysis" class="tab-content">
             <div class="card">
-                <div class="card-header">&#128202; Monthly Data Analysis</div>
+                <div class="card-header">Monthly Data Analysis</div>
                 <div class="card-body">
                     <p style="color:#555;font-size:13px;margin-bottom:14px;">Choose month, questions, and class codes, then switch between pie and bar chart views for visual analysis.</p>
 
@@ -771,7 +782,33 @@
 
         function showUniversalQR() {
             const preview = document.getElementById('universalQRPreview');
+            const linkContainer = document.getElementById('universalLinkContainer');
+            
             preview.style.display = preview.style.display === 'none' ? 'block' : 'none';
+
+            if (preview.style.display === 'block' && linkContainer.style.display === 'none') {
+                fetch('/api/universal-qr-link')
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('universalScanLink').value = data.scan_url;
+                        linkContainer.style.display = 'block';
+                    })
+                    .catch(error => console.error('Error fetching universal QR link:', error));
+            }
+        }
+        
+        function copyUniversalLink() {
+            const linkInput = document.getElementById('universalScanLink');
+            linkInput.select();
+            document.execCommand('copy');
+            
+            // Give user feedback
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = '✓ Copied!';
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 2000);
         }
         
         async function searchParticipantCourses(term) {

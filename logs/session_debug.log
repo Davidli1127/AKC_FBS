@@ -363,3 +363,110 @@
 2026-04-08 17:46:35,612 -   [Backfill]: Updated 0 responses with course codes
 2026-04-08 17:46:35,615 -  * Debugger is active!
 2026-04-08 17:46:35,618 -  * Debugger PIN: 126-439-623
+2026-04-08 17:52:50,512 -  * Detected change in 'C:\\Users\\Li.Zhongyuan\\Desktop\\AKC_FBS\\app.py', reloading
+2026-04-08 17:52:50,541 -  * Restarting with stat
+2026-04-08 17:52:50,770 - ================================================================================
+2026-04-08 17:52:50,770 - Application started - Logging enabled
+2026-04-08 17:52:50,770 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-08 17:52:50,770 - ================================================================================
+2026-04-08 17:52:50,840 - [FBS_Forms sync] 2/2 forms synced
+2026-04-08 17:52:50,845 -   [TRAINER EVALUATION FORM]: Table [trainer_evaluation_form_response] is ready.
+2026-04-08 17:52:50,852 -   [Backfill]: Updated 0 responses with course codes
+2026-04-08 17:52:50,858 -   [ASSESSOR EVALUATION FORM]: Table [assessor_evaluation_form_response] is ready.
+2026-04-08 17:52:50,867 -   [Backfill]: Updated 0 responses with course codes
+2026-04-08 17:52:50,872 -  * Debugger is active!
+2026-04-08 17:52:50,875 -  * Debugger PIN: 126-439-623
+2026-04-09 09:45:50,220 - ================================================================================
+2026-04-09 09:45:50,220 - Application started - Logging enabled
+2026-04-09 09:45:50,221 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-09 09:45:50,221 - ================================================================================
+2026-04-09 09:45:50,245 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-04-09 09:45:50,245 - [33mPress CTRL+C to quit[0m
+2026-04-09 10:06:59,173 - ================================================================================
+2026-04-09 10:06:59,173 - Application started - Logging enabled
+2026-04-09 10:06:59,173 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-09 10:06:59,173 - ================================================================================
+2026-04-09 10:06:59,193 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-04-09 10:06:59,193 - [33mPress CTRL+C to quit[0m
+2026-04-09 10:07:21,092 - 127.0.0.1 - - [09/Apr/2026 10:07:21] "[32mGET / HTTP/1.1[0m" 302 -
+2026-04-09 10:07:21,094 - 127.0.0.1 - - [09/Apr/2026 10:07:21] "[32mGET /admin HTTP/1.1[0m" 302 -
+2026-04-09 10:07:21,098 - 127.0.0.1 - - [09/Apr/2026 10:07:21] "GET /login HTTP/1.1" 200 -
+2026-04-09 10:08:26,241 - ================================================================================
+2026-04-09 10:08:26,241 - Application started - Logging enabled
+2026-04-09 10:08:26,241 - Log file: c:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-09 10:08:26,241 - ================================================================================
+2026-04-09 10:08:26,253 - [NEGATIVE_MATCH] Processing text: 'this course was excellent and amazing!'
+2026-04-09 10:08:26,254 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-09 10:08:26,254 - [NEGATIVE_MATCH] Processing text: 'the content was boring and confusing'
+2026-04-09 10:08:26,254 - [NEGATIVE_MATCH] ALERT - negative keywords: ['boring', 'confusing']
+2026-04-09 10:08:26,254 - [NEGATIVE_MATCH] Processing text: 'not bad, pretty good overall'
+2026-04-09 10:08:26,254 - [NEGATIVE_MATCH] SKIP - contains skip phrase: 'not bad'
+2026-04-09 10:08:26,254 - [NEGATIVE_MATCH] Processing text: 'poor quality, waste of time'
+2026-04-09 10:08:26,254 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Poor quality', 'waste']
+2026-04-09 10:08:34,908 - ================================================================================
+2026-04-09 10:08:34,908 - Application started - Logging enabled
+2026-04-09 10:08:34,908 - Log file: c:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-09 10:08:34,908 - ================================================================================
+2026-04-09 10:08:42,193 - ================================================================================
+2026-04-09 10:08:42,193 - Application started - Logging enabled
+2026-04-09 10:08:42,193 - Log file: c:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-09 10:08:42,193 - ================================================================================
+2026-04-09 10:08:58,049 - ================================================================================
+2026-04-09 10:08:58,049 - Application started - Logging enabled
+2026-04-09 10:08:58,049 - Log file: c:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-09 10:08:58,049 - ================================================================================
+2026-04-09 10:09:05,644 - ================================================================================
+2026-04-09 10:09:05,644 - Application started - Logging enabled
+2026-04-09 10:09:05,644 - Log file: c:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-09 10:09:05,644 - ================================================================================
+2026-04-09 10:09:20,320 - ================================================================================
+2026-04-09 10:09:20,320 - Application started - Logging enabled
+2026-04-09 10:09:20,320 - Log file: c:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-09 10:09:20,320 - ================================================================================
+2026-04-09 10:09:20,540 - [NEGATIVE_MATCH] Processing text: 'the course was boring and confusing'
+2026-04-09 10:09:20,540 - [NEGATIVE_MATCH] ALERT - negative keywords: ['boring', 'confusing']
+2026-04-09 10:11:55,783 - 127.0.0.1 - - [09/Apr/2026 10:11:55] "[32mGET / HTTP/1.1[0m" 302 -
+2026-04-09 10:11:55,786 - 127.0.0.1 - - [09/Apr/2026 10:11:55] "[32mGET /admin HTTP/1.1[0m" 302 -
+2026-04-09 10:11:55,791 - 127.0.0.1 - - [09/Apr/2026 10:11:55] "GET /login HTTP/1.1" 200 -
+2026-04-09 10:11:55,928 - 127.0.0.1 - - [09/Apr/2026 10:11:55] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-04-09 10:12:02,225 - 127.0.0.1 - - [09/Apr/2026 10:12:02] "POST /api/admin-login HTTP/1.1" 200 -
+2026-04-09 10:12:02,300 - 127.0.0.1 - - [09/Apr/2026 10:12:02] "GET /admin HTTP/1.1" 200 -
+2026-04-09 10:12:02,335 - 127.0.0.1 - - [09/Apr/2026 10:12:02] "GET /api/scan/qrcode HTTP/1.1" 200 -
+2026-04-09 10:12:02,383 - 127.0.0.1 - - [09/Apr/2026 10:12:02] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-04-09 10:12:02,388 - 127.0.0.1 - - [09/Apr/2026 10:12:02] "[36mGET /static/logo.png HTTP/1.1[0m" 304 -
+2026-04-09 10:12:02,393 - 127.0.0.1 - - [09/Apr/2026 10:12:02] "GET /api/alerts/summary HTTP/1.1" 200 -
+2026-04-09 10:12:06,627 - 127.0.0.1 - - [09/Apr/2026 10:12:06] "GET /api/analysis/dashboard/filters?form_id=form1 HTTP/1.1" 200 -
+2026-04-09 10:12:06,661 - 127.0.0.1 - - [09/Apr/2026 10:12:06] "GET /api/analysis/dashboard?form_id=form1&sort=priority&question=A1&question=A2&question=A3&question=A4&question=A5&question=B1_1&question=B1_2&question=B1_3&question=B1_4&question=B1_5&question=B1_6&question=B2_1&question=B2_2&question=B2_3&question=B2_4&question=B2_5&question=B2_6&question=C1&question=C2&question=D&question=E&course_title=AWSCSBD HTTP/1.1" 200 -
+2026-04-09 10:12:08,948 - 127.0.0.1 - - [09/Apr/2026 10:12:08] "GET /low-ratings HTTP/1.1" 200 -
+2026-04-09 10:12:08,958 - 127.0.0.1 - - [09/Apr/2026 10:12:08] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-04-09 10:12:09,116 - 127.0.0.1 - - [09/Apr/2026 10:12:09] "GET /api/low-ratings-data?forms=form1,form2&rating_threshold=2 HTTP/1.1" 200 -
+2026-04-09 10:12:09,125 - 127.0.0.1 - - [09/Apr/2026 10:12:09] "GET /api/hotspot-analysis?forms=form1,form2 HTTP/1.1" 200 -
+2026-04-09 10:12:12,493 - 127.0.0.1 - - [09/Apr/2026 10:12:12] "GET /api/low-ratings-data?forms=form1&rating_threshold=2 HTTP/1.1" 200 -
+2026-04-09 10:12:12,501 - 127.0.0.1 - - [09/Apr/2026 10:12:12] "GET /api/hotspot-analysis?forms=form1 HTTP/1.1" 200 -
+2026-04-09 10:12:13,533 - 127.0.0.1 - - [09/Apr/2026 10:12:13] "GET /admin HTTP/1.1" 200 -
+2026-04-09 10:12:13,542 - 127.0.0.1 - - [09/Apr/2026 10:12:13] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-04-09 10:12:13,544 - 127.0.0.1 - - [09/Apr/2026 10:12:13] "[36mGET /static/logo.png HTTP/1.1[0m" 304 -
+2026-04-09 10:12:13,551 - 127.0.0.1 - - [09/Apr/2026 10:12:13] "GET /api/scan/qrcode HTTP/1.1" 200 -
+2026-04-09 10:12:13,554 - 127.0.0.1 - - [09/Apr/2026 10:12:13] "GET /api/alerts/summary HTTP/1.1" 200 -
+2026-04-09 10:12:14,557 - 127.0.0.1 - - [09/Apr/2026 10:12:14] "GET /api/courses HTTP/1.1" 200 -
+2026-04-09 10:12:15,127 - 127.0.0.1 - - [09/Apr/2026 10:12:15] "GET /api/forms/form1 HTTP/1.1" 200 -
+2026-04-09 10:12:15,147 - 127.0.0.1 - - [09/Apr/2026 10:12:15] "GET /api/forms/form1/table-status HTTP/1.1" 200 -
+2026-04-09 10:12:16,330 - 127.0.0.1 - - [09/Apr/2026 10:12:16] "GET /api/forms/form1 HTTP/1.1" 200 -
+2026-04-09 10:12:16,356 - 127.0.0.1 - - [09/Apr/2026 10:12:16] "GET /api/forms/form1/table-status HTTP/1.1" 200 -
+2026-04-09 10:12:23,717 - 127.0.0.1 - - [09/Apr/2026 10:12:23] "GET /api/forms/form1/structure HTTP/1.1" 200 -
+2026-04-09 10:12:33,460 - 127.0.0.1 - - [09/Apr/2026 10:12:33] "GET /api/analysis/dashboard/filters?form_id=form1 HTTP/1.1" 200 -
+2026-04-09 10:12:33,491 - 127.0.0.1 - - [09/Apr/2026 10:12:33] "GET /api/analysis/dashboard?form_id=form1&sort=priority&question=A1&question=A2&question=A3&question=A4&question=A5&question=B1_1&question=B1_2&question=B1_3&question=B1_4&question=B1_5&question=B1_6&question=B2_1&question=B2_2&question=B2_3&question=B2_4&question=B2_5&question=B2_6&question=C1&question=C2&question=D&question=E&course_title=AWSCSBD HTTP/1.1" 200 -
+2026-04-09 11:10:34,263 - ================================================================================
+2026-04-09 11:10:34,263 - Application started - Logging enabled
+2026-04-09 11:10:34,263 - Log file: c:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-09 11:10:34,263 - ================================================================================
+2026-04-09 11:10:41,159 - ================================================================================
+2026-04-09 11:10:41,159 - Application started - Logging enabled
+2026-04-09 11:10:41,159 - Log file: c:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-09 11:10:41,159 - ================================================================================
+2026-04-09 11:10:50,638 - ================================================================================
+2026-04-09 11:10:50,638 - Application started - Logging enabled
+2026-04-09 11:10:50,638 - Log file: c:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-09 11:10:50,638 - ================================================================================

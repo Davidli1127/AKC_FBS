@@ -1,4 +1,3 @@
--- Admin Users Table for new login system
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name = 'AdminUsers' AND xtype = 'U')
 CREATE TABLE AdminUsers (
     admin_id         UNIQUEIDENTIFIER NOT NULL PRIMARY KEY DEFAULT NEWID(),
@@ -6,21 +5,18 @@ CREATE TABLE AdminUsers (
     password_hash    NVARCHAR(255)    NOT NULL,
     email            NVARCHAR(200)    NULL,
     created_at       DATETIME         NOT NULL DEFAULT GETDATE(),
-    is_active        BIT              NOT NULL DEFAULT 1
+    is_active        BIT              NOT NULL DEFAULT 1,
+    last_login       DATETIME         NULL
 );
 
--- Default admin account (password: 'akc2026')
-IF NOT EXISTS (SELECT * FROM AdminUsers WHERE username = 'admin')
-BEGIN
-    INSERT INTO AdminUsers (username, password_hash, email, is_active)
-    VALUES ('admin', '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5', 'admin@akc.local', 1);
-END
+-- Note: Default admin user is no longer created automatically for security reasons.
+-- An administrator should create the first user account manually.
 
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name = 'FBS_Forms' AND xtype = 'U')
 CREATE TABLE FBS_Forms (
     form_id      NVARCHAR(100) NOT NULL,
-    form_title   NVARCHAR(300) NOT NULL,
     language     NVARCHAR(50)  NOT NULL DEFAULT 'English',
+    form_title   NVARCHAR(300) NOT NULL,
     form_number  NVARCHAR(100) NULL,
     description  NVARCHAR(MAX) NULL,
     config_json  NVARCHAR(MAX) NULL,
@@ -28,13 +24,27 @@ CREATE TABLE FBS_Forms (
     updated_at   DATETIME      NOT NULL DEFAULT GETDATE(),
     is_deleted   BIT           NOT NULL DEFAULT 0,
     deleted_at   DATETIME      NULL,
-    CONSTRAINT PK_FBS_Forms PRIMARY KEY (form_id)
+    CONSTRAINT PK_FBS_Forms PRIMARY KEY (form_id, language)
+);
+
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name = 'FBS_Courses' AND xtype = 'U')
+CREATE TABLE FBS_Courses (
+    course_id      NVARCHAR(20)  NOT NULL,
+    form_id        NVARCHAR(100) NOT NULL,
+    course_title   NVARCHAR(500) NOT NULL,
+    course_date    NVARCHAR(50)  NULL,
+    created_at     DATETIME      NOT NULL DEFAULT GETDATE(),
+    is_active      BIT           NOT NULL DEFAULT 1,
+    deactivated_at DATETIME      NULL,
+    extra_fields   NVARCHAR(MAX) NULL,
+    CONSTRAINT PK_FBS_Courses PRIMARY KEY (course_id)
 );
 
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name = 'FBS_Responses' AND xtype = 'U')
 CREATE TABLE FBS_Responses (
     response_id      INT           IDENTITY(1,1) NOT NULL,
     form_id          NVARCHAR(100) NOT NULL,
+    language         NVARCHAR(50)  NOT NULL,
     course_id        NVARCHAR(100) NOT NULL,
     class_code       NVARCHAR(100) NULL,
     course_title     NVARCHAR(500) NULL,
@@ -53,51 +63,10 @@ CREATE TABLE FBS_Responses (
     CONSTRAINT PK_FBS_Responses PRIMARY KEY (response_id)
 );
 
-CREATE INDEX IX_FBS_Responses_form_id    ON FBS_Responses (form_id);
+CREATE INDEX IX_FBS_Responses_form_id_lang ON FBS_Responses (form_id, language);
 CREATE INDEX IX_FBS_Responses_course_id  ON FBS_Responses (course_id);
 CREATE INDEX IX_FBS_Responses_submitted  ON FBS_Responses (submitted_at);
 CREATE INDEX IX_FBS_Responses_id_number  ON FBS_Responses (id_number);
-CREATE TABLE Feedback_Form1 (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    submission_time DATETIME DEFAULT GETDATE(),
-    
-    course_id VARCHAR(50),
-    course_title NVARCHAR(255),
-    course_code NVARCHAR(50),
-    course_date VARCHAR(50),
-    classroom NVARCHAR(255),
-    language NVARCHAR(50),
-    
-    instructor1_name NVARCHAR(255),
-    instructor2_name NVARCHAR(255),
-    instructor3_name NVARCHAR(255),
-    
-    A1 INT,  
-    A2 INT, 
-    A3 INT, 
-    A4 INT, 
-    A5 INT,  
-    
-    B1_1 INT, 
-    B1_2 INT, 
-    B1_3 INT, 
-    B1_4 INT, 
-    B1_5 INT, 
-    B1_6 INT, 
-    
-    B2_1 INT,
-    B2_2 INT,
-    B2_3 INT,
-    B2_4 INT,
-    B2_5 INT,
-    B2_6 INT,
-    
-    B3_1 INT,
-    B3_2 INT,
-    B3_3 INT,
-    B3_4 INT,
-    B3_5 INT,
-    B3_6 INT,
     
     C1 INT,  
     C2 INT,  

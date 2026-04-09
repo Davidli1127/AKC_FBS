@@ -8,6 +8,7 @@ import copy
 from collections import defaultdict
 from datetime import datetime, timedelta
 import uuid
+import time
 from functools import wraps
 import hashlib
 from dotenv import load_dotenv
@@ -36,13 +37,11 @@ if not app.secret_key:
         'Please configure your .env file with a SECRET_KEY.'
     )
 
-# Configure session for IIS - use default Flask sessions with permanent flag
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
-# Configure file-based logging to track session issues
 log_dir = Path(APP_DIR) / 'logs'
 log_dir.mkdir(exist_ok=True)
 log_file = log_dir / 'session_debug.log'
@@ -147,6 +146,7 @@ DATA_DIR = os.path.join(BASE_DIR, 'data')
 os.makedirs(DATA_DIR, exist_ok=True)
 
 ALERTS_FILE = os.path.join(DATA_DIR, 'low_feedback_alerts.json')
+ALERTS_LOCK_FILE = os.path.join(DATA_DIR, 'low_feedback_alerts.lock')
 
 _NEGATIVE_FEEDBACK_RE = re.compile(
     r'(?:'
@@ -254,17 +254,70 @@ def _extract_negative_matches(text):
 
 
 def load_alerts():
-    """Load low feedback alerts from JSON file"""
-    if os.path.exists(ALERTS_FILE):
+    """Load low feedback alerts from JSON file with file locking."""
+    if not os.path.exists(ALERTS_FILE):
+        return []
+    lock_path = ALERTS_LOCK_FILE
+    start_time = datetime.now()
+    
+    while os.path.exists(lock_path):
+        if datetime.now() - start_time > timedelta(seconds=5):
+            logger.error(f"Alerts lock file is stale. Breaking lock on {lock_path}")
+            try:
+                os.remove(lock_path)
+            except OSError as e:
+                logger.error(f"Could not remove stale lock file: {e}")
+            break
+        time.sleep(0.1)
+        
+    try:
+        with open(lock_path, 'w') as f:
+            f.write('locked')
+            
         with open(ALERTS_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
-    return []
+            
+    except (IOError, json.JSONDecodeError) as e:
+        logger.error(f"Error loading alerts file: {e}")
+        return []
+    finally:
+        if os.path.exists(lock_path):
+            try:
+                os.remove(lock_path)
+            except OSError as e:
+                logger.error(f"Could not remove lock file: {e}")
 
 
 def save_alerts_data(alerts):
-    """Save low feedback alerts to JSON file"""
-    with open(ALERTS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(alerts, f, indent=2, ensure_ascii=False)
+    """Save low feedback alerts to JSON file with file locking."""
+    lock_path = ALERTS_LOCK_FILE
+    start_time = datetime.now()
+    
+    while os.path.exists(lock_path):
+        if datetime.now() - start_time > timedelta(seconds=5):
+            logger.error(f"Alerts lock file is stale. Breaking lock on {lock_path}")
+            try:
+                os.remove(lock_path)
+            except OSError as e:
+                logger.error(f"Could not remove stale lock file: {e}")
+            break
+        time.sleep(0.1)
+        
+    try:
+        with open(lock_path, 'w') as f:
+            f.write('locked')
+            
+        with open(ALERTS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(alerts, f, indent=2, ensure_ascii=False)
+            
+    except IOError as e:
+        logger.error(f"Error saving alerts file: {e}")
+    finally:
+        if os.path.exists(lock_path):
+            try:
+                os.remove(lock_path)
+            except OSError as e:
+                logger.error(f"Could not remove lock file: {e}")
 
 
 def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
@@ -425,28 +478,16 @@ def has_submitted(course_id, identifier):
     return db.has_submitted_db(course_id, identifier, form_title)
 
 def load_config():
-    """Load app config from JSON and forms from FBS_Forms."""
-    base = {}
-    if os.path.exists(CONFIG_PATH):
-        try:
-            with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-                base = json.load(f)
-        except Exception:
-            base = {}
-
-    if not isinstance(base, dict):
-        base = {}
-
-    base['courses'] = base.get('courses', [])
-    base['forms'] = db.get_active_forms_map()
-    return base
+    """Load app config from the database."""
+    return {
+        'courses': db.get_all_courses_from_db(),
+        'forms': db.get_active_forms_map(),
+    }
 
 def save_config(config):
-    local_cfg = {
-        'courses': config.get('courses', [])
-    }
-    with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
-        json.dump(local_cfg, f, indent=2, ensure_ascii=False)
+    """This function is now a placeholder.
+    Courses and forms are managed directly via DB functions."""
+    pass
 
 
 def sync_forms_registry_with_config(config):
@@ -1203,6 +1244,15 @@ def get_course_qrcode(course_id):
     return send_file(buf, mimetype='image/png', as_attachment=True,
                      download_name=f'QR_{course["course_title"]}_{course["course_date"]}.png')
 
+@app.route('/api/universal-qr-link', methods=['GET'])
+def get_universal_qr_link():
+    """Get the public link for universal QR scan page (no authentication required)."""
+    public_base = os.environ.get('PUBLIC_URL', '').rstrip('/') or request.host_url.rstrip('/')
+    public_base = public_base.replace('https://', 'http://')
+    scan_url = public_base + '/scan'
+    return jsonify({'scan_url': scan_url})
+
+
 @app.route('/api/scan/qrcode', methods=['GET'])
 @api_login_required
 def get_universal_qrcode():
@@ -1568,7 +1618,7 @@ def get_analysis_ratings():
             val = str(answers.get(qid, '') or '').strip()
             if val and val.lower() not in ('none', '-', ''):
                 if qid not in text_agg:
-                    text_agg[qid] = {'text': qtext, 'responses': []}
+                    text_agg[qid] = {'id': qid, 'text': qtext, 'responses': []}
                 text_agg[qid]['responses'].append(val)
 
     questions_out = []
