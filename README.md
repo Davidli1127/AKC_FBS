@@ -1,4 +1,4 @@
-# AKC Feedback System (AKC_FBS)
+# AKC Feedback System
 
 A web-based course feedback and evaluation platform built with Flask and Microsoft SQL Server. It lets participants submit feedback forms via QR code after completing a training course, and gives administrators a dashboard to manage forms, generate QR codes, and analyze responses.
 
