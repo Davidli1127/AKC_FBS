@@ -83,11 +83,9 @@ LANGUAGE_CODE_MAP = {
 CODE_TO_LANGUAGE = {v: k for k, v in LANGUAGE_CODE_MAP.items()}
 
 def _language_to_code(language_name):
-    """Convert full language name to code"""
     return LANGUAGE_CODE_MAP.get(language_name, 'en')
 
 def _code_to_language(code):
-    """Convert language code to full name"""
     return CODE_TO_LANGUAGE.get(code, 'English')
 
 def _get_default_instructor_section(max_instructors=3):
@@ -109,7 +107,6 @@ def _get_default_assessor_section(max_assessors=2):
     }
 
 def _get_unique_section_id(sections, preferred_id):
-    """Get a unique section ID, using preferred_id if available, else find alternative."""
     existing_ids = set(s.get('id') for s in sections)
     if preferred_id not in existing_ids:
         return preferred_id
@@ -121,7 +118,6 @@ def _get_unique_section_id(sections, preferred_id):
     return f"{preferred_id}_1"
 
 def login_required(f):
-    """Decorator to require login for admin routes"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get('logged_in'):
@@ -131,7 +127,6 @@ def login_required(f):
 
 
 def api_login_required(f):
-    """Decorator to require login for API routes"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get('logged_in'):
@@ -215,7 +210,6 @@ _SKIP_PHRASES = {
 }
 
 def _extract_negative_matches(text):
-    """Direct negative feedback detection - find negative keywords only."""
     if not text or len(text.strip()) < 2:
         return []
     
@@ -254,7 +248,6 @@ def _extract_negative_matches(text):
 
 
 def load_alerts():
-    """Load low feedback alerts from JSON file with file locking."""
     if not os.path.exists(ALERTS_FILE):
         return []
     lock_path = ALERTS_LOCK_FILE
@@ -289,7 +282,6 @@ def load_alerts():
 
 
 def save_alerts_data(alerts):
-    """Save low feedback alerts to JSON file with file locking."""
     lock_path = ALERTS_LOCK_FILE
     start_time = datetime.now()
     
@@ -321,8 +313,6 @@ def save_alerts_data(alerts):
 
 
 def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
-    """Detect low ratings (≤ 2) and negative sentiment in free-text responses,
-    creating alert records for admin review"""
     alerts = load_alerts()
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     rating_labels = {1: 'Poor', 2: 'Unsatisfactory'}
@@ -461,15 +451,12 @@ def save_low_feedback_alerts(form_id, course_id, course, data, form_config):
     save_alerts_data(alerts)
 
 def _norm_name(name):
-    """Normalize a name for comparison: collapse whitespace, uppercase"""
     return ' '.join(name.strip().split()).upper()
 
 def _norm_id(id_number):
-    """Normalize an identification number for comparison: strip, uppercase"""
     return id_number.strip().upper()
 
 def has_submitted(course_id, identifier):
-    """Check if a student has already submitted for this course."""
     course = db.get_course_by_id(course_id)
     form_id = (course or {}).get('form_id', '')
     config = load_config()
@@ -478,20 +465,16 @@ def has_submitted(course_id, identifier):
     return db.has_submitted_db(course_id, identifier, form_title)
 
 def load_config():
-    """Load app config from the database."""
     return {
         'courses': db.get_all_courses_from_db(),
         'forms': db.get_active_forms_map(),
     }
 
 def save_config(config):
-    """This function is now a placeholder.
-    Courses and forms are managed directly via DB functions."""
     pass
 
 
 def sync_forms_registry_with_config(config):
-    """Upsert non-archived forms from config into FBS_Forms."""
     results = {}
     for form_id, form in config.get('forms', {}).items():
         if form.get('is_archived'):
@@ -515,7 +498,6 @@ def _slugify_form_id(title):
     return s.strip('_') or 'form_' + uuid.uuid4().hex[:8]
 
 def save_response(form_id, course_id, data, id_number='', language='English'):
-    """Save form response to AKC_FBS database."""
     course = db.get_course_by_id(course_id)
     config = load_config()
     form_config = config['forms'].get(form_id, {})
@@ -541,25 +523,18 @@ def save_response(form_id, course_id, data, id_number='', language='English'):
     logger.info(f"[SAVE_RESPONSE] SUCCESS: Response saved to table [{form_title}] for participant {participant_name} (ID: {id_number}) in language {language}")
     return True
 
-
 def _extract_language_from_form_id(form_id):
-    """Extract language from form config using form_id"""
     config = load_config()
     form_config = config['forms'].get(form_id, {})
     return form_config.get('language', 'English')
 
-
 @app.route('/')
 def index():
-    """Redirect to admin page"""
     return redirect(url_for('admin'))
-
 
 @app.route('/scan')
 def scan_page():
-    """Universal scan page."""
     return render_template('scan.html')
-
 
 @app.route('/api/scan/lookup', methods=['POST'])
 def scan_lookup():
@@ -608,7 +583,6 @@ def scan_lookup():
 
 @app.route('/api/scan/select', methods=['POST'])
 def scan_select():
-    """After user picks one option from multiple sessions."""
     data = request.json or {}
     course_id   = (data.get('course_id')   or '').strip()
     id_number   = (data.get('id_number')   or '').strip()
@@ -635,7 +609,6 @@ def scan_select():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Admin login page"""
     if session.get('logged_in'):
         return redirect(url_for('admin'))
     
@@ -655,17 +628,15 @@ def login():
 
 @app.route('/logout')
 def logout():
-    """Admin logout"""
     session.clear()
     return redirect(url_for('login'))
 
 def _hash_password(password):
-    """Hash password using SHA256"""
+    #Hash password using SHA256
     return hashlib.sha256(password.encode()).hexdigest()
 
 @app.route('/api/admin-login', methods=['POST'])
 def api_admin_login():
-    """API endpoint for admin login"""
     data = request.json
     username = data.get('username', '').strip()
     password = data.get('password', '')
@@ -695,11 +666,9 @@ def api_admin_login():
                 else:
                     return jsonify({'success': False, 'error': 'Account is inactive'}), 403
             else:
-                # Fall through to environment-based auth below
                 pass
         except Exception as e:
             logger.error(f"Database login error: {e}")
-            # Fall through to environment-based auth below
         finally:
             try:
                 conn.close()
@@ -708,8 +677,6 @@ def api_admin_login():
     else:
         logger.warning("Could not connect to FBS database for login")
     
-    # Fallback: Check against environment variables
-    # This allows login using configured ADMIN_ACCOUNT and ADMIN_PASSWORD
     env_admin = os.environ.get('ADMIN_ACCOUNT')
     env_password = os.environ.get('ADMIN_PASSWORD')
     
@@ -723,7 +690,6 @@ def api_admin_login():
 
 @app.route('/api/admin-signup', methods=['POST'])
 def api_admin_signup():
-    """API endpoint for admin signup"""
     data = request.json
     username = data.get('username', '').strip()
     password = data.get('password', '')
@@ -772,7 +738,6 @@ def api_admin_signup():
 @app.route('/admin')
 @login_required
 def admin():
-    """Admin dashboard"""
     config = load_config()
     def _detect_personnel(sections):
         types = {s.get('type') for s in sections}
@@ -803,7 +768,6 @@ def admin():
 @app.route('/admin/form/<form_id>')
 @login_required
 def admin_form(form_id):
-    """Admin page for editing a specific form"""
     config = load_config()
     form = config['forms'].get(form_id)
     if not form:
@@ -813,7 +777,6 @@ def admin_form(form_id):
 @app.route('/api/forms/<form_id>', methods=['GET'])
 @api_login_required
 def get_form(form_id):
-    """Get form configuration"""
     config = load_config()
     form = config['forms'].get(form_id)
     if not form:
@@ -823,7 +786,6 @@ def get_form(form_id):
 @app.route('/api/forms/<form_id>', methods=['PUT'])
 @api_login_required
 def update_form(form_id):
-    """Update form configuration"""
     config = load_config()
     if form_id not in config['forms']:
         return jsonify({'error': 'Form not found'}), 404
@@ -849,7 +811,6 @@ def update_form(form_id):
 @app.route('/api/forms/<form_id>/sections', methods=['POST'])
 @api_login_required
 def add_section(form_id):
-    """Add a new section to form"""
     config = load_config()
     if form_id not in config['forms']:
         return jsonify({'error': 'Form not found'}), 404
@@ -874,7 +835,7 @@ def add_section(form_id):
 @app.route('/api/forms/<form_id>/sections/<section_id>/questions', methods=['POST'])
 @api_login_required
 def add_question(form_id, section_id):
-    """Add a question to a section"""
+    #Add a question to a section
     config = load_config()
     if form_id not in config['forms']:
         return jsonify({'error': 'Form not found'}), 404
@@ -903,7 +864,7 @@ def add_question(form_id, section_id):
 @app.route('/api/forms/<form_id>/sections/<section_id>/questions/<question_id>', methods=['DELETE'])
 @api_login_required
 def delete_question(form_id, section_id, question_id):
-    """Delete a question from a section"""
+    #Delete a question from a section
     config = load_config()
     if form_id not in config['forms']:
         return jsonify({'error': 'Form not found'}), 404
@@ -930,14 +891,12 @@ def delete_question(form_id, section_id, question_id):
 
 @app.route('/api/db/test', methods=['GET'])
 def test_db_connection_old():
-    """Test database connection (no auth required for debugging)"""
     success, message = db.test_connection()
     return jsonify({'success': success, 'message': message})
 
 @app.route('/api/db/courses', methods=['GET'])
 @api_login_required
 def search_db_courses():
-    """Search courses from database"""
     search_term = request.args.get('search', '')
     limit = request.args.get('limit', 50, type=int)
     courses = db.get_courses_from_db(search_term, limit)
@@ -946,7 +905,6 @@ def search_db_courses():
 @app.route('/api/db/participants', methods=['GET'])
 @api_login_required
 def get_participants():
-    """Get participants for a class with pagination."""
     class_code = request.args.get('class_code', '')
     offset = request.args.get('offset', 0, type=int)
     limit = request.args.get('limit', 20, type=int)
@@ -978,7 +936,7 @@ def get_participants():
 @app.route('/api/db/update-survey-sent', methods=['POST'])
 @api_login_required
 def update_survey_sent():
-    """Update Survey Sent flag for a participant"""
+    #Update Survey Sent flag for a participant
     data = request.json
     course_code = data.get('course_code')
     participant_name = data.get('participant_name')
@@ -991,14 +949,12 @@ def update_survey_sent():
 
 @app.route('/api/db/test-connection', methods=['GET'])
 def test_db_connection():
-    """Test database connection and return detailed diagnostics (no auth required for debugging)."""
     ok, message = db.test_connection()
     return jsonify({'success': ok, 'message': message})
 
 
 @app.route('/api/db/auto-init', methods=['POST'])
 def auto_init_database():
-    """Automatically initialize database tables if needed (no auth required for first-time setup)."""
     try:
         config = load_config()
         results = {}
@@ -1007,7 +963,6 @@ def auto_init_database():
         ok_base, msg_base = db.init_fbs_tables()
         results['FBS_Forms'] = msg_base
         
-        # Initialize rectification log
         ok_rect, msg_rect = db.init_rectification_log_table()
         results['FBS_Rectification_Log'] = msg_rect
         
@@ -1030,7 +985,6 @@ def auto_init_database():
 @app.route('/api/db/create-tables', methods=['POST'])
 @api_login_required
 def create_tables():
-    """Ensure FBS_Forms and per-form response tables exist in AKC_FBS."""
     config = load_config()
     ok_base, msg_base = db.init_fbs_tables()
     results = {'FBS_Forms': msg_base}
@@ -1053,7 +1007,6 @@ def create_tables():
 @app.route('/api/forms/<form_id>/create-table', methods=['POST'])
 @api_login_required
 def create_form_table(form_id):
-    """Create the per-form response table for the given form."""
     config = load_config()
     form = config['forms'].get(form_id)
     if not form:
@@ -1066,7 +1019,6 @@ def create_form_table(form_id):
 @app.route('/api/forms/<form_id>/table-status', methods=['GET'])
 @api_login_required
 def form_table_status(form_id):
-    """Return whether the per-form response table already exists."""
     config = load_config()
     form = config['forms'].get(form_id)
     if not form:
@@ -1079,14 +1031,12 @@ def form_table_status(form_id):
 @app.route('/api/db/course-dates', methods=['GET'])
 @api_login_required
 def get_course_dates():
-    """Get all available registration dates from database"""
     dates = db.get_course_dates()
     return jsonify(dates)
 
 @app.route('/api/db/class-codes', methods=['GET'])
 @api_login_required
 def get_class_codes():
-    """Get class codes for a specific registration date"""
     date = request.args.get('date', '')
     if not date:
         return jsonify({'error': 'Date required'}), 400
@@ -1096,7 +1046,6 @@ def get_class_codes():
 @app.route('/api/courses', methods=['GET'])
 @api_login_required
 def get_courses():
-    """Get all course sessions from the database."""
     courses = db.get_all_courses_from_db()
     # Add form_url to each course for direct access links
     public_base = os.environ.get('PUBLIC_URL', '').rstrip('/') or request.host_url.rstrip('/')
@@ -1108,7 +1057,6 @@ def get_courses():
 @app.route('/api/courses', methods=['POST'])
 @api_login_required
 def create_course():
-    """Create a new course and generate QR code"""
     config = load_config()
     data = request.json
     
@@ -1193,7 +1141,6 @@ def create_course():
 @app.route('/api/forms/by-base/<base_form_id>', methods=['GET'])
 @api_login_required
 def get_form_languages(base_form_id):
-    """Get all language versions of a base form."""
     config = load_config()
     form_versions = []
     
@@ -1210,22 +1157,18 @@ def get_form_languages(base_form_id):
 @app.route('/api/courses/<course_id>', methods=['DELETE'])
 @api_login_required
 def close_course(course_id):
-    """Close a course QR session. The record is kept in the database."""
     ok = db.deactivate_course(course_id)
     return jsonify({'success': ok})
-
 
 @app.route('/api/courses/<course_id>/reactivate', methods=['PATCH'])
 @api_login_required
 def reactivate_course(course_id):
-    """Re-open a previously closed QR session."""
     ok = db.reactivate_course(course_id)
     return jsonify({'success': ok})
 
 @app.route('/api/courses/<course_id>/qrcode', methods=['GET'])
 @api_login_required
 def get_course_qrcode(course_id):
-    """Get QR code image for a course"""
     course = db.get_course_by_id(course_id)
     if not course:
         return jsonify({'error': 'Course not found'}), 404
@@ -1246,7 +1189,6 @@ def get_course_qrcode(course_id):
 
 @app.route('/api/universal-qr-link', methods=['GET'])
 def get_universal_qr_link():
-    """Get the public link for universal QR scan page (no authentication required)."""
     public_base = os.environ.get('PUBLIC_URL', '').rstrip('/') or request.host_url.rstrip('/')
     public_base = public_base.replace('https://', 'http://')
     scan_url = public_base + '/scan'
@@ -1273,7 +1215,6 @@ def get_universal_qrcode():
 
 @app.route('/student-login/<course_id>', methods=['GET', 'POST'])
 def student_login(course_id):
-    """Student login page - verifies the student by identification number"""
     course = db.get_course_by_id(course_id)
     if not course:
         return "Course not found. The QR code may be invalid.", 404
@@ -1304,7 +1245,6 @@ def student_login(course_id):
 
 @app.route('/form/<course_id>')
 def form_page(course_id):
-    """Public form page for participants to fill"""
     session_course_id = session.get('student_course_id')
     session_name = session.get('student_name', '[NONE]')
     session_id = session.get('student_id_number', '[NONE]')
@@ -1331,7 +1271,6 @@ def form_page(course_id):
 
 @app.route('/api/submit/<course_id>', methods=['POST'])
 def submit_form(course_id):
-    """Submit form response"""
     student_course_id = session.get('student_course_id')
     student_name = session.get('student_name', '[NO_NAME]')
     student_id = session.get('student_id_number', '[NO_ID]')
@@ -1385,7 +1324,6 @@ def submit_form(course_id):
 @app.route('/api/alerts', methods=['GET'])
 @api_login_required
 def get_alerts():
-    """Get low feedback alerts, optionally filtered by status and/or alert type."""
     alerts = load_alerts()
     status_filter = request.args.get('status', '')
     type_filter   = request.args.get('alert_type', '')
@@ -1399,7 +1337,6 @@ def get_alerts():
 @app.route('/api/alerts/summary', methods=['GET'])
 @api_login_required
 def get_alerts_summary():
-    """Get alert counts grouped by status"""
     alerts = load_alerts()
     summary = {'new': 0, 'acknowledged': 0, 'in_progress': 0, 'resolved': 0, 'total': len(alerts)}
     for a in alerts:
@@ -1411,7 +1348,6 @@ def get_alerts_summary():
 @app.route('/api/alerts/<alert_id>', methods=['PUT'])
 @api_login_required
 def update_alert(alert_id):
-    """Update alert status and/or action notes"""
     alerts = load_alerts()
     data = request.json
     for alert in alerts:
@@ -1431,7 +1367,6 @@ def update_alert(alert_id):
 @app.route('/api/alerts/analysis', methods=['GET'])
 @api_login_required
 def get_alerts_analysis():
-    """Group unresolved alerts by question and return priority-ranked hotspots."""
     alerts = load_alerts()
     active = [a for a in alerts if a.get('status') != 'resolved']
 
@@ -1473,7 +1408,6 @@ def get_alerts_analysis():
 @app.route('/api/alerts/batch', methods=['PUT'])
 @api_login_required
 def batch_update_alerts():
-    """Update multiple alerts at once by their IDs."""
     data = request.json
     ids = set(data.get('ids', []))
     new_status = data.get('status', '')
@@ -1496,7 +1430,6 @@ def batch_update_alerts():
 @app.route('/api/alerts/<alert_id>', methods=['DELETE'])
 @api_login_required
 def delete_alert(alert_id):
-    """Delete a single alert by ID"""
     alerts = load_alerts()
     original_len = len(alerts)
     alerts = [a for a in alerts if a.get('id') != alert_id]
@@ -1527,7 +1460,6 @@ def batch_delete_alerts():
 @app.route('/api/analysis/summary', methods=['GET'])
 @api_login_required
 def get_analysis_summary():
-    """Return high-level collection stats: total responses per form + alert counts."""
     config = load_config()
     counts = db.get_response_count_by_form(config['forms'])
     result = {}
@@ -1546,7 +1478,6 @@ def get_analysis_summary():
 @app.route('/api/analysis/ratings', methods=['GET'])
 @api_login_required
 def get_analysis_ratings():
-    """Compute per-question averages and rating distributions from the database."""
     form_id = request.args.get('form_id', 'form1')
     date_from_str = request.args.get('date_from', '').strip()
     date_to_str = request.args.get('date_to', '').strip()
@@ -1714,7 +1645,6 @@ def _parse_month_range(month_value):
     return start, end
 
 def _build_rating_question_map(form):
-    """Build ordered map for all rating-like sections."""
     rating_q_map = {}
     for section in form.get('sections', []):
         s_type = section.get('type', '')
@@ -1760,7 +1690,6 @@ def _resolve_analysis_class_code(row, course_id_to_class_code):
 @app.route('/api/analysis/dashboard/filters', methods=['GET'])
 @api_login_required
 def get_analysis_dashboard_filters():
-    """Return dashboard filter options by form/month."""
     try:
         form_id = request.args.get('form_id', 'form1')
         month = request.args.get('month', '').strip()
@@ -1822,7 +1751,6 @@ def get_analysis_dashboard_filters():
 @app.route('/api/analysis/dashboard', methods=['GET'])
 @api_login_required
 def get_analysis_dashboard():
-    """Return pie/bar-ready rating analysis for the dashboard UI."""
     form_id = request.args.get('form_id', 'form1')
     month = request.args.get('month', '').strip()
     selected_questions = [q.strip() for q in request.args.getlist('question') if q.strip()]
@@ -2006,7 +1934,6 @@ def get_analysis_dashboard():
 @app.route('/api/forms/<form_id>/structure', methods=['GET'])
 @api_login_required
 def get_form_structure(form_id):
-    """Get the structure of an existing form for copying/editing."""
     config = load_config()
     if form_id not in config['forms']:
         return jsonify({'error': 'Form not found'}), 404
@@ -2026,7 +1953,6 @@ def get_form_structure(form_id):
 @app.route('/api/forms', methods=['POST'])
 @api_login_required
 def create_form():
-    """Create a new custom form. Form ID is auto-generated from title + language."""
     config = load_config()
     data = request.json
     title = (data.get('title') or 'New Form').strip()
@@ -2162,9 +2088,6 @@ def create_form():
 @app.route('/api/forms/<form_id>', methods=['DELETE'])
 @api_login_required
 def delete_form(form_id):
-    """Delete or archive a form. Forms with response data are archived so that 
-    historical responses are never lost. Forms without data are hard-deleted
-    and their empty response tables are removed."""
     if form_id in ('form1', 'form2'):
         return jsonify({'error': 'Cannot delete built-in forms'}), 400
     config = load_config()
@@ -2202,7 +2125,6 @@ def delete_form(form_id):
 @app.route('/low-ratings')
 @api_login_required
 def low_ratings_page():
-    """Render the low ratings feedback page."""
     config = load_config()
     forms_dict = db.get_active_forms_map()
     forms_config = {
@@ -2297,7 +2219,6 @@ def get_low_ratings_data():
 @app.route('/api/rating-questions')
 @api_login_required
 def get_rating_questions():
-    """Get all rating questions for filtering."""
     forms_str = request.args.get('forms', '').strip()
     
     if not forms_str:
@@ -2313,7 +2234,6 @@ def get_rating_questions():
 @app.route('/api/hotspot-analysis')
 @api_login_required
 def get_hotspot_analysis():
-    """Get hotspot analysis - questions ranked by priority. For both rating questions and text questions."""
     forms_str = request.args.get('forms', '').strip()
     
     alerts = load_alerts()
@@ -2373,7 +2293,6 @@ def get_hotspot_analysis():
 @app.route('/api/update-alert-status', methods=['PUT'])
 @api_login_required
 def update_alert_status():
-    """Update alert status and notes."""
     data = request.get_json()
     alert_ids = data.get('alert_ids', [])
     status = data.get('status', '').strip()

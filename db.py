@@ -15,9 +15,8 @@ if ENV_PATH.exists():
 else:
     load_dotenv()
 
-# Setup logger for db module (use same log file as app)
 logger = logging.getLogger('db')
-if not logger.handlers:  # Only add handlers if not already added
+if not logger.handlers:
     log_dir = Path(APP_DIR) / 'logs'
     log_dir.mkdir(exist_ok=True)
     log_file = log_dir / 'session_debug.log'
@@ -35,7 +34,6 @@ PARTICIPANT_TABLE = '[Absolute Kinetics Consultancy$Course Participant]'
 DB_FBS_DATABASE = os.getenv('DB_FBS_DATABASE', 'AKC_FBS')
 
 def _validate_db_config():
-    """Validate that required database configuration is set."""
     missing = []
     if not DB_SERVER:
         missing.append('DB_SERVER')
@@ -62,7 +60,6 @@ _CONN_TMPL_LEGACY = (
 )
 
 def get_connection():
-    """Return a connection to AKC_NAV."""
     try:
         _validate_db_config()
 
@@ -94,7 +91,6 @@ def get_connection():
 
 
 def get_fbs_connection():
-    """Return a connection to AKC_FBS."""
     try:
         _validate_db_config()
 
@@ -126,7 +122,6 @@ def get_fbs_connection():
 
 
 def test_connection():
-    """Test both database connections. Returns (ok: bool, message: str)."""
     results = {}
     
     try:
@@ -168,7 +163,6 @@ def test_connection():
     return ok, message
 
 def _get_table_name(form_title):
-    """Convert form title to a SQL table name."""
     slug = re.sub(r'[^a-zA-Z0-9]+', '_', form_title.strip().lower()).strip('_')
     return f"{slug}_response"
 
@@ -231,8 +225,6 @@ def _get_form_columns(form_config):
 
 
 def create_form_response_table(form_title, form_config):
-    """Create the per-form response table in AKC_FBS if it does not already exist.
-    If it exists but is missing required columns, drop and recreate it."""
     table = _get_table_name(form_title)
     conn  = get_fbs_connection()
     if not conn:
@@ -240,55 +232,86 @@ def create_form_response_table(form_title, form_config):
     try:
         cur    = conn.cursor()
         
-        # Check if table exists and has the required id column
-        cur.execute(
-            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? AND COLUMN_NAME = 'id'",
-            (table,))
-        has_id_column = cur.fetchone()[0] > 0
-        
-        # Check if table exists and has the language column
-        cur.execute(
-            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? AND COLUMN_NAME = 'language'",
-            (table,))
-        has_language_column = cur.fetchone()[0] > 0
-        
         # Check if table exists
         cur.execute(
             "SELECT COUNT(*) FROM sysobjects WHERE name=? AND xtype='U'",
             (table,))
         table_exists = cur.fetchone()[0] > 0
         
-        # If table exists but missing required columns, drop it and recreate
-        if table_exists and (not has_id_column or not has_language_column):
-            logger.info(f"[DB] Dropping old table [{table}] (missing required columns - id:{has_id_column}, language:{has_language_column})")
-            cur.execute(f"DROP TABLE [{table}]")
+        # If table exists, add missing columns without dropping data
+        if table_exists:
+            logger.info(f"[DB] Table [{table}] already exists. Checking and adding missing columns if needed...")
+            
+            # Get existing columns
+            cur.execute(
+                "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS "
+                "WHERE TABLE_NAME = ? AND TABLE_CATALOG = DB_NAME()",
+                (table,))
+            existing_cols = {row[0].lower() for row in cur.fetchall()}
+            
+            desired_cols = _get_form_columns(form_config)
+            added = []
+            fixed_cols = [
+                ('id', 'UNIQUEIDENTIFIER NULL'),
+                ('submission_time', 'DATETIME2(7) NULL'),
+                ('course_id', 'NVARCHAR(20) NULL'),
+                ('course_title', 'NVARCHAR(500) NULL'),
+                ('course_code', 'NVARCHAR(50) NULL'),
+                ('course_date', 'DATE NULL'),
+                ('venue', 'NVARCHAR(200) NULL'),
+                ('language', 'NVARCHAR(50) NULL'),
+                ('participant_name', 'NVARCHAR(200) NULL'),
+                ('id_number', 'NVARCHAR(100) NULL'),
+                ('position_title', 'NVARCHAR(200) NULL'),
+            ]
+
+            for col, sql_type in fixed_cols:
+                if col.lower() not in existing_cols:
+                    try:
+                        cur.execute(f"ALTER TABLE [{table}] ADD [{col}] {sql_type}")
+                        added.append(col)
+                        logger.info(f"[DB] Added column [{col}] to table [{table}]")
+                    except Exception as e:
+                        logger.warning(f"[DB] Could not add column [{col}]: {e}")
+
+            for col, sql_type in desired_cols:
+                if col.lower() not in existing_cols:
+                    try:
+                        cur.execute(f"ALTER TABLE [{table}] ADD [{col}] {sql_type}")
+                        added.append(col)
+                        logger.info(f"[DB] Added column [{col}] to table [{table}]")
+                    except Exception as e:
+                        logger.warning(f"[DB] Could not add column [{col}]: {e}")
+            
             conn.commit()
-            table_exists = False
+            conn.close()
+            
+            if added:
+                return True, f"Table [{table}] updated with {len(added)} new column(s). Data preserved."
+            else:
+                return True, f"Table [{table}] is up to date. No changes needed."
         
-        # Create table if it doesn't exist
-        if not table_exists:
-            q_cols = _get_form_columns(form_config)
-            q_col_sql = '\n'.join(
-                f'    [{col}] {sql_type},' for col, sql_type in q_cols
-            )
-            sql = f"""CREATE TABLE [{table}] (
+        # Create table only if it doesn't exist
+        q_cols = _get_form_columns(form_config)
+        q_col_sql = '\n'.join(
+            f'    [{col}] {sql_type},' for col, sql_type in q_cols
+        )
+        sql = f"""CREATE TABLE [{table}] (
 {_FIXED_COLUMNS_SQL},
 {q_col_sql}
     CONSTRAINT [PK_{table}] PRIMARY KEY ([id])
 )"""
-            logger.info(f"[DB] Creating table [{table}]")
-            cur.execute(sql)
-            conn.commit()
-        
+        logger.info(f"[DB] Creating new table [{table}]")
+        cur.execute(sql)
+        conn.commit()
         conn.close()
-        return True, f"Table [{table}] is ready."
+        return True, f"Table [{table}] created successfully."
     except Exception as e:
-        logger.error(f"[DB] Error creating table {table}: {e}")
+        logger.error(f"[DB] Error creating/updating table {table}: {e}")
         return False, str(e)
 
 
 def form_table_exists(form_title):
-    """Return True if the per-form response table exists in AKC_FBS."""
     table = _get_table_name(form_title)
     conn  = get_fbs_connection()
     if not conn:
@@ -356,7 +379,6 @@ def sync_form_response_table(form_title, form_config):
 
 
 def init_fbs_tables():
-    """Create the FBS_Forms registry table if it does not exist."""
     conn = get_fbs_connection()
     if not conn:
         return False, "Could not connect to AKC_FBS"
@@ -398,7 +420,6 @@ def init_fbs_tables():
         return False, f"Error initialising FBS tables: {e}"
 
 def _course_row_to_dict(row):
-    """Convert a FBS_Courses DB row to a plain dict identical to the old config format."""
     d = {
         'id':           row[0],
         'form_id':      row[1],
@@ -417,7 +438,6 @@ def _course_row_to_dict(row):
 
 
 def create_course_in_db(course_dict):
-    """Insert a new course session into FBS_Courses."""
     conn = get_fbs_connection()
     if not conn:
         return False
@@ -440,7 +460,6 @@ def create_course_in_db(course_dict):
 
 
 def get_course_by_id(course_id):
-    """Return a single course dict, or None if not found."""
     conn = get_fbs_connection()
     if not conn:
         return None
@@ -459,7 +478,6 @@ def get_course_by_id(course_id):
 
 
 def get_fbs_course_title_map(course_ids):
-    """Return {course_id: course_title} from FBS_Courses for a list of course IDs."""
     ids = sorted({str(c).strip() for c in (course_ids or []) if str(c).strip()})
     if not ids:
         return {}
@@ -489,7 +507,6 @@ def get_fbs_course_title_map(course_ids):
 
 
 def get_all_courses_from_db():
-    """Return all course sessions (active and closed), newest first."""
     conn = get_fbs_connection()
     if not conn:
         return []
@@ -509,7 +526,6 @@ def get_all_courses_from_db():
 
 
 def register_form(form_id, form_title, form_number, description, config_json, language='English'):
-    """Create or update a form in the FBS_Forms registry."""
     conn = get_fbs_connection()
     if not conn:
         return False
@@ -537,7 +553,6 @@ def register_form(form_id, form_title, form_number, description, config_json, la
 
 
 def get_all_courses_from_db():
-    """Return all course sessions (active and closed), newest first."""
     conn = get_fbs_connection()
     if not conn:
         return []
@@ -557,7 +572,6 @@ def get_all_courses_from_db():
 
 
 def get_active_courses_by_title(course_title):
-    """Return all ACTIVE course sessions matching the given course_title."""
     conn = get_fbs_connection()
     if not conn:
         return []
@@ -577,7 +591,6 @@ def get_active_courses_by_title(course_title):
 
 
 def get_courses_by_title(course_title):
-    """Return ALL (active + closed) course sessions matching the given course_title."""
     conn = get_fbs_connection()
     if not conn:
         return []
@@ -597,7 +610,6 @@ def get_courses_by_title(course_title):
 
 
 def deactivate_course(course_id):
-    """Close a QR session (is_active → 0). The record is kept for data integrity."""
     conn = get_fbs_connection()
     if not conn:
         return False
@@ -615,7 +627,6 @@ def deactivate_course(course_id):
 
 
 def reactivate_course(course_id):
-    """Re-open a previously closed QR session."""
     conn = get_fbs_connection()
     if not conn:
         return False
@@ -632,7 +643,6 @@ def reactivate_course(course_id):
         return False
 
 def register_form(form_id, form_title, form_number, description, config_dict, language='English'):
-    """Upsert a form in FBS_Forms."""
     conn = get_fbs_connection()
     if not conn:
         return False
@@ -663,7 +673,6 @@ def register_form(form_id, form_title, form_number, description, config_dict, la
 
 
 def soft_delete_form(form_id):
-    """Mark a form as deleted. Responses in FBS_Responses are never touched."""
     conn = get_fbs_connection()
     if not conn:
         return False
@@ -701,7 +710,6 @@ def find_form_by_title(form_title):
 
 
 def get_active_forms_map():
-    """Return active forms as {form_id: config_dict}."""
     conn = get_fbs_connection()
     if not conn:
         return {}
@@ -750,7 +758,6 @@ def get_active_forms_map():
 
 
 def form_has_responses(form_id, form_title):
-    """Return True if the per-form response table has at least one row."""
     table = _get_table_name(form_title)
     conn  = get_fbs_connection()
     if not conn:
@@ -766,7 +773,6 @@ def form_has_responses(form_id, form_title):
 
 
 def drop_form_response_table_if_empty(form_title):
-    """Drop the per-form response table only when it exists and has zero rows. """
     table = _get_table_name(form_title)
     conn = get_fbs_connection()
     if not conn:
@@ -795,7 +801,6 @@ def drop_form_response_table_if_empty(form_title):
         return False, False, str(e)
 
 def has_submitted_db(course_id, id_number, form_title):
-    """Return True if a response already exists in the form's per-form table."""
     table = _get_table_name(form_title)
     conn  = get_fbs_connection()
     if not conn:
@@ -935,7 +940,6 @@ def save_response_to_db(form_id, course_id, course, participant_name, id_number,
         return False
 
 def get_response_count_by_form(forms_dict):
-    """Return {form_id: count} by querying each form's per-form response table."""
     result = {}
     conn   = get_fbs_connection()
     if not conn:
@@ -957,7 +961,6 @@ def get_response_count_by_form(forms_dict):
 
 
 def get_responses_for_analysis(form_id, form_config, date_from=None, date_to=None, course_filter=None):
-    """Return response rows from the per-form table for analysis."""
     table  = _get_table_name(form_config.get('title', form_id))
     conn   = get_fbs_connection()
     if not conn:
@@ -1037,7 +1040,6 @@ def get_responses_for_analysis(form_id, form_config, date_from=None, date_to=Non
 
 
 def get_distinct_courses_for_form(form_id, form_config):
-    """Return sorted list of distinct course_id values in the per-form table."""
     table = _get_table_name(form_config.get('title', form_id))
     conn  = get_fbs_connection()
     if not conn:
@@ -1056,7 +1058,6 @@ def get_distinct_courses_for_form(form_id, form_config):
 
 
 def get_available_analysis_months(form_id, form_config):
-    """Return distinct available months (YYYY-MM) from a form response table."""
     table = _get_table_name(form_config.get('title', form_id))
     conn = get_fbs_connection()
     if not conn:
@@ -1168,7 +1169,6 @@ def get_nav_course_name_map(class_codes):
         return {}
 
 def add_course_code_column(form_title):
-    """Add course_code column to form table if it doesn't exist."""
     table = _get_table_name(form_title)
     conn  = get_fbs_connection()
     if not conn:
@@ -1196,7 +1196,6 @@ def add_course_code_column(form_title):
         return False
 
 def backfill_course_codes(form_title):
-    """Populate course_code column for existing responses using their class codes."""
     table = _get_table_name(form_title)
     conn  = get_fbs_connection()
     if not conn:
@@ -1217,7 +1216,6 @@ def backfill_course_codes(form_title):
             if not class_code:
                 continue
             
-            # Look up course code from NAV
             course_code = get_course_code_for_class_code(class_code)
             if course_code:
                 cur.execute(f"""
@@ -1235,7 +1233,6 @@ def backfill_course_codes(form_title):
         return False, str(e)
 
 def get_course_code_for_class_code(class_code):
-    """Get the Course Code from NAV for a given Class Code. Returns course_code or None."""
     if not class_code:
         return None
     
@@ -1275,7 +1272,6 @@ def get_course_code_for_class_code(class_code):
         return None
 
 def get_nav_course_code_map(class_codes):
-    """Get Course Code from NAV database by Class Code. Returns {class_code_upper: course_code}"""
     if not class_codes:
         return {}
 
@@ -1364,7 +1360,6 @@ def get_nav_course_code_map(class_codes):
         return {}
 
 def get_courses_from_db(search_term=None, limit=50):
-    """Fetch courses from AKC_NAV. Returns list of dicts with code and description."""
     conn = get_connection()
     if not conn:
         return []
@@ -1386,7 +1381,6 @@ def get_courses_from_db(search_term=None, limit=50):
 
 
 def get_course_dates():
-    """Return list of distinct Registration Dates (YYYY-MM-DD strings) from AKC_NAV."""
     conn = get_connection()
     if not conn:
         return []
@@ -1407,7 +1401,6 @@ def get_course_dates():
 
 
 def get_class_codes_by_date(registration_date):
-    """Return list of distinct Class Codes for a specific Registration Date."""
     conn = get_connection()
     if not conn:
         return []
@@ -1429,7 +1422,6 @@ def get_class_codes_by_date(registration_date):
 
 
 def verify_student_participant(class_code, participant_name):
-    """Return True if participant_name is registered for class_code."""
     conn = get_connection()
     if not conn:
         return False
@@ -1451,7 +1443,6 @@ def verify_student_participant(class_code, participant_name):
 
 
 def get_participant_name_by_id(class_code, identification_number):
-    """Look up participant name by class code + ID number. Returns str or None."""
     conn = get_connection()
     if not conn:
         return None
@@ -1472,7 +1463,6 @@ def get_participant_name_by_id(class_code, identification_number):
 
 
 def get_participants_by_class(class_code, offset=0, limit=20):
-    """Fetch participants for a class with pagination. Deduplicates on Identification Number"""
     conn = get_connection()
     if not conn:
         return {'error': 'Could not connect to database'}
@@ -1519,7 +1509,6 @@ def get_participants_by_class(class_code, offset=0, limit=20):
         return {'error': str(e)}
 
 def update_survey_sent(course_code, participant_name, sent=True):
-    """Update the Survey Sent flag for a participant in AKC_NAV."""
     conn = get_connection()
     if not conn:
         return False
@@ -1538,7 +1527,6 @@ def update_survey_sent(course_code, participant_name, sent=True):
         return False
 
 def init_rectification_log_table():
-    """Create the FBS_Rectification_Log table if it does not exist."""
     conn = get_fbs_connection()
     if not conn:
         return False, "Could not connect to AKC_FBS"
@@ -1571,7 +1559,6 @@ def init_rectification_log_table():
 
 
 def get_low_rating_responses(form_id, form_config, rating_threshold=2):
-    """Get all low-rated responses (rating <= rating_threshold) from a form."""
     table = _get_table_name(form_config.get('title', form_id))
     conn = get_fbs_connection()
     if not conn:
@@ -1691,7 +1678,6 @@ def get_low_rating_responses(form_id, form_config, rating_threshold=2):
         return []
 
 def _get_participant_email(course_id, id_number, participant_name):
-    """Look up participant email from AKC_NAV using course_id and id_number."""
     try:
         conn = get_connection()
         if not conn:
@@ -1734,10 +1720,7 @@ def get_all_rating_questions_by_form(forms_dict):
             result[form_id] = questions
     return result
 
-def log_rectification_sent(form_id, response_id, participant_name, participant_email,
-                           question_id, question_text, rating_value, rectification_text,
-                           implementation_date, status):
-    """Log a sent rectification to prevent duplicates."""
+def log_rectification_sent(form_id, response_id, participant_name, participant_email, question_id, question_text, rating_value, rectification_text, implementation_date, status):
     conn = get_fbs_connection()
     if not conn:
         return False
@@ -1758,7 +1741,6 @@ def log_rectification_sent(form_id, response_id, participant_name, participant_e
         return False
 
 def check_rectification_already_sent(form_id, response_id, question_id):
-    """Check if a rectification has already been sent for this low rating."""
     conn = get_fbs_connection()
     if not conn:
         return False
@@ -1775,7 +1757,6 @@ def check_rectification_already_sent(form_id, response_id, question_id):
         return False
 
 def get_text_question_responses(form_id, form_config):
-    """Get all text/short-answer question responses for alert management."""
     table = _get_table_name(form_config.get('title', form_id))
     conn = get_fbs_connection()
     if not conn:
