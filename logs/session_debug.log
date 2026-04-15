@@ -470,3 +470,175 @@
 2026-04-09 11:10:50,638 - Application started - Logging enabled
 2026-04-09 11:10:50,638 - Log file: c:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
 2026-04-09 11:10:50,638 - ================================================================================
+2026-04-15 16:55:59,341 - ================================================================================
+2026-04-15 16:55:59,342 - Application started - Logging enabled
+2026-04-15 16:55:59,342 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-15 16:55:59,342 - ================================================================================
+2026-04-15 16:55:59,357 - [NEGATIVE_MATCH] Processing text: 'the course was terrible'
+2026-04-15 16:55:59,357 - [NEGATIVE_MATCH] ALERT - negative keywords: ['terrible']
+2026-04-15 16:55:59,358 - [NEGATIVE_MATCH] Processing text: 'this was a horrible experience'
+2026-04-15 16:55:59,358 - [NEGATIVE_MATCH] ALERT - negative keywords: ['horrible']
+2026-04-15 16:55:59,358 - [NEGATIVE_MATCH] Processing text: 'very disappointed with the trainer'
+2026-04-15 16:55:59,358 - [NEGATIVE_MATCH] ALERT - negative keywords: ['disappointed']
+2026-04-15 16:55:59,359 - [NEGATIVE_MATCH] Processing text: 'the content is boring and repetitive'
+2026-04-15 16:55:59,359 - [NEGATIVE_MATCH] ALERT - negative keywords: ['boring', 'repetitive']
+2026-04-15 16:55:59,359 - [NEGATIVE_MATCH] Processing text: 'unprofessional and rude instructors'
+2026-04-15 16:55:59,359 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Unprofessional', 'rude']
+2026-04-15 16:55:59,359 - [NEGATIVE_MATCH] Processing text: 'waste of time and money'
+2026-04-15 16:55:59,359 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Waste']
+2026-04-15 16:55:59,360 - [NEGATIVE_MATCH] Processing text: 'confusing and unclear explanations'
+2026-04-15 16:55:59,360 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Confusing', 'unclear']
+2026-04-15 16:55:59,360 - [NEGATIVE_MATCH] Processing text: 'poorly organized and disorganized'
+2026-04-15 16:55:59,360 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Poorly', 'disorganized']
+2026-04-15 16:55:59,360 - [NEGATIVE_MATCH] Processing text: 'disappointing performance from staff'
+2026-04-15 16:55:59,361 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Disappointing']
+2026-04-15 16:55:59,361 - [NEGATIVE_MATCH] Processing text: 'not satisfied with the training'
+2026-04-15 16:55:59,361 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Not satisfied']
+2026-04-15 16:55:59,361 - [NEGATIVE_MATCH] Processing text: 'could be much better'
+2026-04-15 16:55:59,361 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:55:59,361 - [NEGATIVE_MATCH] Processing text: 'needs improvement in quality'
+2026-04-15 16:55:59,361 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Needs improve']
+2026-04-15 16:55:59,362 - [NEGATIVE_MATCH] Processing text: 'too fast and rushed delivery'
+2026-04-15 16:55:59,362 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Too fast', 'rushed']
+2026-04-15 16:55:59,362 - [NEGATIVE_MATCH] Processing text: 'inadequate support and guidance'
+2026-04-15 16:55:59,362 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Inadequate']
+2026-04-15 16:55:59,363 - [NEGATIVE_MATCH] Processing text: 'frustrated with the process'
+2026-04-15 16:55:59,363 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Frustrated']
+2026-04-15 16:55:59,363 - [NEGATIVE_MATCH] Processing text: 'the course was excellent'
+2026-04-15 16:55:59,363 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:55:59,363 - [NEGATIVE_MATCH] Processing text: 'i loved this training!'
+2026-04-15 16:55:59,364 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:55:59,364 - [NEGATIVE_MATCH] Processing text: 'amazing and wonderful experience'
+2026-04-15 16:55:59,364 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:55:59,364 - [NEGATIVE_MATCH] Processing text: 'perfect training delivered'
+2026-04-15 16:55:59,364 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:55:59,365 - [NEGATIVE_MATCH] Processing text: 'great instructors and best content'
+2026-04-15 16:55:59,365 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:55:59,365 - [NEGATIVE_MATCH] Processing text: 'awesome program, very impressed'
+2026-04-15 16:55:59,365 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:55:59,365 - [NEGATIVE_MATCH] Processing text: 'excellent organization and support'
+2026-04-15 16:55:59,365 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:55:59,365 - [NEGATIVE_MATCH] Processing text: 'outstanding delivery and engagement'
+2026-04-15 16:55:59,365 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:55:59,366 - [NEGATIVE_MATCH] Processing text: 'fantastic course structure'
+2026-04-15 16:55:59,366 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:55:59,366 - [NEGATIVE_MATCH] Processing text: 'superb quality training'
+2026-04-15 16:55:59,366 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:55:59,366 - [NEGATIVE_MATCH] Processing text: 'n/a'
+2026-04-15 16:55:59,366 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:55:59,367 - [NEGATIVE_MATCH] Processing text: 'ok'
+2026-04-15 16:55:59,367 - [NEGATIVE_MATCH] SKIP - all words are positive/neutral
+2026-04-15 16:55:59,367 - [NEGATIVE_MATCH] Processing text: 'fine'
+2026-04-15 16:55:59,367 - [NEGATIVE_MATCH] SKIP - all words are positive/neutral
+2026-04-15 16:55:59,367 - [NEGATIVE_MATCH] Processing text: 'average'
+2026-04-15 16:55:59,367 - [NEGATIVE_MATCH] SKIP - all words are positive/neutral
+2026-04-15 16:55:59,367 - [NEGATIVE_MATCH] Processing text: 'nothing specific to mention'
+2026-04-15 16:55:59,368 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:55:59,368 - [NEGATIVE_MATCH] Processing text: 'none'
+2026-04-15 16:55:59,368 - [NEGATIVE_MATCH] SKIP - all words are positive/neutral
+2026-04-15 16:55:59,368 - [NEGATIVE_MATCH] Processing text: 'not bad at all'
+2026-04-15 16:55:59,368 - [NEGATIVE_MATCH] SKIP - contains skip phrase: 'not bad'
+2026-04-15 16:55:59,368 - [NEGATIVE_MATCH] Processing text: 'no problem with the training'
+2026-04-15 16:55:59,368 - [NEGATIVE_MATCH] SKIP - contains skip phrase: 'no problem'
+2026-04-15 16:55:59,368 - [NEGATIVE_MATCH] Processing text: 'no issues found'
+2026-04-15 16:55:59,368 - [NEGATIVE_MATCH] SKIP - contains skip phrase: 'no issues'
+2026-04-15 16:55:59,368 - [NEGATIVE_MATCH] Processing text: 'not poorly executed'
+2026-04-15 16:55:59,368 - [NEGATIVE_MATCH] SKIP - contains skip phrase: 'not poorly'
+2026-04-15 16:55:59,369 - [NEGATIVE_MATCH] Processing text: 'x y z'
+2026-04-15 16:55:59,369 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:55:59,369 - [NEGATIVE_MATCH] Processing text: 'this training was bad, really bad and awful'
+2026-04-15 16:55:59,369 - [NEGATIVE_MATCH] ALERT - negative keywords: ['bad', 'awful']
+2026-04-15 16:55:59,369 - [NEGATIVE_MATCH] Processing text: 'the content was unclear. very confusing indeed.'
+2026-04-15 16:55:59,369 - [NEGATIVE_MATCH] ALERT - negative keywords: ['unclear', 'Very confusing']
+2026-04-15 16:55:59,369 - [NEGATIVE_MATCH] Processing text: 'the course was terrible, awful, and horrible. very disappointing.'
+2026-04-15 16:55:59,369 - [NEGATIVE_MATCH] ALERT - negative keywords: ['terrible', 'awful', 'horrible', 'Very disappointing']
+2026-04-15 16:55:59,369 - [NEGATIVE_MATCH] Processing text: 'bad quality, poor delivery, unprofessional staff'
+2026-04-15 16:55:59,370 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Bad', 'poor delivery', 'unprofessional']
+2026-04-15 16:55:59,370 - [NEGATIVE_MATCH] Processing text: 'confusing, unclear, inadequate content and useless exercises'
+2026-04-15 16:55:59,370 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Confusing', 'unclear', 'inadequate', 'useless']
+2026-04-15 16:57:07,269 - ================================================================================
+2026-04-15 16:57:07,269 - Application started - Logging enabled
+2026-04-15 16:57:07,270 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-15 16:57:07,270 - ================================================================================
+2026-04-15 16:57:07,282 - [NEGATIVE_MATCH] Processing text: 'the course was terrible'
+2026-04-15 16:57:07,282 - [NEGATIVE_MATCH] ALERT - negative keywords: ['terrible']
+2026-04-15 16:57:07,283 - [NEGATIVE_MATCH] Processing text: 'this was a horrible experience'
+2026-04-15 16:57:07,283 - [NEGATIVE_MATCH] ALERT - negative keywords: ['horrible']
+2026-04-15 16:57:07,283 - [NEGATIVE_MATCH] Processing text: 'very disappointed with the trainer'
+2026-04-15 16:57:07,283 - [NEGATIVE_MATCH] ALERT - negative keywords: ['disappointed']
+2026-04-15 16:57:07,283 - [NEGATIVE_MATCH] Processing text: 'the content is boring and repetitive'
+2026-04-15 16:57:07,283 - [NEGATIVE_MATCH] ALERT - negative keywords: ['boring', 'repetitive']
+2026-04-15 16:57:07,283 - [NEGATIVE_MATCH] Processing text: 'unprofessional and rude instructors'
+2026-04-15 16:57:07,283 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Unprofessional', 'rude']
+2026-04-15 16:57:07,284 - [NEGATIVE_MATCH] Processing text: 'waste of time and money'
+2026-04-15 16:57:07,284 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Waste']
+2026-04-15 16:57:07,284 - [NEGATIVE_MATCH] Processing text: 'confusing and unclear explanations'
+2026-04-15 16:57:07,284 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Confusing', 'unclear']
+2026-04-15 16:57:07,284 - [NEGATIVE_MATCH] Processing text: 'poorly organized and disorganized'
+2026-04-15 16:57:07,284 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Poorly', 'disorganized']
+2026-04-15 16:57:07,284 - [NEGATIVE_MATCH] Processing text: 'disappointing performance from staff'
+2026-04-15 16:57:07,285 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Disappointing']
+2026-04-15 16:57:07,285 - [NEGATIVE_MATCH] Processing text: 'not satisfied with the training'
+2026-04-15 16:57:07,285 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Not satisfied']
+2026-04-15 16:57:07,285 - [NEGATIVE_MATCH] Processing text: 'could be much better'
+2026-04-15 16:57:07,285 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Could be much better']
+2026-04-15 16:57:07,285 - [NEGATIVE_MATCH] Processing text: 'needs improvement in quality'
+2026-04-15 16:57:07,285 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Needs improvement']
+2026-04-15 16:57:07,286 - [NEGATIVE_MATCH] Processing text: 'too fast and rushed delivery'
+2026-04-15 16:57:07,286 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Too fast', 'rushed']
+2026-04-15 16:57:07,286 - [NEGATIVE_MATCH] Processing text: 'inadequate content'
+2026-04-15 16:57:07,286 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Inadequate']
+2026-04-15 16:57:07,286 - [NEGATIVE_MATCH] Processing text: 'frustrated with the process'
+2026-04-15 16:57:07,286 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Frustrated']
+2026-04-15 16:57:07,286 - [NEGATIVE_MATCH] Processing text: 'the course was excellent'
+2026-04-15 16:57:07,286 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:57:07,286 - [NEGATIVE_MATCH] Processing text: 'i loved this training!'
+2026-04-15 16:57:07,287 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:57:07,287 - [NEGATIVE_MATCH] Processing text: 'amazing and wonderful experience'
+2026-04-15 16:57:07,287 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:57:07,287 - [NEGATIVE_MATCH] Processing text: 'perfect training delivered'
+2026-04-15 16:57:07,287 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:57:07,288 - [NEGATIVE_MATCH] Processing text: 'great instructors and best content'
+2026-04-15 16:57:07,288 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:57:07,288 - [NEGATIVE_MATCH] Processing text: 'awesome program, very impressed'
+2026-04-15 16:57:07,288 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:57:07,288 - [NEGATIVE_MATCH] Processing text: 'excellent organization and support'
+2026-04-15 16:57:07,289 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:57:07,289 - [NEGATIVE_MATCH] Processing text: 'outstanding delivery and engagement'
+2026-04-15 16:57:07,289 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:57:07,289 - [NEGATIVE_MATCH] Processing text: 'fantastic course structure'
+2026-04-15 16:57:07,289 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:57:07,289 - [NEGATIVE_MATCH] Processing text: 'superb quality training'
+2026-04-15 16:57:07,289 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:57:07,290 - [NEGATIVE_MATCH] Processing text: 'n/a'
+2026-04-15 16:57:07,290 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:57:07,290 - [NEGATIVE_MATCH] Processing text: 'ok'
+2026-04-15 16:57:07,290 - [NEGATIVE_MATCH] SKIP - all words are positive/neutral
+2026-04-15 16:57:07,290 - [NEGATIVE_MATCH] Processing text: 'fine'
+2026-04-15 16:57:07,290 - [NEGATIVE_MATCH] SKIP - all words are positive/neutral
+2026-04-15 16:57:07,291 - [NEGATIVE_MATCH] Processing text: 'average'
+2026-04-15 16:57:07,291 - [NEGATIVE_MATCH] SKIP - all words are positive/neutral
+2026-04-15 16:57:07,291 - [NEGATIVE_MATCH] Processing text: 'nothing specific to mention'
+2026-04-15 16:57:07,291 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:57:07,291 - [NEGATIVE_MATCH] Processing text: 'none'
+2026-04-15 16:57:07,291 - [NEGATIVE_MATCH] SKIP - all words are positive/neutral
+2026-04-15 16:57:07,292 - [NEGATIVE_MATCH] Processing text: 'not bad at all'
+2026-04-15 16:57:07,292 - [NEGATIVE_MATCH] SKIP - contains skip phrase: 'not bad'
+2026-04-15 16:57:07,292 - [NEGATIVE_MATCH] Processing text: 'no problem with the training'
+2026-04-15 16:57:07,292 - [NEGATIVE_MATCH] SKIP - contains skip phrase: 'no problem'
+2026-04-15 16:57:07,292 - [NEGATIVE_MATCH] Processing text: 'no issues found'
+2026-04-15 16:57:07,292 - [NEGATIVE_MATCH] SKIP - contains skip phrase: 'no issues'
+2026-04-15 16:57:07,292 - [NEGATIVE_MATCH] Processing text: 'not poorly executed'
+2026-04-15 16:57:07,292 - [NEGATIVE_MATCH] SKIP - contains skip phrase: 'not poorly'
+2026-04-15 16:57:07,293 - [NEGATIVE_MATCH] Processing text: 'x y z'
+2026-04-15 16:57:07,293 - [NEGATIVE_MATCH] SKIP - no negative keywords
+2026-04-15 16:57:07,293 - [NEGATIVE_MATCH] Processing text: 'this training was bad, really bad and awful'
+2026-04-15 16:57:07,293 - [NEGATIVE_MATCH] ALERT - negative keywords: ['bad', 'awful']
+2026-04-15 16:57:07,293 - [NEGATIVE_MATCH] Processing text: 'the content was unclear. very confusing indeed.'
+2026-04-15 16:57:07,294 - [NEGATIVE_MATCH] ALERT - negative keywords: ['unclear', 'Very confusing']
+2026-04-15 16:57:07,294 - [NEGATIVE_MATCH] Processing text: 'the course was terrible, awful, and horrible. very disappointing.'
+2026-04-15 16:57:07,294 - [NEGATIVE_MATCH] ALERT - negative keywords: ['terrible', 'awful', 'horrible', 'Very disappointing']
+2026-04-15 16:57:07,294 - [NEGATIVE_MATCH] Processing text: 'bad quality, poor delivery, unprofessional staff'
+2026-04-15 16:57:07,294 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Bad', 'poor delivery', 'unprofessional']
+2026-04-15 16:57:07,294 - [NEGATIVE_MATCH] Processing text: 'confusing, unclear, inadequate content and useless exercises'
+2026-04-15 16:57:07,295 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Confusing', 'unclear', 'inadequate', 'useless']
