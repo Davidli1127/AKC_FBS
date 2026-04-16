@@ -123,7 +123,6 @@ def get_fbs_connection():
 
 def test_connection():
     results = {}
-    
     try:
         conn = get_connection()
         if conn:

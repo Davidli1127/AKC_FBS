@@ -642,3 +642,15 @@
 2026-04-15 16:57:07,294 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Bad', 'poor delivery', 'unprofessional']
 2026-04-15 16:57:07,294 - [NEGATIVE_MATCH] Processing text: 'confusing, unclear, inadequate content and useless exercises'
 2026-04-15 16:57:07,295 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Confusing', 'unclear', 'inadequate', 'useless']
+2026-04-16 08:46:06,603 - ================================================================================
+2026-04-16 08:46:06,603 - Application started - Logging enabled
+2026-04-16 08:46:06,603 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-16 08:46:06,604 - ================================================================================
+2026-04-16 08:46:36,919 - ================================================================================
+2026-04-16 08:46:36,919 - Application started - Logging enabled
+2026-04-16 08:46:36,920 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-16 08:46:36,920 - ================================================================================
+2026-04-16 08:47:02,214 - ================================================================================
+2026-04-16 08:47:02,214 - Application started - Logging enabled
+2026-04-16 08:47:02,214 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-16 08:47:02,215 - ================================================================================

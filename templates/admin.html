@@ -951,24 +951,23 @@
                 }
                 
                 allParticipants = data.participants;
-                currentOffset = allParticipants.length;
+                currentOffset = 0;
                 
                 let html = `<div class="participants-header">
                     <h4>Showing all ${data.total} participants for class "${classCode}"</h4>
                 </div>`;
                 
                 html += '<table class="participants-table"><thead><tr>';
-                html += '<th>Name</th><th>Identification No.</th><th>Email</th><th>Designation</th><th>Survey Sent</th>';
+                html += '<th>Name</th><th>Identification No.</th><th>Email</th><th>Form Submitted</th>';
                 html += '</tr></thead><tbody>';
                 
                 for (const p of allParticipants) {
-                    const surveyStatus = p.survey_sent ? '✓ Yes' : '✗ No';
-                    const statusClass = p.survey_sent ? 'status-sent' : 'status-pending';
+                    const surveyStatus = p.form_submitted ? '✓ Yes' : '✗ No';
+                    const statusClass = p.form_submitted ? 'status-sent' : 'status-pending';
                     html += `<tr>
                         <td>${p.name || '-'}</td>
                         <td>${p.id_number || '-'}</td>
                         <td>${p.email || '-'}</td>
-                        <td>${p.designation || '-'}</td>
                         <td class="${statusClass}">${surveyStatus}</td>
                     </tr>`;
                 }
