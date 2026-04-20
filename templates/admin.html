@@ -205,6 +205,11 @@
                         Load Participants
                     </button>
                     
+                    <button class="btn btn-secondary" onclick="sendEmailReminders()" id="sendRemindersBtn" 
+                            style="display: none; margin-left: 10px;">
+                        📧 Send Email Reminder to Non-Submitted
+                    </button>
+                    
                     <div id="participantsResult" style="margin-top: 20px;">
                     </div>
                 </div>
@@ -960,6 +965,8 @@
                     
                     html += '</tbody></table>';
                     
+                    document.getElementById('sendRemindersBtn').style.display = 'inline-block';
+                    
                     if (data.has_more) {
                         const remaining = data.total - allParticipants.length;
                         html += `<div style="text-align: center; margin-top: 15px;">
@@ -1020,9 +1027,109 @@
                 
                 html += '</tbody></table>';
                 resultDiv.innerHTML = html;
+                document.getElementById('sendRemindersBtn').style.display = 'inline-block';
             } catch (error) {
                 console.error('Error:', error);
                 resultDiv.innerHTML = '<p style="color: red;">Error loading participants.</p>';
+            }
+        }
+        
+        async function sendEmailReminders() {
+            const classCode = document.getElementById('participantCourseSearch').value.trim();
+            
+            if (!classCode) {
+                alert('Please load participants first');
+                return;
+            }
+            
+            if (!confirm('Send email reminders to all participants who haven\'t submitted their form? This action will be logged.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/send-form-reminder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        class_code: classCode
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    alert('Error: ' + (result.error || result.message));
+                    return;
+                }
+                
+                if (result.reminders_sent === 0) {
+                    alert(result.message);
+                    return;
+                }
+                
+                let message = `✓ Reminder emails prepared for ${result.reminders_sent} participants:\n\n`;
+                const recipients = result.participants_notified;
+                
+                if (recipients && recipients.length > 0) {
+                    message += 'Click OK to open the first email, or copy the email content:\n\n';
+                    
+                    // Create a modal to show all recipients and their email links
+                    const modal = document.createElement('div');
+                    modal.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0,0,0,0.5);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 10000;
+                    `;
+                    
+                    const modalContent = document.createElement('div');
+                    modalContent.style.cssText = `
+                        background: white;
+                        border-radius: 8px;
+                        padding: 20px;
+                        max-width: 600px;
+                        max-height: 80vh;
+                        overflow-y: auto;
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    `;
+                    
+                    let html = `<h3>Email Reminders Prepared</h3>
+                        <p><strong>${result.reminders_sent} reminder${result.reminders_sent > 1 ? 's' : ''} prepared for:</strong></p>
+                        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 15px; background: #f9f9f9;">`;
+                    
+                    for (let i = 0; i < recipients.length; i++) {
+                        const r = recipients[i];
+                        html += `<div style="padding: 8px; border-bottom: 1px solid #eee; margin-bottom: 8px;">
+                            <strong>${i+1}. ${r.name}</strong> (${r.email})<br>
+                            <small style="color: #666;">ID: ${r.id_number}</small><br>
+                            <button style="margin-top: 5px; padding: 5px 10px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                                    onclick="window.open('${r.mailto_link}', '_blank')">
+                                Open Email
+                            </button>
+                        </div>`;
+                    }
+                    
+                    html += `</div>
+                        <div style="text-align: right;">
+                            <button onclick="this.closest('div').parentElement.parentElement.remove()" 
+                                    style="padding: 8px 16px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                                Close
+                            </button>
+                        </div>`;
+                    
+                    modalContent.innerHTML = html;
+                    modal.appendChild(modalContent);
+                    document.body.appendChild(modal);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error sending reminders: ' + error.message);
             }
         }
         

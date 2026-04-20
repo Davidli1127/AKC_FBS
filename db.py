@@ -1557,6 +1557,53 @@ def init_rectification_log_table():
         return False, str(e)
 
 
+def init_reminder_log_table():
+    conn = get_fbs_connection()
+    if not conn:
+        return False, "Could not connect to AKC_FBS"
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='FBS_Reminder_Log' AND xtype='U')
+            CREATE TABLE FBS_Reminder_Log (
+                log_id              UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+                class_code          NVARCHAR(100) NOT NULL,
+                participant_name    NVARCHAR(200) NOT NULL,
+                participant_email   NVARCHAR(200) NOT NULL,
+                participant_id      NVARCHAR(100) NULL,
+                form_title          NVARCHAR(300) NULL,
+                reminder_type       NVARCHAR(50) NOT NULL DEFAULT 'form_submission',
+                sent_by_admin       NVARCHAR(200) NULL,
+                reminder_sent_at    DATETIME NOT NULL DEFAULT GETDATE(),
+                created_at          DATETIME NOT NULL DEFAULT GETDATE()
+            )
+        """)
+        conn.commit()
+        conn.close()
+        return True, "FBS_Reminder_Log ready."
+    except Exception as e:
+        print(f"Error initializing FBS_Reminder_Log: {e}")
+        return False, str(e)
+
+
+def log_reminder_sent(class_code, participant_name, participant_email, participant_id=None, form_title=None, sent_by_admin=None):
+    conn = get_fbs_connection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """INSERT INTO FBS_Reminder_Log (class_code, participant_name, participant_email, participant_id, form_title, sent_by_admin)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (class_code, participant_name, participant_email, participant_id, form_title, sent_by_admin))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error logging reminder: {e}")
+        return False
+
+
 def get_low_rating_responses(form_id, form_config, rating_threshold=2):
     table = _get_table_name(form_config.get('title', form_id))
     conn = get_fbs_connection()

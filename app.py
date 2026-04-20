@@ -2395,10 +2395,164 @@ AKC Training Team"""
         logger.error(f"Error sending rectification: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/log-rectification-preview', methods=['POST'])
+@api_login_required
+def log_rectification_preview():
+    """Log when admin clicks 'Preview Email' button for rectification"""
+    try:
+        data = request.get_json()
+        
+        form_id = data.get('form_id', '').strip()
+        response_id = data.get('response_id', '').strip()
+        question_id = data.get('question_id', '').strip()
+        participant_email = data.get('participant_email', '').strip()
+        participant_name = data.get('participant_name', '').strip()
+        question_text = data.get('question_text', '').strip()
+        rating_value = data.get('rating_value', 0)
+        rectification_text = data.get('rectification_text', '').strip()
+        implementation_date = data.get('implementation_date', '').strip()
+        status = data.get('status', 'Pending').strip()
+        
+        if not all([form_id, response_id, question_id, participant_email]):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        # Convert response_id to UUID if it's a string
+        import uuid
+        try:
+            if isinstance(response_id, str):
+                response_uuid = uuid.UUID(response_id)
+            else:
+                response_uuid = response_id
+        except ValueError:
+            return jsonify({'error': 'Invalid response_id format'}), 400
+        
+        # Log the preview action to the database
+        log_ok = db.log_rectification_sent(
+            form_id=form_id,
+            response_id=response_uuid,
+            participant_name=participant_name,
+            participant_email=participant_email,
+            question_id=question_id,
+            question_text=question_text,
+            rating_value=rating_value,
+            rectification_text=rectification_text,
+            implementation_date=implementation_date if implementation_date else None,
+            status=status
+        )
+        
+        if not log_ok:
+            return jsonify({'error': 'Could not log rectification preview'}), 500
+        
+        return jsonify({
+            'success': True,
+            'message': 'Rectification preview logged successfully'
+        })
+    
+    except Exception as e:
+        logger.error(f"Error logging rectification preview: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/send-form-reminder', methods=['POST'])
+@api_login_required
+def send_form_reminder():
+    """Send email reminders to participants who haven't submitted their form"""
+    try:
+        data = request.get_json()
+        class_code = data.get('class_code', '').strip()
+        
+        if not class_code:
+            return jsonify({'error': 'Class code is required'}), 400
+        
+        # Get all participants for this class
+        result = db.get_participants_by_class(class_code, 0, 50000)
+        if 'error' in result:
+            return jsonify(result), 400
+        
+        # Get form submission status for each participant
+        config = load_config()
+        class_code_norm = class_code.strip().upper()
+        matching_courses = db.get_courses_by_title(class_code_norm)
+        matching_course_ids = [c['id'] for c in matching_courses]
+        form_titles = list({
+            config['forms'].get(c.get('form_id', ''), {}).get('title', c.get('form_id', ''))
+            for c in matching_courses
+        })
+        
+        submitted_ids = db.get_submitted_ids_for_courses(matching_course_ids, form_titles)
+        
+        # Filter participants who haven't submitted
+        non_submitted = []
+        for p in result.get('participants', []):
+            id_norm = _norm_id(p.get('id_number', ''))
+            is_submitted = bool(id_norm) and id_norm in submitted_ids
+            if not is_submitted:
+                non_submitted.append(p)
+        
+        if not non_submitted:
+            return jsonify({
+                'success': True,
+                'message': 'All participants have submitted their forms',
+                'reminders_sent': 0,
+                'participants_notified': []
+            })
+        
+        # Create reminder email content
+        form_title = form_titles[0] if form_titles else 'Feedback Form'
+        email_subject = f"Reminder: Please Complete {form_title}"
+        
+        # Prepare list of recipients and send reminders
+        recipients = []
+        for p in non_submitted:
+            email_body = f"""Dear {p.get('name', 'Participant')},
+
+This is a friendly reminder to complete the {form_title} evaluation.
+
+Your feedback is important to us and helps us improve our training programs. 
+Please take a few minutes to provide your honest feedback.
+
+Thank you for your cooperation!
+
+Best regards,
+AKC Training Team"""
+            
+            from urllib.parse import quote
+            subject_encoded = quote(email_subject)
+            body_encoded = quote(email_body)
+            mailto_link = f"mailto:{p.get('email', '')}?subject={subject_encoded}&body={body_encoded}"
+            admin_user = session.get('user', 'Unknown')
+            db.log_reminder_sent(
+                class_code=class_code,
+                participant_name=p.get('name', ''),
+                participant_email=p.get('email', ''),
+                participant_id=p.get('id_number', ''),
+                form_title=form_title,
+                sent_by_admin=admin_user
+            )
+            
+            recipients.append({
+                'name': p.get('name', ''),
+                'email': p.get('email', ''),
+                'id_number': p.get('id_number', ''),
+                'mailto_link': mailto_link,
+                'email_body': email_body
+            })
+        
+        return jsonify({
+            'success': True,
+            'message': f'Reminder emails prepared for {len(recipients)} participants',
+            'reminders_sent': len(recipients),
+            'participants_notified': recipients
+        })
+    
+    except Exception as e:
+        logger.error(f"Error sending form reminder: {e}")
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     db.init_fbs_tables()
     db.init_rectification_log_table()
+    db.init_reminder_log_table()
     _cfg = load_config()
     _forms_ok, _forms_sync = sync_forms_registry_with_config(_cfg)
     logger.info(f"[FBS_Forms sync] {sum(1 for ok in _forms_sync.values() if ok)}/{len(_forms_sync)} forms synced")

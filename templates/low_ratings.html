@@ -1196,7 +1196,7 @@
             document.querySelectorAll('.feedback-row').forEach(row => row.classList.remove('selected'));
         }
 
-        function previewEmail() {
+        async function previewEmail() {
             if (!selectedFeedback || !selectedFeedback.isRating) {
                 alert('Please select a rating feedback first.');
                 return;
@@ -1211,6 +1211,32 @@
             if (!rectificationText.trim() || !implDate) {
                 alert('Please fill in Rectification and Implementation Date first.');
                 return;
+            }
+
+            try {
+                const logResponse = await fetch('/api/log-rectification-preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        form_id: item.form_id,
+                        response_id: item.response_id,
+                        question_id: rating.question_id,
+                        participant_name: item.participant_name,
+                        participant_email: item.participant_email,
+                        question_text: rating.question_text,
+                        rating_value: rating.rating_value,
+                        rectification_text: rectificationText,
+                        implementation_date: implDate,
+                        status: status
+                    })
+                });
+
+                const logResult = await logResponse.json();
+                if (!logResult.success) {
+                    console.warn('Warning: Could not log preview action:', logResult.error);
+                }
+            } catch (err) {
+                console.warn('Warning: Error logging preview action:', err.message);
             }
 
             const emailBody = `Dear ${item.participant_name},
