@@ -1404,7 +1404,7 @@
 
             li.innerHTML = `
                 <div class="course-info">
-                    <h4>${course.course_title}${statusBadge} <span style="font-size:12px;color:#666;">(${course.form_id === 'form1' ? 'Trainer Evaluation' : course.form_id === 'form2' ? 'Assessor Evaluation' : course.form_id})</span></h4>
+                    <h4 style="cursor:pointer; color:#0066cc;" onclick="viewParticipantsForCourse('${course.course_title}')" title="Click to view participants for this class">${course.course_title}${statusBadge} <span style="font-size:12px;color:#666;">(${course.form_id === 'form1' ? 'Trainer Evaluation' : course.form_id === 'form2' ? 'Assessor Evaluation' : course.form_id})</span></h4>
                     <p>${locationInfo}</p>
                     ${personnelInfo ? `<p>${personnelInfo}</p>` : ''}
                 </div>
@@ -1437,6 +1437,13 @@
             document.getElementById('sessionClassCodeFilter').value = '';
             document.getElementById('sessionStatusFilter').value = 'all';
             applyCourseFilters();
+        }
+
+        function viewParticipantsForCourse(courseTitle) {
+            document.getElementById('participantCourseSearch').value = courseTitle;
+            showTab('participants');
+            // Load participants for this class
+            setTimeout(() => loadParticipants(), 100);
         }
 
         function renderCourseList(courses, totalCount = null) {
