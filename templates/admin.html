@@ -39,11 +39,22 @@
                         <div class="form-group">
                             <label>Select Form Type:</label>
                             <select id="formSelect" name="form_id" required onchange="updateQRFormFields()">
-                                {% for form_id, form in config.forms.items() %}
-                                {% if not form.is_archived %}
-                                <option value="{{ form_id }}">{{ form.title }}</option>
-                                {% endif %}
-                                {% endfor %}
+                                <script>
+                                (function() {
+                                    const formSelect = document.getElementById('formSelect');
+                                    const seenTitles = new Set();
+                                    {% for form_id, form in config.forms.items() %}
+                                    {% if not form.is_archived %}
+                                    const title = "{{ form.title }}";
+                                    if (!seenTitles.has(title)) {
+                                        seenTitles.add(title);
+                                        const opt = new Option(title, "{{ form_id }}");
+                                        formSelect.add(opt);
+                                    }
+                                    {% endif %}
+                                    {% endfor %}
+                                })();
+                                </script>
                             </select>
                         </div>
 
@@ -235,11 +246,22 @@
                                 <label>Copy structure from</label>
                                 <select id="newFormCopyFrom" onchange="onCopyFromChange()">
                                     <option value="">Start from scratch</option>
-                                    {% for form_id, form in config.forms.items() %}
-                                    {% if not form.is_archived %}
-                                    <option value="{{ form_id }}">{{ form.title }}</option>
-                                    {% endif %}
-                                    {% endfor %}
+                                    <script>
+                                    (function() {
+                                        const formSelect = document.getElementById('newFormCopyFrom');
+                                        const seenTitles = new Set();
+                                        {% for form_id, form in config.forms.items() %}
+                                        {% if not form.is_archived %}
+                                        const title = "{{ form.title }}";
+                                        if (!seenTitles.has(title)) {
+                                            seenTitles.add(title);
+                                            const opt = new Option(title, "{{ form_id }}");
+                                            formSelect.add(opt);
+                                        }
+                                        {% endif %}
+                                        {% endfor %}
+                                    })();
+                                    </script>
                                 </select>
                             </div>
                         </div>
@@ -313,17 +335,29 @@
                         <div style="flex:1; min-width:300px;">
                             <label>Select Form to Edit:</label>
                             <select id="editFormSelect" onchange="loadFormForEdit()">
-                                {% for form_id, form in config.forms.items() %}
-                                {% if not form.is_archived %}
-                                <option value="{{ form_id }}">{{ form.title }}</option>
-                                {% endif %}
-                                {% endfor %}
+                                <script>
+                                (function() {
+                                    const formSelect = document.getElementById('editFormSelect');
+                                    const seenTitles = new Set();
+                                    {% for form_id, form in config.forms.items() %}
+                                    {% if not form.is_archived %}
+                                    const title = "{{ form.title }}";
+                                    if (!seenTitles.has(title)) {
+                                        seenTitles.add(title);
+                                        const opt = new Option(title, "{{ form_id }}");
+                                        formSelect.add(opt);
+                                    }
+                                    {% endif %}
+                                    {% endfor %}
+                                })();
+                                </script>
                             </select>
                         </div>
                         <div style="flex:0; min-width:200px;">
                             <label for="editFormLanguageSelect">Language Version:</label>
                             <select id="editFormLanguageSelect" onchange="loadFormForEdit('language')">
                             </select>
+                            <small id="editFormLanguageLabel" style="display:block; color:#666; font-size:11px; margin-top:3px; height:14px;"></small>
                         </div>
                         <div style="display:flex; gap:8px; padding-top:22px;">
                             <button class="btn btn-danger btn-sm" onclick="deleteSelectedForm()" id="deleteFormBtn" title="Delete this custom form">Delete Form</button>
@@ -414,9 +448,20 @@
                         <div>
                             <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Form</label>
                             <select id="analysisFormId" onchange="refreshAnalysisFilters()" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:230px;">
-                                {% for form_id, form in config.forms.items() %}
-                                <option value="{{ form_id }}">{{ form.title }}</option>
-                                {% endfor %}
+                                <script>
+                                (function() {
+                                    const formSelect = document.getElementById('analysisFormId');
+                                    const seenTitles = new Set();
+                                    {% for form_id, form in config.forms.items() %}
+                                    const title = "{{ form.title }}";
+                                    if (!seenTitles.has(title)) {
+                                        seenTitles.add(title);
+                                        const opt = new Option(title, "{{ form_id }}");
+                                        formSelect.add(opt);
+                                    }
+                                    {% endfor %}
+                                })();
+                                </script>
                             </select>
                         </div>
                         <div id="analysisLanguageGroup" style="display:none;">
@@ -424,6 +469,7 @@
                             <select id="analysisLanguageSelect" onchange="updateAnalysisLanguage()" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:180px;">
                                 <option value="">Select language...</option>
                             </select>
+                            <small id="analysisLanguageLabel" style="display:block; color:#666; font-size:11px; margin-top:3px; height:14px;"></small>
                         </div>
                         <div>
                             <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Month Selection</label>
@@ -1474,13 +1520,16 @@
         async function loadFormForEdit(source = 'main') {
             let selectedFormId = document.getElementById('editFormSelect').value;
             const languageSelect = document.getElementById('editFormLanguageSelect');
-            const languageLabel = languageSelect.previousElementSibling;
+            const languageLabel = document.getElementById('editFormLanguageLabel');
             
             if (source === 'language') {
                 selectedFormId = languageSelect.value;
                 if (document.getElementById('editFormSelect').value !== selectedFormId) {
                     document.getElementById('editFormSelect').value = selectedFormId;
                 }
+                // Update language label to show selected language
+                const selectedOption = languageSelect.options[languageSelect.selectedIndex];
+                languageLabel.textContent = `(${selectedOption.textContent})`;
             } else {
                 const selectedTitle = FORM_TITLE_MAP[selectedFormId];
                 if (!selectedTitle) {
@@ -1500,7 +1549,10 @@
                         });
                         languageSelect.value = selectedFormId;
                         languageSelect.style.display = 'inline-block';
-                        languageLabel.style.display = 'inline-block';
+                        languageLabel.style.display = 'block';
+                        // Update language label to show selected language
+                        const selectedOption = languageSelect.options[languageSelect.selectedIndex];
+                        languageLabel.textContent = `(${selectedOption.textContent})`;
                     } else {
                         languageSelect.style.display = 'none';
                         languageLabel.style.display = 'none';
@@ -2239,10 +2291,21 @@
                 const result = await response.json();
                 if (result.success) {
                     resultDiv.innerHTML = `<span style="color:green;">✓ Form "<strong>${result.form.title}</strong>" (${language}) created! (ID: <code>${result.form.id}</code>)</span>`;
-                    const opt1 = new Option(`${result.form.title} [${language}]`, result.form.id);
-                    const opt2 = new Option(`${result.form.title} [${language}]`, result.form.id);
-                    document.getElementById('editFormSelect').add(opt1);
-                    document.getElementById('formSelect').add(opt2);
+                    
+                    const editSelect = document.getElementById('editFormSelect');
+                    const formSelect = document.getElementById('formSelect');
+                    const newFormCopyFrom = document.getElementById('newFormCopyFrom');
+                    
+                    const titleExists = Array.from(editSelect.options).some(opt => opt.text === result.form.title);
+                    if (!titleExists) {
+                        const opt1 = new Option(result.form.title, result.form.id);
+                        const opt2 = new Option(result.form.title, result.form.id);
+                        const opt3 = new Option(result.form.title, result.form.id);
+                        editSelect.add(opt1);
+                        formSelect.add(opt2);
+                        newFormCopyFrom.add(opt3);
+                    }
+                    
                     const isAssessor = result.form.sections && result.form.sections.some(s => s.type === 'assessor_rating');
                     FORM_PERSONNEL[result.form.id] = isAssessor ? 'assessor' : 'instructor';
                     if (result.form.qr_fields) FORM_QR_FIELDS[result.form.id] = result.form.qr_fields;
@@ -2254,7 +2317,7 @@
                     document.getElementById('qrMaxAssessors').value = '2';
                     qrCustomFields = []; qrCustomFieldCounter = 0;
                     renderQrCustomFieldsBuilder();
-                    document.getElementById('editFormSelect').value = result.form.id;
+                    editSelect.value = result.form.id;
                     loadFormForEdit();
                     document.getElementById('newFormTitle').value = '';
                     document.getElementById('newFormLanguage').value = 'English';
@@ -2814,9 +2877,11 @@
         function updateAnalysisLanguageSelector(formId) {
             const languageSelect = document.getElementById('analysisLanguageSelect');
             const languageGroup = document.getElementById('analysisLanguageGroup');
+            const languageLabel = document.getElementById('analysisLanguageLabel');
             
             languageSelect.innerHTML = '<option value="">Select language...</option>';
             languageGroup.style.display = 'none';
+            languageLabel.textContent = '';
             
             const formTitle = FORM_TITLE_MAP[formId];
             if (!formTitle) return;
@@ -2830,13 +2895,23 @@
                 });
                 languageSelect.value = formId;
                 languageGroup.style.display = 'block';
+                const selectedOption = languageSelect.options[languageSelect.selectedIndex];
+                if (selectedOption && selectedOption.value) {
+                    languageLabel.textContent = `(${selectedOption.textContent})`;
+                }
             }
         }
         
         function updateAnalysisLanguage() {
-            const selectedFormId = document.getElementById('analysisLanguageSelect').value;
+            const languageSelect = document.getElementById('analysisLanguageSelect');
+            const languageLabel = document.getElementById('analysisLanguageLabel');
+            const selectedFormId = languageSelect.value;
             if (selectedFormId) {
                 document.getElementById('analysisFormId').value = selectedFormId;
+                const selectedOption = languageSelect.options[languageSelect.selectedIndex];
+                if (selectedOption && selectedOption.value) {
+                    languageLabel.textContent = `(${selectedOption.textContent})`;
+                }
                 refreshAnalysisFilters();
             }
         }
