@@ -747,6 +747,7 @@ def get_active_forms_map():
             cfg['headerFields'] = cfg.get('headerFields', [])
             cfg['ratingOptions'] = cfg.get('ratingOptions', [])
             cfg['language'] = cfg.get('language', 'English')
+            cfg['is_archived'] = cfg.get('is_archived', False)
 
             forms[form_id] = cfg
 

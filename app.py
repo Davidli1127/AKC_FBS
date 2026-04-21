@@ -765,6 +765,32 @@ def admin():
     }
     return render_template('admin.html', config=config, form_personnel=form_personnel, form_qr_fields=form_qr_fields, forms_config=forms_config)
 
+@app.route('/api/debug/forms')
+@login_required
+def debug_forms():
+    try:
+        config = load_config()
+        forms = config.get('forms', {})
+        
+        return jsonify({
+            'status': 'success',
+            'form_count': len(forms),
+            'forms': {
+                form_id: {
+                    'title': form.get('title'),
+                    'is_archived': form.get('is_archived'),
+                    'language': form.get('language'),
+                    'sections_count': len(form.get('sections', []))
+                }
+                for form_id, form in forms.items()
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
 @app.route('/admin/form/<form_id>')
 @login_required
 def admin_form(form_id):
