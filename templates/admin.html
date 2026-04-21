@@ -3013,6 +3013,11 @@
             const languageVersions = FORM_BY_TITLE[formTitle] || [];
             
             if (languageVersions.length > 1) {
+                // Add "Select All" option
+                const selectAllOpt = new Option('Select All Languages', 'select_all');
+                languageSelect.add(selectAllOpt);
+                
+                // Add individual language options
                 languageVersions.forEach(version => {
                     const opt = new Option(version.language, version.id);
                     languageSelect.add(opt);
@@ -3029,13 +3034,28 @@
         function updateAnalysisLanguage() {
             const languageSelect = document.getElementById('analysisLanguageSelect');
             const languageLabel = document.getElementById('analysisLanguageLabel');
-            const selectedFormId = languageSelect.value;
-            if (selectedFormId) {
+            let selectedFormId = languageSelect.value;
+            
+            if (selectedFormId === 'select_all') {
+                // Get all form versions and aggregate them
+                const formId = document.getElementById('analysisFormId').value;
+                const formTitle = FORM_TITLE_MAP[formId];
+                const languageVersions = FORM_BY_TITLE[formTitle] || [];
+                
+                if (languageVersions.length > 0) {
+                    // Store all form IDs for "Select All" to fetch and aggregate data
+                    selectedFormId = languageVersions.map(v => v.id).join(',');
+                    languageLabel.textContent = `(All Languages)`;
+                }
+            } else if (selectedFormId) {
                 document.getElementById('analysisFormId').value = selectedFormId;
                 const selectedOption = languageSelect.options[languageSelect.selectedIndex];
                 if (selectedOption && selectedOption.value) {
                     languageLabel.textContent = `(${selectedOption.textContent})`;
                 }
+            }
+            
+            if (selectedFormId) {
                 refreshAnalysisFilters();
             }
         }

@@ -715,7 +715,7 @@ def get_active_forms_map():
     try:
         cur = conn.cursor()
         cur.execute(
-            "SELECT form_id, form_title, form_number, description, config_json "
+            "SELECT form_id, form_title, form_number, description, config_json, base_form_id "
             "FROM FBS_Forms WHERE is_deleted = 0"
         )
         rows = cur.fetchall()
@@ -728,6 +728,7 @@ def get_active_forms_map():
             form_number = row[2] or ''
             description = row[3] or ''
             config_json = row[4]
+            base_form_id = row[5]
 
             cfg = {}
             if config_json:
@@ -739,6 +740,13 @@ def get_active_forms_map():
             if not isinstance(cfg, dict):
                 cfg = {}
 
+            # Extract language code from form_id
+            language_code = 'en'
+            if '_' in form_id:
+                potential_code = form_id.split('_')[-1]
+                if len(potential_code) <= 3 and potential_code.isalpha():
+                    language_code = potential_code.lower()
+
             cfg['id'] = cfg.get('id', form_id)
             cfg['title'] = cfg.get('title', form_title)
             cfg['formNumber'] = cfg.get('formNumber', form_number)
@@ -747,6 +755,8 @@ def get_active_forms_map():
             cfg['headerFields'] = cfg.get('headerFields', [])
             cfg['ratingOptions'] = cfg.get('ratingOptions', [])
             cfg['language'] = cfg.get('language', 'English')
+            cfg['language_code'] = language_code
+            cfg['base_form_id'] = base_form_id
             cfg['is_archived'] = cfg.get('is_archived', False)
 
             forms[form_id] = cfg
@@ -1748,6 +1758,179 @@ def _get_participant_email(course_id, id_number, participant_name):
     except Exception as e:
         print(f"Error getting participant email: {e}")
         return None
+
+def get_response_table_name_with_language(form_title, language_code):
+    slug = re.sub(r'[^a-zA-Z0-9]+', '_', form_title.strip().lower()).strip('_')
+    lang_suffix = language_code.strip().lower()
+    return f"{slug}_response_{lang_suffix}"
+
+
+def check_response_table_exists(table_name):
+    conn = get_fbs_connection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT 1 FROM INFORMATION_SCHEMA.TABLES 
+            WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = ?
+        """, (table_name,))
+        result = cur.fetchone() is not None
+        conn.close()
+        return result
+    except Exception as e:
+        print(f"Error checking table existence: {e}")
+        return False
+
+
+def create_response_table_if_not_exists(form_title, language_code, form_config):
+    table_name = get_response_table_name_with_language(form_title, language_code)
+    conn = get_fbs_connection()
+    if not conn:
+        return False, table_name, "Cannot connect to database"
+    
+    try:
+        if check_response_table_exists(table_name):
+            return True, table_name, f"Table '{table_name}' already exists (reused)"
+        
+        # Create new table
+        cur = conn.cursor()
+        columns = _FIXED_COLUMNS_SQL
+        form_cols = _get_form_columns(form_config)
+        if form_cols:
+            form_col_sql = ', '.join(f'[{col}] {dtype}' for col, dtype in form_cols)
+            columns = f"{columns}, {form_col_sql}"
+        
+        # Create table with primary key
+        sql = f"""
+        CREATE TABLE [{table_name}] (
+            {columns},
+            PRIMARY KEY ([id])
+        )
+        """
+        
+        cur.execute(sql)
+        conn.commit()
+        conn.close()
+        
+        return True, table_name, f"Table '{table_name}' created successfully"
+    
+    except Exception as e:
+        print(f"Error creating response table: {e}")
+        try:
+            conn.rollback()
+        except:
+            pass
+        return False, table_name, str(e)
+
+
+def delete_response_table_if_empty(form_title, language_code):
+    table_name = get_response_table_name_with_language(form_title, language_code)
+    conn = get_fbs_connection()
+    if not conn:
+        return False, False, "Cannot connect to database"
+    
+    try:
+        cur = conn.cursor()
+        
+        # Check if table exists
+        if not check_response_table_exists(table_name):
+            return True, False, f"Table '{table_name}' does not exist"
+        
+        # Check if table has data
+        cur.execute(f"SELECT COUNT(*) FROM [{table_name}]")
+        row_count = cur.fetchone()[0]
+        
+        if row_count > 0:
+            conn.close()
+            return True, False, f"Table '{table_name}' contains {row_count} row(s); keeping table"
+        
+        # Delete empty table
+        cur.execute(f"DROP TABLE [{table_name}]")
+        conn.commit()
+        conn.close()
+        
+        return True, True, f"Table '{table_name}' dropped (empty table)"
+    
+    except Exception as e:
+        print(f"Error deleting response table: {e}")
+        try:
+            conn.rollback()
+        except:
+            pass
+        return False, False, str(e)
+
+
+def get_form_versions(base_form_id):
+    conn = get_fbs_connection()
+    if not conn:
+        return []
+    
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT form_id, form_title, base_form_id, config_json
+            FROM FBS_Forms
+            WHERE base_form_id = ? AND is_deleted = 0
+            ORDER BY form_id
+        """, (base_form_id,))
+        
+        rows = cur.fetchall()
+        conn.close()
+        
+        versions = []
+        for row in rows:
+            form_id, form_title, bid, config_json = row
+            cfg = {}
+            if config_json:
+                try:
+                    cfg = json.loads(config_json)
+                except:
+                    pass
+            
+            language = cfg.get('language', 'English')
+            versions.append({
+                'form_id': form_id,
+                'form_title': form_title,
+                'base_form_id': bid,
+                'language': language
+            })
+        
+        return versions
+    
+    except Exception as e:
+        print(f"Error getting form versions: {e}")
+        return []
+
+
+def list_available_languages_for_form(base_form_id):
+    versions = get_form_versions(base_form_id)
+    languages = []
+    
+    for version in versions:
+        language = version.get('language', 'English')
+        form_id = version.get('form_id', '')
+        
+        if '_' in form_id:
+            code = form_id.split('_')[-1]
+            if code not in languages:
+                languages.append(code)
+        else:
+            lang_map = {
+                'English': 'en',
+                'Chinese': 'zh',
+                'Thai': 'th',
+                'Spanish': 'es',
+                'French': 'fr',
+                'German': 'de',
+                'Japanese': 'ja',
+                'Korean': 'ko'
+            }
+            code = lang_map.get(language, language[:2].lower())
+            if code not in languages:
+                languages.append(code)
+    
+    return sorted(languages)
 
 
 def get_all_rating_questions_by_form(forms_dict):

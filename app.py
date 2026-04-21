@@ -568,8 +568,8 @@ def scan_lookup():
     options = []
     for c in matches:
         form_label = {
-            'form1': 'Trainer Evaluation',
-            'form2': 'Assessor Evaluation'
+            'form1_en': 'Trainer Evaluation',
+            'form2_en': 'Assessor Evaluation'
         }.get(c['form_id'], c['form_id'])
         already = has_submitted(c['id'], id_number)
         options.append({
@@ -1504,7 +1504,7 @@ def get_analysis_summary():
 @app.route('/api/analysis/ratings', methods=['GET'])
 @api_login_required
 def get_analysis_ratings():
-    form_id = request.args.get('form_id', 'form1')
+    form_id = request.args.get('form_id', 'form1_en')
     date_from_str = request.args.get('date_from', '').strip()
     date_to_str = request.args.get('date_to', '').strip()
     course_filter = request.args.get('course', '').strip()
@@ -1597,7 +1597,7 @@ def get_analysis_ratings():
 @app.route('/api/analysis/text', methods=['GET'])
 @api_login_required
 def get_analysis_text():
-    form_id = request.args.get('form_id', 'form1')
+    form_id = request.args.get('form_id', 'form1_en')
     date_from_str = request.args.get('date_from', '').strip()
     date_to_str   = request.args.get('date_to', '').strip()
     course_filter = request.args.get('course', '').strip()
@@ -1717,7 +1717,7 @@ def _resolve_analysis_class_code(row, course_id_to_class_code):
 @api_login_required
 def get_analysis_dashboard_filters():
     try:
-        form_id = request.args.get('form_id', 'form1')
+        form_id = request.args.get('form_id', 'form1_en')
         month = request.args.get('month', '').strip()
 
         config = load_config()
@@ -1777,7 +1777,7 @@ def get_analysis_dashboard_filters():
 @app.route('/api/analysis/dashboard', methods=['GET'])
 @api_login_required
 def get_analysis_dashboard():
-    form_id = request.args.get('form_id', 'form1')
+    form_id = request.args.get('form_id', 'form1_en')
     month = request.args.get('month', '').strip()
     selected_questions = [q.strip() for q in request.args.getlist('question') if q.strip()]
     selected_course_titles = [c.strip() for c in request.args.getlist('course_title') if c.strip()]
@@ -2109,18 +2109,39 @@ def create_form():
     )
     if not form_ok:
         return jsonify({'error': 'Could not save new form to FBS_Forms'}), 500
-    return jsonify({'success': True, 'form': new_form})
+    
+    # Create response table for this language version
+    lang_code = _language_to_code(language)
+    table_created, table_name, table_msg = db.create_response_table_if_not_exists(
+        title,
+        lang_code,
+        new_form
+    )
+    
+    response_data = {
+        'success': True,
+        'form': new_form,
+        'table_info': {
+            'created': table_created,
+            'table_name': table_name,
+            'message': table_msg
+        }
+    }
+    
+    return jsonify(response_data)
 
 @app.route('/api/forms/<form_id>', methods=['DELETE'])
 @api_login_required
 def delete_form(form_id):
-    if form_id in ('form1', 'form2'):
+    if form_id in ('form1_en', 'form2_en', 'form1', 'form2'):
         return jsonify({'error': 'Cannot delete built-in forms'}), 400
     config = load_config()
     if form_id not in config['forms']:
         return jsonify({'error': 'Form not found'}), 404
 
     form_title = config['forms'].get(form_id, {}).get('title', form_id)
+    language_code = config['forms'].get(form_id, {}).get('language_code', 'en')
+    
     if db.form_has_responses(form_id, form_title):
         if not db.soft_delete_form(form_id):
             return jsonify({'error': 'Could not archive form in FBS_Forms'}), 500
@@ -2130,7 +2151,8 @@ def delete_form(form_id):
             'message': 'Form archived — all responses are preserved in the database.'
         })
     else:
-        drop_ok, dropped, drop_msg = db.drop_form_response_table_if_empty(form_title)
+        # Try to delete response table if empty
+        drop_ok, dropped, drop_msg = db.delete_response_table_if_empty(form_title, language_code)
 
         if not drop_ok:
             return jsonify({'error': f'Could not remove response table: {drop_msg}'}), 500
