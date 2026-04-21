@@ -502,16 +502,21 @@ def save_response(form_id, course_id, data, id_number='', language='English'):
     config = load_config()
     form_config = config['forms'].get(form_id, {})
     form_title = form_config.get('title', form_id)
+    language_code = form_config.get('language_code', 'en')
     participant_name = data.get('name', '')
     position = data.get('position', '')
 
     logger.info(f"[SAVE_RESPONSE] Starting save for form_id={form_id}, participant={participant_name}, id_number={id_number}")
     
-    table_ok, table_msg = db.create_form_response_table(form_title, form_config)
+    table_ok, table_name, table_msg = db.create_response_table_if_not_exists(
+        form_title,
+        language_code,
+        form_config
+    )
     if not table_ok:
-        logger.error(f"[SAVE_RESPONSE] ERROR: Could not create response table [{form_title}]: {table_msg}")
+        logger.error(f"[SAVE_RESPONSE] ERROR: Could not create response table [{table_name}]: {table_msg}")
         return False
-    logger.info(f"[SAVE_RESPONSE] Table [{form_title}] verified")
+    logger.info(f"[SAVE_RESPONSE] Table [{table_name}] verified")
     
     ok = db.save_response_to_db(
         form_id, course_id, course or {},
@@ -995,7 +1000,13 @@ def auto_init_database():
         # Create form response tables
         for form_id, form in config['forms'].items():
             if not form.get('is_archived'):
-                ok, msg = db.create_form_response_table(form.get('title', form_id), form)
+                form_title = form.get('title', form_id)
+                language_code = form.get('language_code', 'en')
+                ok, table_name, msg = db.create_response_table_if_not_exists(
+                    form_title,
+                    language_code,
+                    form
+                )
                 results[form_id] = msg
         
         all_ok = ok_base and all('Error' not in str(m) for m in results.values())
@@ -1037,10 +1048,22 @@ def create_form_table(form_id):
     form = config['forms'].get(form_id)
     if not form:
         return jsonify({'error': 'Form not found'}), 404
+    
     form_title = form.get('title', form_id)
-    ok, message = db.create_form_response_table(form_title, form)
-    return jsonify({'success': ok, 'message': message,
-                    'table': db._get_table_name(form_title)})
+    language_code = form.get('language_code', 'en')
+    
+    # Use new language-aware function
+    success, table_name, message = db.create_response_table_if_not_exists(
+        form_title,
+        language_code,
+        form
+    )
+    
+    return jsonify({
+        'success': success,
+        'message': message,
+        'table': table_name
+    })
 
 @app.route('/api/forms/<form_id>/table-status', methods=['GET'])
 @api_login_required
@@ -1049,10 +1072,18 @@ def form_table_status(form_id):
     form = config['forms'].get(form_id)
     if not form:
         return jsonify({'error': 'Form not found'}), 404
+    
     form_title = form.get('title', form_id)
-    table_name = db._get_table_name(form_title)
-    exists = db.form_table_exists(form_title)
-    return jsonify({'exists': exists, 'table': table_name})
+    language_code = form.get('language_code', 'en')
+    
+    # Use new language-aware naming
+    table_name = db.get_response_table_name_with_language(form_title, language_code)
+    exists = db.check_response_table_exists(table_name)
+    
+    return jsonify({
+        'exists': exists,
+        'table': table_name
+    })
 
 @app.route('/api/db/course-dates', methods=['GET'])
 @api_login_required
@@ -2606,10 +2637,12 @@ if __name__ == '__main__':
     logger.info(f"[FBS_Forms sync] {sum(1 for ok in _forms_sync.values() if ok)}/{len(_forms_sync)} forms synced")
     for _fid, _form in _cfg['forms'].items():
         if not _form.get('is_archived'):
-            _ok, _msg = db.create_form_response_table(_form.get('title', _fid), _form)
-            logger.info(f"  [{_form.get('title', _fid)}]: {_msg}")
-            db.add_course_code_column(_form.get('title', _fid))
-            _bf_ok, _bf_msg = db.backfill_course_codes(_form.get('title', _fid))
+            _form_title = _form.get('title', _fid)
+            _lang_code = _form.get('language_code', 'en')
+            _ok, _table, _msg = db.create_response_table_if_not_exists(_form_title, _lang_code, _form)
+            logger.info(f"  [{_form_title}]: {_msg}")
+            db.add_course_code_column(_form_title)
+            _bf_ok, _bf_msg = db.backfill_course_codes(_form_title)
             if _bf_ok and 'Updated' in _bf_msg:
                 logger.info(f"  [Backfill]: {_bf_msg}")
     app.run(debug=True, host='0.0.0.0', port=5000)
