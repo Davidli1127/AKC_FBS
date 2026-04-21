@@ -1790,7 +1790,9 @@ def create_response_table_if_not_exists(form_title, language_code, form_config):
         return False, table_name, "Cannot connect to database"
     
     try:
+        # Check if table already exists
         if check_response_table_exists(table_name):
+            conn.close()
             return True, table_name, f"Table '{table_name}' already exists (reused)"
         
         # Create new table
@@ -1816,9 +1818,20 @@ def create_response_table_if_not_exists(form_title, language_code, form_config):
         return True, table_name, f"Table '{table_name}' created successfully"
     
     except Exception as e:
+        error_msg = str(e)
+        # If table already exists, treat as success
+        if 'already exists' in error_msg.lower():
+            try:
+                conn.close()
+            except:
+                pass
+            return True, table_name, f"Table '{table_name}' already exists (reused)"
+        
+        # For other errors, log and return failure
         print(f"Error creating response table: {e}")
         try:
             conn.rollback()
+            conn.close()
         except:
             pass
         return False, table_name, str(e)
