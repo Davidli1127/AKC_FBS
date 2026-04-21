@@ -44,14 +44,16 @@
                                     const formSelect = document.getElementById('formSelect');
                                     const seenTitles = new Set();
                                     {% for form_id, form in config.forms.items() %}
-                                    {% if not form.is_archived %}
-                                    const title = "{{ form.title }}";
-                                    if (!seenTitles.has(title)) {
-                                        seenTitles.add(title);
-                                        const opt = new Option(title, "{{ form_id }}");
-                                        formSelect.add(opt);
+                                    {
+                                        {% if not form.is_archived %}
+                                        const title = "{{ form.title }}";
+                                        if (!seenTitles.has(title)) {
+                                            seenTitles.add(title);
+                                            const opt = new Option(title, "{{ form_id }}");
+                                            formSelect.add(opt);
+                                        }
+                                        {% endif %}
                                     }
-                                    {% endif %}
                                     {% endfor %}
                                 })();
                                 </script>
@@ -256,14 +258,16 @@
                                         const formSelect = document.getElementById('newFormCopyFrom');
                                         const seenTitles = new Set();
                                         {% for form_id, form in config.forms.items() %}
-                                        {% if not form.is_archived %}
-                                        const title = "{{ form.title }}";
-                                        if (!seenTitles.has(title)) {
-                                            seenTitles.add(title);
-                                            const opt = new Option(title, "{{ form_id }}");
-                                            formSelect.add(opt);
+                                        {
+                                            {% if not form.is_archived %}
+                                            const title = "{{ form.title }}";
+                                            if (!seenTitles.has(title)) {
+                                                seenTitles.add(title);
+                                                const opt = new Option(title, "{{ form_id }}");
+                                                formSelect.add(opt);
+                                            }
+                                            {% endif %}
                                         }
-                                        {% endif %}
                                         {% endfor %}
                                     })();
                                     </script>
@@ -345,14 +349,16 @@
                                     const formSelect = document.getElementById('editFormSelect');
                                     const seenTitles = new Set();
                                     {% for form_id, form in config.forms.items() %}
-                                    {% if not form.is_archived %}
-                                    const title = "{{ form.title }}";
-                                    if (!seenTitles.has(title)) {
-                                        seenTitles.add(title);
-                                        const opt = new Option(title, "{{ form_id }}");
-                                        formSelect.add(opt);
+                                    {
+                                        {% if not form.is_archived %}
+                                        const title = "{{ form.title }}";
+                                        if (!seenTitles.has(title)) {
+                                            seenTitles.add(title);
+                                            const opt = new Option(title, "{{ form_id }}");
+                                            formSelect.add(opt);
+                                        }
+                                        {% endif %}
                                     }
-                                    {% endif %}
                                     {% endfor %}
                                 })();
                                 </script>
@@ -458,11 +464,15 @@
                                     const formSelect = document.getElementById('analysisFormId');
                                     const seenTitles = new Set();
                                     {% for form_id, form in config.forms.items() %}
-                                    const title = "{{ form.title }}";
-                                    if (!seenTitles.has(title)) {
-                                        seenTitles.add(title);
-                                        const opt = new Option(title, "{{ form_id }}");
-                                        formSelect.add(opt);
+                                    {
+                                        {% if not form.is_archived %}
+                                        const title = "{{ form.title }}";
+                                        if (!seenTitles.has(title)) {
+                                            seenTitles.add(title);
+                                            const opt = new Option(title, "{{ form_id }}");
+                                            formSelect.add(opt);
+                                        }
+                                        {% endif %}
                                     }
                                     {% endfor %}
                                 })();
