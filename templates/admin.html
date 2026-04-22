@@ -1305,10 +1305,64 @@
 
         function selectLanguageVersion() {
             const selectedFormId = document.getElementById('languageSelect').value;
-            if (selectedFormId) {
-                document.getElementById('formSelect').value = selectedFormId;
-                loadClassCodes();
+            const languageGroup = document.getElementById('languageGroup');
+            
+            if (!selectedFormId) {
+                // If no language selected, reset to all forms
+                updateQRFormFields();
+                return;
             }
+            
+            // Get the form object for the selected language version
+            const selectedForm = Object.values(FORM_TITLE_MAP).find(title => {
+                const versions = FORM_BY_TITLE[title] || [];
+                return versions.some(v => v.id === selectedFormId);
+            });
+            
+            // Find the base form title for this language version
+            const selectedFormObj = Object.entries(FORM_TITLE_MAP).find(([id, title]) => id === selectedFormId);
+            if (!selectedFormObj) return;
+            
+            const formTitle = selectedFormObj[1];
+            const languageVersions = FORM_BY_TITLE[formTitle] || [];
+            const selectedLanguage = languageVersions.find(v => v.id === selectedFormId)?.language;
+            
+            // Filter formSelect to show only forms with this language
+            const formSelect = document.getElementById('formSelect');
+            
+            // Find all unique form titles that have this language
+            const formsWithLanguage = [];
+            const seenTitles = new Set();
+            
+            for (const [fid, form] of Object.entries(FORM_TITLE_MAP)) {
+                const title = form;
+                const versions = FORM_BY_TITLE[title] || [];
+                const hasLanguage = versions.some(v => v.language === selectedLanguage);
+                
+                if (hasLanguage && !seenTitles.has(title)) {
+                    seenTitles.add(title);
+                    // Find the form_id for this title in the selected language
+                    const langVersion = versions.find(v => v.language === selectedLanguage);
+                    if (langVersion) {
+                        formsWithLanguage.push({title, id: langVersion.id});
+                    }
+                }
+            }
+            
+            // Rebuild formSelect with only forms available in this language
+            formSelect.innerHTML = '';
+            formsWithLanguage.forEach(form => {
+                const opt = new Option(form.title, form.id);
+                formSelect.add(opt);
+            });
+            
+            // Select the first form
+            if (formsWithLanguage.length > 0) {
+                formSelect.value = formsWithLanguage[0].id;
+            }
+            
+            // Update other fields
+            updateQRFormFields();
         }
 
         function renderQrCustomFields(customFields) {
@@ -1648,9 +1702,44 @@
             
             if (source === 'language') {
                 selectedFormId = languageSelect.value;
-                if (document.getElementById('editFormSelect').value !== selectedFormId) {
-                    document.getElementById('editFormSelect').value = selectedFormId;
+                
+                // Get the selected language
+                const selectedFormObj = Object.entries(FORM_TITLE_MAP).find(([id, title]) => id === selectedFormId);
+                if (!selectedFormObj) return;
+                
+                const formTitle = selectedFormObj[1];
+                const languageVersions = FORM_BY_TITLE[formTitle] || [];
+                const selectedLanguage = languageVersions.find(v => v.id === selectedFormId)?.language;
+                
+                // Filter editFormSelect to show only forms with this language
+                const editFormSelect = document.getElementById('editFormSelect');
+                const formsWithLanguage = [];
+                const seenTitles = new Set();
+                
+                for (const [fid, form] of Object.entries(FORM_TITLE_MAP)) {
+                    const title = form;
+                    const versions = FORM_BY_TITLE[title] || [];
+                    const hasLanguage = versions.some(v => v.language === selectedLanguage);
+                    
+                    if (hasLanguage && !seenTitles.has(title)) {
+                        seenTitles.add(title);
+                        const langVersion = versions.find(v => v.language === selectedLanguage);
+                        if (langVersion) {
+                            formsWithLanguage.push({title, id: langVersion.id});
+                        }
+                    }
                 }
+                
+                // Rebuild editFormSelect with only forms available in this language
+                editFormSelect.innerHTML = '';
+                formsWithLanguage.forEach(form => {
+                    const opt = new Option(form.title, form.id);
+                    editFormSelect.add(opt);
+                });
+                
+                // Select the form that matches the selected language
+                editFormSelect.value = selectedFormId;
+                
                 // Update language label to show selected language
                 const selectedOption = languageSelect.options[languageSelect.selectedIndex];
                 languageLabel.textContent = `(${selectedOption.textContent})`;

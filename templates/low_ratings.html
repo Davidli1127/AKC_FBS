@@ -1018,12 +1018,53 @@
 
         function updateLowRatingsLanguage() {
             const selectedFormId = document.getElementById('lowRatingsLanguageSelect').value;
-            const mainSelect = document.getElementById('formFilterSelect');
+            const formFilterSelect = document.getElementById('formFilterSelect');
 
-            if (selectedFormId && mainSelect.value !== selectedFormId) {
-                mainSelect.value = selectedFormId;
+            if (!selectedFormId) {
+                // If no language selected, show all forms
                 loadFeedback();
+                return;
             }
+
+            // Get the form object for the selected language version
+            const selectedFormObj = Object.entries(FORM_TITLE_MAP).find(([id, title]) => id === selectedFormId);
+            if (!selectedFormObj) return;
+
+            const formTitle = selectedFormObj[1];
+            const languageVersions = FORM_BY_TITLE[formTitle] || [];
+            const selectedLanguage = languageVersions.find(v => v.id === selectedFormId)?.language;
+
+            // Filter formFilterSelect to show only forms with this language
+            const formsWithLanguage = [];
+            const seenTitles = new Set();
+
+            for (const [fid, form] of Object.entries(FORM_TITLE_MAP)) {
+                const title = form;
+                const versions = FORM_BY_TITLE[title] || [];
+                const hasLanguage = versions.some(v => v.language === selectedLanguage);
+
+                if (hasLanguage && !seenTitles.has(title)) {
+                    seenTitles.add(title);
+                    const langVersion = versions.find(v => v.language === selectedLanguage);
+                    if (langVersion) {
+                        formsWithLanguage.push({title, id: langVersion.id});
+                    }
+                }
+            }
+
+            // Rebuild formFilterSelect with only forms available in this language
+            formFilterSelect.innerHTML = '<option value="">-- All Forms (This Language) --</option>';
+            formsWithLanguage.forEach(form => {
+                const opt = new Option(form.title, form.id);
+                formFilterSelect.add(opt);
+            });
+
+            // Select the first form if only one exists
+            if (formsWithLanguage.length === 1) {
+                formFilterSelect.value = formsWithLanguage[0].id;
+            }
+
+            loadFeedback();
         }
 
         function onRatingThresholdChange() {

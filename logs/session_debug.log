@@ -654,3 +654,165 @@
 2026-04-16 08:47:02,214 - Application started - Logging enabled
 2026-04-16 08:47:02,214 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
 2026-04-16 08:47:02,215 - ================================================================================
+2026-04-22 10:50:14,135 - ================================================================================
+2026-04-22 10:50:14,136 - Application started - Logging enabled
+2026-04-22 10:50:14,136 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-22 10:50:14,136 - ================================================================================
+2026-04-22 10:50:14,238 - [FBS_Forms sync] 3/3 forms synced
+2026-04-22 10:50:14,254 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-22 10:50:14,283 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-22 10:50:14,307 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-22 10:50:14,344 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.64.23.87:5000
+2026-04-22 10:50:14,344 - [33mPress CTRL+C to quit[0m
+2026-04-22 10:50:14,347 -  * Restarting with stat
+2026-04-22 10:50:14,533 - ================================================================================
+2026-04-22 10:50:14,533 - Application started - Logging enabled
+2026-04-22 10:50:14,533 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-22 10:50:14,533 - ================================================================================
+2026-04-22 10:50:14,622 - [FBS_Forms sync] 3/3 forms synced
+2026-04-22 10:50:14,639 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-22 10:50:14,653 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-22 10:50:14,666 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-22 10:50:14,679 -  * Debugger is active!
+2026-04-22 10:50:14,681 -  * Debugger PIN: 126-439-623
+2026-04-22 10:50:28,731 - 127.0.0.1 - - [22/Apr/2026 10:50:28] "[32mGET /admin HTTP/1.1[0m" 302 -
+2026-04-22 10:50:29,016 - 127.0.0.1 - - [22/Apr/2026 10:50:29] "GET /login HTTP/1.1" 200 -
+2026-04-22 10:54:11,419 - 127.0.0.1 - - [22/Apr/2026 10:54:11] "[32mGET /admin HTTP/1.1[0m" 302 -
+2026-04-22 10:54:11,427 - 127.0.0.1 - - [22/Apr/2026 10:54:11] "GET /login HTTP/1.1" 200 -
+2026-04-22 10:54:11,672 - 127.0.0.1 - - [22/Apr/2026 10:54:11] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-04-22 10:54:17,328 - 127.0.0.1 - - [22/Apr/2026 10:54:17] "POST /api/admin-login HTTP/1.1" 200 -
+2026-04-22 10:54:17,591 - 127.0.0.1 - - [22/Apr/2026 10:54:17] "GET /admin HTTP/1.1" 200 -
+2026-04-22 10:54:17,706 - 127.0.0.1 - - [22/Apr/2026 10:54:17] "GET /static/style.css HTTP/1.1" 200 -
+2026-04-22 10:54:17,926 - 127.0.0.1 - - [22/Apr/2026 10:54:17] "GET /static/logo.png HTTP/1.1" 200 -
+2026-04-22 10:54:17,939 - 127.0.0.1 - - [22/Apr/2026 10:54:17] "GET /api/alerts/summary HTTP/1.1" 200 -
+2026-04-22 10:54:17,960 - 127.0.0.1 - - [22/Apr/2026 10:54:17] "GET /api/scan/qrcode HTTP/1.1" 200 -
+2026-04-22 10:54:23,266 - 127.0.0.1 - - [22/Apr/2026 10:54:23] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-04-22 10:54:23,583 - 127.0.0.1 - - [22/Apr/2026 10:54:23] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-04-22 10:54:29,308 - 127.0.0.1 - - [22/Apr/2026 10:54:29] "GET /api/forms/trainer_evaluation_form_zh HTTP/1.1" 200 -
+2026-04-22 10:54:29,636 - 127.0.0.1 - - [22/Apr/2026 10:54:29] "GET /api/forms/trainer_evaluation_form_zh/table-status HTTP/1.1" 200 -
+2026-04-22 10:54:31,870 - 127.0.0.1 - - [22/Apr/2026 10:54:31] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-04-22 10:54:32,200 - 127.0.0.1 - - [22/Apr/2026 10:54:32] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-04-22 10:54:32,902 - 127.0.0.1 - - [22/Apr/2026 10:54:32] "GET /api/forms/trainer_evaluation_form_zh HTTP/1.1" 200 -
+2026-04-22 10:54:33,233 - 127.0.0.1 - - [22/Apr/2026 10:54:33] "GET /api/forms/trainer_evaluation_form_zh/table-status HTTP/1.1" 200 -
+2026-04-22 10:54:38,606 - 127.0.0.1 - - [22/Apr/2026 10:54:38] "GET /api/courses HTTP/1.1" 200 -
+2026-04-22 10:54:40,149 - Error fetching analysis months from [trainer_evaluation_form_response]: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+2026-04-22 10:54:40,149 - Error fetching analysis months from [trainer_evaluation_form_response]: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+2026-04-22 10:54:40,152 - [DB-ANALYSIS] Error fetching responses from [trainer_evaluation_form_response]: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+2026-04-22 10:54:40,152 - [DB-ANALYSIS] Error fetching responses from [trainer_evaluation_form_response]: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+2026-04-22 10:54:40,158 - Traceback (most recent call last):
+  File "C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\db.py", line 1012, in get_responses_for_analysis
+    cur.execute(f"""
+    ~~~~~~~~~~~^^^^^
+        SELECT {fixed_select_sql}{q_col_sql}
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        ORDER BY submission_time DESC
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    """, params)
+    ^^^^^^^^^^^^
+pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+
+2026-04-22 10:54:40,158 - Traceback (most recent call last):
+  File "C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\db.py", line 1012, in get_responses_for_analysis
+    cur.execute(f"""
+    ~~~~~~~~~~~^^^^^
+        SELECT {fixed_select_sql}{q_col_sql}
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        ORDER BY submission_time DESC
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    """, params)
+    ^^^^^^^^^^^^
+pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+
+2026-04-22 10:54:40,160 - 127.0.0.1 - - [22/Apr/2026 10:54:40] "GET /api/analysis/dashboard/filters?form_id=form1_en HTTP/1.1" 200 -
+2026-04-22 10:54:42,524 - 127.0.0.1 - - [22/Apr/2026 10:54:42] "[33mGET /api/analysis/dashboard/filters?form_id= HTTP/1.1[0m" 404 -
+2026-04-22 10:54:45,067 - Error fetching analysis months from [trainer_evaluation_form_response]: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+2026-04-22 10:54:45,067 - Error fetching analysis months from [trainer_evaluation_form_response]: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+2026-04-22 10:54:45,071 - [DB-ANALYSIS] Error fetching responses from [trainer_evaluation_form_response]: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+2026-04-22 10:54:45,071 - [DB-ANALYSIS] Error fetching responses from [trainer_evaluation_form_response]: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+2026-04-22 10:54:45,072 - Traceback (most recent call last):
+  File "C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\db.py", line 1012, in get_responses_for_analysis
+    cur.execute(f"""
+    ~~~~~~~~~~~^^^^^
+        SELECT {fixed_select_sql}{q_col_sql}
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        ORDER BY submission_time DESC
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    """, params)
+    ^^^^^^^^^^^^
+pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+
+2026-04-22 10:54:45,072 - Traceback (most recent call last):
+  File "C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\db.py", line 1012, in get_responses_for_analysis
+    cur.execute(f"""
+    ~~~~~~~~~~~^^^^^
+        SELECT {fixed_select_sql}{q_col_sql}
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        ORDER BY submission_time DESC
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    """, params)
+    ^^^^^^^^^^^^
+pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+
+2026-04-22 10:54:45,073 - 127.0.0.1 - - [22/Apr/2026 10:54:45] "GET /api/analysis/dashboard/filters?form_id=form1_en HTTP/1.1" 200 -
+2026-04-22 10:54:50,978 - 127.0.0.1 - - [22/Apr/2026 10:54:50] "GET /low-ratings HTTP/1.1" 200 -
+2026-04-22 10:54:51,258 - 127.0.0.1 - - [22/Apr/2026 10:54:51] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-04-22 10:54:51,607 - 127.0.0.1 - - [22/Apr/2026 10:54:51] "GET /api/low-ratings-data?forms=form1_en,form2_en&rating_threshold=2 HTTP/1.1" 200 -
+2026-04-22 10:54:51,851 - 127.0.0.1 - - [22/Apr/2026 10:54:51] "GET /api/hotspot-analysis?forms=form1_en,form2_en HTTP/1.1" 200 -
+2026-04-22 10:54:53,574 - 127.0.0.1 - - [22/Apr/2026 10:54:53] "GET /api/low-ratings-data?forms=form1_en&rating_threshold=2 HTTP/1.1" 200 -
+2026-04-22 10:54:53,884 - 127.0.0.1 - - [22/Apr/2026 10:54:53] "GET /api/hotspot-analysis?forms=form1_en HTTP/1.1" 200 -
+2026-04-22 10:54:54,643 - 127.0.0.1 - - [22/Apr/2026 10:54:54] "GET /api/low-ratings-data?forms=trainer_evaluation_form_zh&rating_threshold=2 HTTP/1.1" 200 -
+2026-04-22 10:54:54,962 - 127.0.0.1 - - [22/Apr/2026 10:54:54] "GET /api/hotspot-analysis?forms=trainer_evaluation_form_zh HTTP/1.1" 200 -
+2026-04-22 10:54:59,541 - 127.0.0.1 - - [22/Apr/2026 10:54:59] "GET /api/low-ratings-data?forms=form1_en,form2_en&rating_threshold=2 HTTP/1.1" 200 -
+2026-04-22 10:54:59,857 - 127.0.0.1 - - [22/Apr/2026 10:54:59] "GET /api/hotspot-analysis?forms=form1_en,form2_en HTTP/1.1" 200 -
+2026-04-22 10:55:01,036 - 127.0.0.1 - - [22/Apr/2026 10:55:01] "GET /api/low-ratings-data?forms=form1_en&rating_threshold=2 HTTP/1.1" 200 -
+2026-04-22 10:55:01,343 - 127.0.0.1 - - [22/Apr/2026 10:55:01] "GET /api/hotspot-analysis?forms=form1_en HTTP/1.1" 200 -
+2026-04-22 10:55:03,477 - 127.0.0.1 - - [22/Apr/2026 10:55:03] "GET /admin HTTP/1.1" 200 -
+2026-04-22 10:55:03,774 - 127.0.0.1 - - [22/Apr/2026 10:55:03] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-04-22 10:55:03,805 - 127.0.0.1 - - [22/Apr/2026 10:55:03] "[36mGET /static/logo.png HTTP/1.1[0m" 304 -
+2026-04-22 10:55:03,806 - 127.0.0.1 - - [22/Apr/2026 10:55:03] "GET /api/alerts/summary HTTP/1.1" 200 -
+2026-04-22 10:55:04,089 - 127.0.0.1 - - [22/Apr/2026 10:55:04] "GET /api/scan/qrcode HTTP/1.1" 200 -
+2026-04-22 10:55:09,252 - 127.0.0.1 - - [22/Apr/2026 10:55:09] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-04-22 10:55:09,527 - 127.0.0.1 - - [22/Apr/2026 10:55:09] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-04-22 10:55:31,029 - 127.0.0.1 - - [22/Apr/2026 10:55:31] "GET /api/forms/trainer_evaluation_form_zh HTTP/1.1" 200 -
+2026-04-22 10:55:31,362 - 127.0.0.1 - - [22/Apr/2026 10:55:31] "GET /api/forms/trainer_evaluation_form_zh/table-status HTTP/1.1" 200 -
+2026-04-22 10:55:32,005 - 127.0.0.1 - - [22/Apr/2026 10:55:32] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-04-22 10:55:32,333 - 127.0.0.1 - - [22/Apr/2026 10:55:32] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-04-22 10:55:33,239 - 127.0.0.1 - - [22/Apr/2026 10:55:33] "GET /api/forms/trainer_evaluation_form_zh HTTP/1.1" 200 -
+2026-04-22 10:55:33,565 - 127.0.0.1 - - [22/Apr/2026 10:55:33] "GET /api/forms/trainer_evaluation_form_zh/table-status HTTP/1.1" 200 -
+2026-04-22 10:55:34,213 - 127.0.0.1 - - [22/Apr/2026 10:55:34] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-04-22 10:55:34,550 - 127.0.0.1 - - [22/Apr/2026 10:55:34] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-04-22 10:59:06,993 - 127.0.0.1 - - [22/Apr/2026 10:59:06] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-04-22 10:59:07,219 - 127.0.0.1 - - [22/Apr/2026 10:59:07] "GET /api/courses HTTP/1.1" 200 -
+2026-04-22 10:59:07,273 - 127.0.0.1 - - [22/Apr/2026 10:59:07] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-04-22 10:59:10,797 - 127.0.0.1 - - [22/Apr/2026 10:59:10] "GET /api/db/participants?class_code=LY26AWSCSTM048&offset=0&limit=20 HTTP/1.1" 200 -
+2026-04-22 10:59:29,783 - 127.0.0.1 - - [22/Apr/2026 10:59:29] "GET /api/db/test HTTP/1.1" 200 -
+2026-04-22 10:59:30,586 - [DB] Creating new table [trainer_evaluation_form_response]
+2026-04-22 10:59:30,586 - [DB] Creating new table [trainer_evaluation_form_response]
+2026-04-22 10:59:30,591 - [DB] Error creating/updating table trainer_evaluation_form_response: ('42S01', "[42S01] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]There is already an object named 'PK_trainer_evaluation_form_response' in the database. (2714) (SQLExecDirectW); [42S01] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Could not create constraint or index. See previous errors. (1750)")
+2026-04-22 10:59:30,591 - [DB] Error creating/updating table trainer_evaluation_form_response: ('42S01', "[42S01] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]There is already an object named 'PK_trainer_evaluation_form_response' in the database. (2714) (SQLExecDirectW); [42S01] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Could not create constraint or index. See previous errors. (1750)")
+2026-04-22 10:59:30,596 - [DB] Creating new table [assessor_evaluation_form_response]
+2026-04-22 10:59:30,596 - [DB] Creating new table [assessor_evaluation_form_response]
+2026-04-22 10:59:30,601 - [DB] Error creating/updating table assessor_evaluation_form_response: ('42S01', "[42S01] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]There is already an object named 'PK_assessor_evaluation_form_response' in the database. (2714) (SQLExecDirectW); [42S01] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Could not create constraint or index. See previous errors. (1750)")
+2026-04-22 10:59:30,601 - [DB] Error creating/updating table assessor_evaluation_form_response: ('42S01', "[42S01] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]There is already an object named 'PK_assessor_evaluation_form_response' in the database. (2714) (SQLExecDirectW); [42S01] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Could not create constraint or index. See previous errors. (1750)")
+2026-04-22 10:59:30,603 - [DB] Creating new table [trainer_evaluation_form_response]
+2026-04-22 10:59:30,603 - [DB] Creating new table [trainer_evaluation_form_response]
+2026-04-22 10:59:30,608 - [DB] Error creating/updating table trainer_evaluation_form_response: ('42S01', "[42S01] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]There is already an object named 'PK_trainer_evaluation_form_response' in the database. (2714) (SQLExecDirectW); [42S01] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Could not create constraint or index. See previous errors. (1750)")
+2026-04-22 10:59:30,608 - [DB] Error creating/updating table trainer_evaluation_form_response: ('42S01', "[42S01] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]There is already an object named 'PK_trainer_evaluation_form_response' in the database. (2714) (SQLExecDirectW); [42S01] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Could not create constraint or index. See previous errors. (1750)")
+2026-04-22 10:59:30,608 - 127.0.0.1 - - [22/Apr/2026 10:59:30] "POST /api/db/create-tables HTTP/1.1" 200 -
+2026-04-22 10:59:48,404 - 127.0.0.1 - - [22/Apr/2026 10:59:48] "GET /api/courses HTTP/1.1" 200 -
+2026-04-22 10:59:49,373 - 127.0.0.1 - - [22/Apr/2026 10:59:49] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-04-22 10:59:49,718 - 127.0.0.1 - - [22/Apr/2026 10:59:49] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-04-22 10:59:50,738 - 127.0.0.1 - - [22/Apr/2026 10:59:50] "GET /api/courses HTTP/1.1" 200 -
+2026-04-22 10:59:52,488 - 127.0.0.1 - - [22/Apr/2026 10:59:52] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-04-22 10:59:52,758 - 127.0.0.1 - - [22/Apr/2026 10:59:52] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-04-22 10:59:54,113 - 127.0.0.1 - - [22/Apr/2026 10:59:54] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-04-22 10:59:54,442 - 127.0.0.1 - - [22/Apr/2026 10:59:54] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-04-22 11:00:00,872 - 127.0.0.1 - - [22/Apr/2026 11:00:00] "GET /api/forms/trainer_evaluation_form_zh HTTP/1.1" 200 -
+2026-04-22 11:00:01,192 - 127.0.0.1 - - [22/Apr/2026 11:00:01] "GET /api/forms/trainer_evaluation_form_zh/table-status HTTP/1.1" 200 -
