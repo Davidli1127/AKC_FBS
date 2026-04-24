@@ -865,3 +865,165 @@ pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL S
 2026-04-22 11:19:35,461 - 127.0.0.1 - - [22/Apr/2026 11:19:35] "GET /api/forms/trainer_evaluation_form_zh/table-status HTTP/1.1" 200 -
 2026-04-22 11:19:35,996 - 127.0.0.1 - - [22/Apr/2026 11:19:35] "GET /api/forms/form1_en HTTP/1.1" 200 -
 2026-04-22 11:19:36,320 - 127.0.0.1 - - [22/Apr/2026 11:19:36] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-04-24 11:11:47,658 - ================================================================================
+2026-04-24 11:11:47,658 - Application started - Logging enabled
+2026-04-24 11:11:47,658 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-24 11:11:47,658 - ================================================================================
+2026-04-24 11:11:47,752 - [FBS_Forms sync] 3/3 forms synced
+2026-04-24 11:11:47,764 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:11:47,786 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:11:47,808 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-24 11:11:47,830 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.64.23.87:5000
+2026-04-24 11:11:47,830 - [33mPress CTRL+C to quit[0m
+2026-04-24 11:11:47,833 -  * Restarting with stat
+2026-04-24 11:11:48,030 - ================================================================================
+2026-04-24 11:11:48,030 - Application started - Logging enabled
+2026-04-24 11:11:48,030 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-24 11:11:48,030 - ================================================================================
+2026-04-24 11:11:48,113 - [FBS_Forms sync] 3/3 forms synced
+2026-04-24 11:11:48,125 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:11:48,138 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:11:48,150 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-24 11:11:48,162 -  * Debugger is active!
+2026-04-24 11:11:48,164 -  * Debugger PIN: 126-439-623
+2026-04-24 11:12:32,348 -  * Detected change in 'C:\\Users\\Li.Zhongyuan\\Desktop\\AKC_FBS\\db.py', reloading
+2026-04-24 11:12:32,379 -  * Restarting with stat
+2026-04-24 11:12:32,623 - ================================================================================
+2026-04-24 11:12:32,623 - Application started - Logging enabled
+2026-04-24 11:12:32,623 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-24 11:12:32,623 - ================================================================================
+2026-04-24 11:12:32,720 - [FBS_Forms sync] 3/3 forms synced
+2026-04-24 11:12:32,735 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:12:32,749 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:12:32,762 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-24 11:12:32,774 -  * Debugger is active!
+2026-04-24 11:12:32,777 -  * Debugger PIN: 126-439-623
+2026-04-24 11:13:34,566 - [DB-SAVE] Inserting into [trainer_evaluation_form_response_en] for participant=Test Student English, id_number=TSE001
+2026-04-24 11:13:34,567 - [DB-SAVE] Columns: ['id', 'submission_time', 'course_id', 'course_title', 'course_code', 'course_date', 'venue', 'language', 'participant_name', 'id_number', 'position_title', 'instructor1_name', 'instructor2_name', 'instructor3_name', 'A1', 'A1_comment', 'A2', 'A2_comment', 'A3', 'A3_comment', 'A4', 'A4_comment', 'A5', 'A5_comment', 'B1_1', 'B1_1_comment', 'B1_2', 'B1_2_comment', 'B1_3', 'B1_3_comment', 'B1_4', 'B1_4_comment', 'B1_5', 'B1_5_comment', 'B1_6', 'B1_6_comment', 'B2_1', 'B2_1_comment', 'B2_2', 'B2_2_comment', 'B2_3', 'B2_3_comment', 'B2_4', 'B2_4_comment', 'B2_5', 'B2_5_comment', 'B2_6', 'B2_6_comment', 'B3_1', 'B3_1_comment', 'B3_2', 'B3_2_comment', 'B3_3', 'B3_3_comment', 'B3_4', 'B3_4_comment', 'B3_5', 'B3_5_comment', 'B3_6', 'B3_6_comment', 'C1', 'C1_comment', 'C2', 'C2_comment', 'D', 'D_comment', 'E', 'E_comment', 'E1', 'E2', 'F', 'G', 'H']
+2026-04-24 11:13:34,594 - [DB-SAVE] ERROR saving response to [trainer_evaluation_form_response_en]: DataError: ('22001', '[22001] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]String or binary data would be truncated. (8152) (SQLExecDirectW); [22001] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]The statement has been terminated. (3621)')
+2026-04-24 11:13:34,823 - [DB-SAVE] Inserting into [trainer_evaluation_form_response_zh] for participant=Test Student Chinese, id_number=TSC001
+2026-04-24 11:13:34,823 - [DB-SAVE] Columns: ['id', 'submission_time', 'course_id', 'course_title', 'course_code', 'course_date', 'venue', 'language', 'participant_name', 'id_number', 'position_title', 'instructor1_name', 'instructor2_name', 'instructor3_name', 'A1', 'A1_comment', 'A2', 'A2_comment', 'A3', 'A3_comment', 'A4', 'A4_comment', 'A5', 'A5_comment', 'B1_1', 'B1_1_comment', 'B1_2', 'B1_2_comment', 'B1_3', 'B1_3_comment', 'B1_4', 'B1_4_comment', 'B1_5', 'B1_5_comment', 'B1_6', 'B1_6_comment', 'B2_1', 'B2_1_comment', 'B2_2', 'B2_2_comment', 'B2_3', 'B2_3_comment', 'B2_4', 'B2_4_comment', 'B2_5', 'B2_5_comment', 'B2_6', 'B2_6_comment', 'B3_1', 'B3_1_comment', 'B3_2', 'B3_2_comment', 'B3_3', 'B3_3_comment', 'B3_4', 'B3_4_comment', 'B3_5', 'B3_5_comment', 'B3_6', 'B3_6_comment', 'C1', 'C1_comment', 'C2', 'C2_comment', 'D', 'D_comment', 'E', 'E_comment', 'E1', 'E2', 'F', 'G', 'H']
+2026-04-24 11:13:34,829 - [DB-SAVE] ERROR saving response to [trainer_evaluation_form_response_zh]: DataError: ('22001', '[22001] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]String or binary data would be truncated. (8152) (SQLExecDirectW); [22001] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]The statement has been terminated. (3621)')
+2026-04-24 11:14:14,206 -  * Detected change in 'C:\\Users\\Li.Zhongyuan\\Desktop\\AKC_FBS\\automated_test_fixes.py', reloading
+2026-04-24 11:14:14,235 -  * Restarting with stat
+2026-04-24 11:14:14,435 - ================================================================================
+2026-04-24 11:14:14,435 - Application started - Logging enabled
+2026-04-24 11:14:14,436 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-24 11:14:14,436 - ================================================================================
+2026-04-24 11:14:14,585 - [FBS_Forms sync] 3/3 forms synced
+2026-04-24 11:14:14,602 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:14:14,650 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:14:14,697 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-24 11:14:14,741 -  * Debugger is active!
+2026-04-24 11:14:14,745 -  * Debugger PIN: 126-439-623
+2026-04-24 11:14:19,776 -  * Detected change in 'C:\\Users\\Li.Zhongyuan\\Desktop\\AKC_FBS\\automated_test_fixes.py', reloading
+2026-04-24 11:14:19,804 -  * Restarting with stat
+2026-04-24 11:14:19,997 - ================================================================================
+2026-04-24 11:14:19,998 - Application started - Logging enabled
+2026-04-24 11:14:19,998 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-24 11:14:19,998 - ================================================================================
+2026-04-24 11:14:20,081 - [FBS_Forms sync] 3/3 forms synced
+2026-04-24 11:14:20,094 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:14:20,106 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:14:20,119 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-24 11:14:20,131 -  * Debugger is active!
+2026-04-24 11:14:20,133 -  * Debugger PIN: 126-439-623
+2026-04-24 11:14:27,055 - [DB-SAVE] Inserting into [trainer_evaluation_form_response_en] for participant=Test Student English, id_number=TSE001
+2026-04-24 11:14:27,055 - [DB-SAVE] Columns: ['id', 'submission_time', 'course_id', 'course_title', 'course_code', 'course_date', 'venue', 'language', 'participant_name', 'id_number', 'position_title', 'instructor1_name', 'instructor2_name', 'instructor3_name', 'A1', 'A1_comment', 'A2', 'A2_comment', 'A3', 'A3_comment', 'A4', 'A4_comment', 'A5', 'A5_comment', 'B1_1', 'B1_1_comment', 'B1_2', 'B1_2_comment', 'B1_3', 'B1_3_comment', 'B1_4', 'B1_4_comment', 'B1_5', 'B1_5_comment', 'B1_6', 'B1_6_comment', 'B2_1', 'B2_1_comment', 'B2_2', 'B2_2_comment', 'B2_3', 'B2_3_comment', 'B2_4', 'B2_4_comment', 'B2_5', 'B2_5_comment', 'B2_6', 'B2_6_comment', 'B3_1', 'B3_1_comment', 'B3_2', 'B3_2_comment', 'B3_3', 'B3_3_comment', 'B3_4', 'B3_4_comment', 'B3_5', 'B3_5_comment', 'B3_6', 'B3_6_comment', 'C1', 'C1_comment', 'C2', 'C2_comment', 'D', 'D_comment', 'E', 'E_comment', 'E1', 'E2', 'F', 'G', 'H']
+2026-04-24 11:14:27,062 - [DB-SAVE] ERROR saving response to [trainer_evaluation_form_response_en]: DataError: ('22001', '[22001] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]String or binary data would be truncated. (8152) (SQLExecDirectW); [22001] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]The statement has been terminated. (3621)')
+2026-04-24 11:14:27,270 - [DB-SAVE] Inserting into [trainer_evaluation_form_response_zh] for participant=Test Student Chinese, id_number=TSC001
+2026-04-24 11:14:27,270 - [DB-SAVE] Columns: ['id', 'submission_time', 'course_id', 'course_title', 'course_code', 'course_date', 'venue', 'language', 'participant_name', 'id_number', 'position_title', 'instructor1_name', 'instructor2_name', 'instructor3_name', 'A1', 'A1_comment', 'A2', 'A2_comment', 'A3', 'A3_comment', 'A4', 'A4_comment', 'A5', 'A5_comment', 'B1_1', 'B1_1_comment', 'B1_2', 'B1_2_comment', 'B1_3', 'B1_3_comment', 'B1_4', 'B1_4_comment', 'B1_5', 'B1_5_comment', 'B1_6', 'B1_6_comment', 'B2_1', 'B2_1_comment', 'B2_2', 'B2_2_comment', 'B2_3', 'B2_3_comment', 'B2_4', 'B2_4_comment', 'B2_5', 'B2_5_comment', 'B2_6', 'B2_6_comment', 'B3_1', 'B3_1_comment', 'B3_2', 'B3_2_comment', 'B3_3', 'B3_3_comment', 'B3_4', 'B3_4_comment', 'B3_5', 'B3_5_comment', 'B3_6', 'B3_6_comment', 'C1', 'C1_comment', 'C2', 'C2_comment', 'D', 'D_comment', 'E', 'E_comment', 'E1', 'E2', 'F', 'G', 'H']
+2026-04-24 11:14:27,277 - [DB-SAVE] ERROR saving response to [trainer_evaluation_form_response_zh]: DataError: ('22001', '[22001] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]String or binary data would be truncated. (8152) (SQLExecDirectW); [22001] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]The statement has been terminated. (3621)')
+2026-04-24 11:14:49,240 -  * Detected change in 'C:\\Users\\Li.Zhongyuan\\Desktop\\AKC_FBS\\automated_test_fixes.py', reloading
+2026-04-24 11:14:49,269 -  * Restarting with stat
+2026-04-24 11:14:49,463 - ================================================================================
+2026-04-24 11:14:49,464 - Application started - Logging enabled
+2026-04-24 11:14:49,464 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-24 11:14:49,464 - ================================================================================
+2026-04-24 11:14:49,554 - [FBS_Forms sync] 3/3 forms synced
+2026-04-24 11:14:49,569 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:14:49,585 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:14:49,598 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-24 11:14:49,609 -  * Debugger is active!
+2026-04-24 11:14:49,612 -  * Debugger PIN: 126-439-623
+2026-04-24 11:14:54,639 -  * Detected change in 'C:\\Users\\Li.Zhongyuan\\Desktop\\AKC_FBS\\automated_test_fixes.py', reloading
+2026-04-24 11:14:54,670 -  * Restarting with stat
+2026-04-24 11:14:54,877 - ================================================================================
+2026-04-24 11:14:54,877 - Application started - Logging enabled
+2026-04-24 11:14:54,877 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-24 11:14:54,877 - ================================================================================
+2026-04-24 11:14:54,964 - [FBS_Forms sync] 3/3 forms synced
+2026-04-24 11:14:54,980 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:14:54,993 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:14:55,008 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-24 11:14:55,020 -  * Debugger is active!
+2026-04-24 11:14:55,022 -  * Debugger PIN: 126-439-623
+2026-04-24 11:14:59,329 - [DB-SAVE] Inserting into [trainer_evaluation_form_response_en] for participant=Test Student English, id_number=TSE001
+2026-04-24 11:14:59,330 - [DB-SAVE] Columns: ['id', 'submission_time', 'course_id', 'course_title', 'course_code', 'course_date', 'venue', 'language', 'participant_name', 'id_number', 'position_title', 'instructor1_name', 'instructor2_name', 'instructor3_name', 'A1', 'A1_comment', 'A2', 'A2_comment', 'A3', 'A3_comment', 'A4', 'A4_comment', 'A5', 'A5_comment', 'B1_1', 'B1_1_comment', 'B1_2', 'B1_2_comment', 'B1_3', 'B1_3_comment', 'B1_4', 'B1_4_comment', 'B1_5', 'B1_5_comment', 'B1_6', 'B1_6_comment', 'B2_1', 'B2_1_comment', 'B2_2', 'B2_2_comment', 'B2_3', 'B2_3_comment', 'B2_4', 'B2_4_comment', 'B2_5', 'B2_5_comment', 'B2_6', 'B2_6_comment', 'B3_1', 'B3_1_comment', 'B3_2', 'B3_2_comment', 'B3_3', 'B3_3_comment', 'B3_4', 'B3_4_comment', 'B3_5', 'B3_5_comment', 'B3_6', 'B3_6_comment', 'C1', 'C1_comment', 'C2', 'C2_comment', 'D', 'D_comment', 'E', 'E_comment', 'E1', 'E2', 'F', 'G', 'H']
+2026-04-24 11:14:59,336 - [DB-SAVE] ERROR saving response to [trainer_evaluation_form_response_en]: DataError: ('22001', '[22001] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]String or binary data would be truncated. (8152) (SQLExecDirectW); [22001] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]The statement has been terminated. (3621)')
+2026-04-24 11:14:59,533 - [DB-SAVE] Inserting into [trainer_evaluation_form_response_zh] for participant=Test Student Chinese, id_number=TSC001
+2026-04-24 11:14:59,533 - [DB-SAVE] Columns: ['id', 'submission_time', 'course_id', 'course_title', 'course_code', 'course_date', 'venue', 'language', 'participant_name', 'id_number', 'position_title', 'instructor1_name', 'instructor2_name', 'instructor3_name', 'A1', 'A1_comment', 'A2', 'A2_comment', 'A3', 'A3_comment', 'A4', 'A4_comment', 'A5', 'A5_comment', 'B1_1', 'B1_1_comment', 'B1_2', 'B1_2_comment', 'B1_3', 'B1_3_comment', 'B1_4', 'B1_4_comment', 'B1_5', 'B1_5_comment', 'B1_6', 'B1_6_comment', 'B2_1', 'B2_1_comment', 'B2_2', 'B2_2_comment', 'B2_3', 'B2_3_comment', 'B2_4', 'B2_4_comment', 'B2_5', 'B2_5_comment', 'B2_6', 'B2_6_comment', 'B3_1', 'B3_1_comment', 'B3_2', 'B3_2_comment', 'B3_3', 'B3_3_comment', 'B3_4', 'B3_4_comment', 'B3_5', 'B3_5_comment', 'B3_6', 'B3_6_comment', 'C1', 'C1_comment', 'C2', 'C2_comment', 'D', 'D_comment', 'E', 'E_comment', 'E1', 'E2', 'F', 'G', 'H']
+2026-04-24 11:14:59,539 - [DB-SAVE] ERROR saving response to [trainer_evaluation_form_response_zh]: DataError: ('22001', '[22001] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]String or binary data would be truncated. (8152) (SQLExecDirectW); [22001] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]The statement has been terminated. (3621)')
+2026-04-24 11:16:13,342 -  * Detected change in 'C:\\Users\\Li.Zhongyuan\\Desktop\\AKC_FBS\\automated_test_fixes.py', reloading
+2026-04-24 11:16:13,370 -  * Restarting with stat
+2026-04-24 11:16:13,564 - ================================================================================
+2026-04-24 11:16:13,564 - Application started - Logging enabled
+2026-04-24 11:16:13,564 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-24 11:16:13,564 - ================================================================================
+2026-04-24 11:16:13,650 - [FBS_Forms sync] 3/3 forms synced
+2026-04-24 11:16:13,662 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:16:13,676 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:16:13,689 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-24 11:16:13,701 -  * Debugger is active!
+2026-04-24 11:16:13,703 -  * Debugger PIN: 126-439-623
+2026-04-24 11:16:19,731 -  * Detected change in 'C:\\Users\\Li.Zhongyuan\\Desktop\\AKC_FBS\\automated_test_fixes.py', reloading
+2026-04-24 11:16:19,759 -  * Restarting with stat
+2026-04-24 11:16:19,952 - ================================================================================
+2026-04-24 11:16:19,952 - Application started - Logging enabled
+2026-04-24 11:16:19,952 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-24 11:16:19,952 - ================================================================================
+2026-04-24 11:16:20,040 - [FBS_Forms sync] 3/3 forms synced
+2026-04-24 11:16:20,053 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:16:20,066 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:16:20,079 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-24 11:16:20,090 -  * Debugger is active!
+2026-04-24 11:16:20,093 -  * Debugger PIN: 126-439-623
+2026-04-24 11:16:22,615 - [DB-SAVE] Inserting into [trainer_evaluation_form_response_en] for participant=E, id_number=E
+2026-04-24 11:16:22,615 - [DB-SAVE] Columns: ['id', 'submission_time', 'course_id', 'course_title', 'course_code', 'course_date', 'venue', 'language', 'participant_name', 'id_number', 'position_title', 'instructor1_name', 'instructor2_name', 'instructor3_name', 'A1', 'A1_comment', 'A2', 'A2_comment', 'A3', 'A3_comment', 'A4', 'A4_comment', 'A5', 'A5_comment', 'B1_1', 'B1_1_comment', 'B1_2', 'B1_2_comment', 'B1_3', 'B1_3_comment', 'B1_4', 'B1_4_comment', 'B1_5', 'B1_5_comment', 'B1_6', 'B1_6_comment', 'B2_1', 'B2_1_comment', 'B2_2', 'B2_2_comment', 'B2_3', 'B2_3_comment', 'B2_4', 'B2_4_comment', 'B2_5', 'B2_5_comment', 'B2_6', 'B2_6_comment', 'B3_1', 'B3_1_comment', 'B3_2', 'B3_2_comment', 'B3_3', 'B3_3_comment', 'B3_4', 'B3_4_comment', 'B3_5', 'B3_5_comment', 'B3_6', 'B3_6_comment', 'C1', 'C1_comment', 'C2', 'C2_comment', 'D', 'D_comment', 'E', 'E_comment', 'E1', 'E2', 'F', 'G', 'H']
+2026-04-24 11:16:22,622 - [DB-SAVE] ERROR saving response to [trainer_evaluation_form_response_en]: DataError: ('22001', '[22001] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]String or binary data would be truncated. (8152) (SQLExecDirectW); [22001] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]The statement has been terminated. (3621)')
+2026-04-24 11:16:22,828 - [DB-SAVE] Inserting into [trainer_evaluation_form_response_zh] for participant=C, id_number=C
+2026-04-24 11:16:22,829 - [DB-SAVE] Columns: ['id', 'submission_time', 'course_id', 'course_title', 'course_code', 'course_date', 'venue', 'language', 'participant_name', 'id_number', 'position_title', 'instructor1_name', 'instructor2_name', 'instructor3_name', 'A1', 'A1_comment', 'A2', 'A2_comment', 'A3', 'A3_comment', 'A4', 'A4_comment', 'A5', 'A5_comment', 'B1_1', 'B1_1_comment', 'B1_2', 'B1_2_comment', 'B1_3', 'B1_3_comment', 'B1_4', 'B1_4_comment', 'B1_5', 'B1_5_comment', 'B1_6', 'B1_6_comment', 'B2_1', 'B2_1_comment', 'B2_2', 'B2_2_comment', 'B2_3', 'B2_3_comment', 'B2_4', 'B2_4_comment', 'B2_5', 'B2_5_comment', 'B2_6', 'B2_6_comment', 'B3_1', 'B3_1_comment', 'B3_2', 'B3_2_comment', 'B3_3', 'B3_3_comment', 'B3_4', 'B3_4_comment', 'B3_5', 'B3_5_comment', 'B3_6', 'B3_6_comment', 'C1', 'C1_comment', 'C2', 'C2_comment', 'D', 'D_comment', 'E', 'E_comment', 'E1', 'E2', 'F', 'G', 'H']
+2026-04-24 11:16:22,835 - [DB-SAVE] ERROR saving response to [trainer_evaluation_form_response_zh]: DataError: ('22001', '[22001] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]String or binary data would be truncated. (8152) (SQLExecDirectW); [22001] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]The statement has been terminated. (3621)')
+2026-04-24 11:17:21,321 -  * Detected change in 'C:\\Users\\Li.Zhongyuan\\Desktop\\AKC_FBS\\automated_test_fixes.py', reloading
+2026-04-24 11:17:21,350 -  * Restarting with stat
+2026-04-24 11:17:21,543 - ================================================================================
+2026-04-24 11:17:21,544 - Application started - Logging enabled
+2026-04-24 11:17:21,544 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-24 11:17:21,544 - ================================================================================
+2026-04-24 11:17:21,630 - [FBS_Forms sync] 3/3 forms synced
+2026-04-24 11:17:21,642 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:17:21,655 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:17:21,669 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-24 11:17:21,681 -  * Debugger is active!
+2026-04-24 11:17:21,683 -  * Debugger PIN: 126-439-623
+2026-04-24 11:17:30,722 -  * Detected change in 'C:\\Users\\Li.Zhongyuan\\Desktop\\AKC_FBS\\automated_test_fixes.py', reloading
+2026-04-24 11:17:30,750 -  * Restarting with stat
+2026-04-24 11:17:30,939 - ================================================================================
+2026-04-24 11:17:30,939 - Application started - Logging enabled
+2026-04-24 11:17:30,940 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-24 11:17:30,940 - ================================================================================
+2026-04-24 11:17:31,026 - [FBS_Forms sync] 3/3 forms synced
+2026-04-24 11:17:31,039 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:17:31,051 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-24 11:17:31,064 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-24 11:17:31,075 -  * Debugger is active!
+2026-04-24 11:17:31,077 -  * Debugger PIN: 126-439-623
+2026-04-24 11:17:43,826 - [DB-SAVE] Inserting into [trainer_evaluation_form_response_en] for participant=E, id_number=E
+2026-04-24 11:17:43,826 - [DB-SAVE] Columns: ['id', 'submission_time', 'course_id', 'course_title', 'course_code', 'course_date', 'venue', 'language', 'participant_name', 'id_number', 'position_title', 'instructor1_name', 'instructor2_name', 'instructor3_name', 'A1', 'A1_comment', 'A2', 'A2_comment', 'A3', 'A3_comment', 'A4', 'A4_comment', 'A5', 'A5_comment', 'B1_1', 'B1_1_comment', 'B1_2', 'B1_2_comment', 'B1_3', 'B1_3_comment', 'B1_4', 'B1_4_comment', 'B1_5', 'B1_5_comment', 'B1_6', 'B1_6_comment', 'B2_1', 'B2_1_comment', 'B2_2', 'B2_2_comment', 'B2_3', 'B2_3_comment', 'B2_4', 'B2_4_comment', 'B2_5', 'B2_5_comment', 'B2_6', 'B2_6_comment', 'B3_1', 'B3_1_comment', 'B3_2', 'B3_2_comment', 'B3_3', 'B3_3_comment', 'B3_4', 'B3_4_comment', 'B3_5', 'B3_5_comment', 'B3_6', 'B3_6_comment', 'C1', 'C1_comment', 'C2', 'C2_comment', 'D', 'D_comment', 'E', 'E_comment', 'E1', 'E2', 'F', 'G', 'H']
+2026-04-24 11:17:43,837 - [DB-SAVE] SUCCESS: Saved for participant E
+2026-04-24 11:17:44,042 - [DB-SAVE] Inserting into [trainer_evaluation_form_response_zh] for participant=C, id_number=C
+2026-04-24 11:17:44,042 - [DB-SAVE] Columns: ['id', 'submission_time', 'course_id', 'course_title', 'course_code', 'course_date', 'venue', 'language', 'participant_name', 'id_number', 'position_title', 'instructor1_name', 'instructor2_name', 'instructor3_name', 'A1', 'A1_comment', 'A2', 'A2_comment', 'A3', 'A3_comment', 'A4', 'A4_comment', 'A5', 'A5_comment', 'B1_1', 'B1_1_comment', 'B1_2', 'B1_2_comment', 'B1_3', 'B1_3_comment', 'B1_4', 'B1_4_comment', 'B1_5', 'B1_5_comment', 'B1_6', 'B1_6_comment', 'B2_1', 'B2_1_comment', 'B2_2', 'B2_2_comment', 'B2_3', 'B2_3_comment', 'B2_4', 'B2_4_comment', 'B2_5', 'B2_5_comment', 'B2_6', 'B2_6_comment', 'B3_1', 'B3_1_comment', 'B3_2', 'B3_2_comment', 'B3_3', 'B3_3_comment', 'B3_4', 'B3_4_comment', 'B3_5', 'B3_5_comment', 'B3_6', 'B3_6_comment', 'C1', 'C1_comment', 'C2', 'C2_comment', 'D', 'D_comment', 'E', 'E_comment', 'E1', 'E2', 'F', 'G', 'H']
+2026-04-24 11:17:44,050 - [DB-SAVE] SUCCESS: Saved for participant C

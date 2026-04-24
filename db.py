@@ -855,7 +855,9 @@ def get_submitted_ids_for_courses(course_ids, form_titles):
         return ids
 
 def save_response_to_db(form_id, course_id, course, participant_name, id_number, position, data, form_title, form_config, language='English'):
-    table = _get_table_name(form_title)
+    # Use language-aware table naming
+    language_code = form_config.get('language_code', 'en')
+    table = get_response_table_name_with_language(form_title, language_code)
     conn  = get_fbs_connection()
     if not conn:
         logger.error(f"[DB-SAVE] Cannot connect to database for table [{table}]")
@@ -957,7 +959,8 @@ def get_response_count_by_form(forms_dict):
     try:
         cur = conn.cursor()
         for form_id, form_config in forms_dict.items():
-            table = _get_table_name(form_config.get('title', form_id))
+            language_code = form_config.get('language_code', 'en')
+            table = get_response_table_name_with_language(form_config.get('title', form_id), language_code)
             try:
                 cur.execute(f"SELECT COUNT(*) FROM [{table}]")
                 result[form_id] = cur.fetchone()[0]
@@ -971,7 +974,8 @@ def get_response_count_by_form(forms_dict):
 
 
 def get_responses_for_analysis(form_id, form_config, date_from=None, date_to=None, course_filter=None):
-    table  = _get_table_name(form_config.get('title', form_id))
+    language_code = form_config.get('language_code', 'en')
+    table  = get_response_table_name_with_language(form_config.get('title', form_id), language_code)
     conn   = get_fbs_connection()
     if not conn:
         return []
@@ -1050,7 +1054,8 @@ def get_responses_for_analysis(form_id, form_config, date_from=None, date_to=Non
 
 
 def get_distinct_courses_for_form(form_id, form_config):
-    table = _get_table_name(form_config.get('title', form_id))
+    language_code = form_config.get('language_code', 'en')
+    table = get_response_table_name_with_language(form_config.get('title', form_id), language_code)
     conn  = get_fbs_connection()
     if not conn:
         return []
@@ -1068,7 +1073,8 @@ def get_distinct_courses_for_form(form_id, form_config):
 
 
 def get_available_analysis_months(form_id, form_config):
-    table = _get_table_name(form_config.get('title', form_id))
+    language_code = form_config.get('language_code', 'en')
+    table = get_response_table_name_with_language(form_config.get('title', form_id), language_code)
     conn = get_fbs_connection()
     if not conn:
         return []
