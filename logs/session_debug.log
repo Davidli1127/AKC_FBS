@@ -816,3 +816,52 @@ pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL S
 2026-04-22 10:59:54,442 - 127.0.0.1 - - [22/Apr/2026 10:59:54] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
 2026-04-22 11:00:00,872 - 127.0.0.1 - - [22/Apr/2026 11:00:00] "GET /api/forms/trainer_evaluation_form_zh HTTP/1.1" 200 -
 2026-04-22 11:00:01,192 - 127.0.0.1 - - [22/Apr/2026 11:00:01] "GET /api/forms/trainer_evaluation_form_zh/table-status HTTP/1.1" 200 -
+2026-04-22 11:19:09,095 - 127.0.0.1 - - [22/Apr/2026 11:19:09] "POST /api/admin-login HTTP/1.1" 200 -
+2026-04-22 11:19:09,359 - 127.0.0.1 - - [22/Apr/2026 11:19:09] "GET /admin HTTP/1.1" 200 -
+2026-04-22 11:19:09,405 - 127.0.0.1 - - [22/Apr/2026 11:19:09] "GET /static/style.css HTTP/1.1" 200 -
+2026-04-22 11:19:09,679 - 127.0.0.1 - - [22/Apr/2026 11:19:09] "GET /api/scan/qrcode HTTP/1.1" 200 -
+2026-04-22 11:19:09,679 - 127.0.0.1 - - [22/Apr/2026 11:19:09] "GET /static/logo.png HTTP/1.1" 200 -
+2026-04-22 11:19:09,680 - 127.0.0.1 - - [22/Apr/2026 11:19:09] "GET /api/alerts/summary HTTP/1.1" 200 -
+2026-04-22 11:19:11,061 - 127.0.0.1 - - [22/Apr/2026 11:19:11] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-04-22 11:19:11,386 - 127.0.0.1 - - [22/Apr/2026 11:19:11] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-04-22 11:19:15,586 - 127.0.0.1 - - [22/Apr/2026 11:19:15] "GET /api/forms/trainer_evaluation_form_zh HTTP/1.1" 200 -
+2026-04-22 11:19:15,907 - 127.0.0.1 - - [22/Apr/2026 11:19:15] "GET /api/forms/trainer_evaluation_form_zh/table-status HTTP/1.1" 200 -
+2026-04-22 11:19:22,659 - Error fetching analysis months from [trainer_evaluation_form_response]: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+2026-04-22 11:19:22,659 - Error fetching analysis months from [trainer_evaluation_form_response]: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+2026-04-22 11:19:22,667 - [DB-ANALYSIS] Error fetching responses from [trainer_evaluation_form_response]: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+2026-04-22 11:19:22,667 - [DB-ANALYSIS] Error fetching responses from [trainer_evaluation_form_response]: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+2026-04-22 11:19:22,667 - Traceback (most recent call last):
+  File "C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\db.py", line 1012, in get_responses_for_analysis
+    cur.execute(f"""
+    ~~~~~~~~~~~^^^^^
+        SELECT {fixed_select_sql}{q_col_sql}
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        ORDER BY submission_time DESC
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    """, params)
+    ^^^^^^^^^^^^
+pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+
+2026-04-22 11:19:22,667 - Traceback (most recent call last):
+  File "C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\db.py", line 1012, in get_responses_for_analysis
+    cur.execute(f"""
+    ~~~~~~~~~~~^^^^^
+        SELECT {fixed_select_sql}{q_col_sql}
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        ORDER BY submission_time DESC
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    """, params)
+    ^^^^^^^^^^^^
+pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'trainer_evaluation_form_response'. (208) (SQLExecDirectW)")
+
+2026-04-22 11:19:22,671 - 127.0.0.1 - - [22/Apr/2026 11:19:22] "GET /api/analysis/dashboard/filters?form_id=form1_en HTTP/1.1" 200 -
+2026-04-22 11:19:32,308 - 127.0.0.1 - - [22/Apr/2026 11:19:32] "GET /api/forms/trainer_evaluation_form_zh HTTP/1.1" 200 -
+2026-04-22 11:19:32,574 - 127.0.0.1 - - [22/Apr/2026 11:19:32] "GET /api/forms/trainer_evaluation_form_zh/table-status HTTP/1.1" 200 -
+2026-04-22 11:19:33,956 - 127.0.0.1 - - [22/Apr/2026 11:19:33] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-04-22 11:19:34,276 - 127.0.0.1 - - [22/Apr/2026 11:19:34] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-04-22 11:19:35,135 - 127.0.0.1 - - [22/Apr/2026 11:19:35] "GET /api/forms/trainer_evaluation_form_zh HTTP/1.1" 200 -
+2026-04-22 11:19:35,461 - 127.0.0.1 - - [22/Apr/2026 11:19:35] "GET /api/forms/trainer_evaluation_form_zh/table-status HTTP/1.1" 200 -
+2026-04-22 11:19:35,996 - 127.0.0.1 - - [22/Apr/2026 11:19:35] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-04-22 11:19:36,320 - 127.0.0.1 - - [22/Apr/2026 11:19:36] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
