@@ -458,10 +458,10 @@
                     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;background:#f7f9ff;border:1px solid #e0e8ff;border-radius:10px;padding:16px;margin-bottom:18px;">
                         <div>
                             <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Form</label>
-                            <select id="analysisFormId" onchange="refreshAnalysisFilters()" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:230px;">
+                            <select id="analysisFormTitle" onchange="refreshAnalysisFilters()" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:230px;">
                                 <script>
                                 (function() {
-                                    const formSelect = document.getElementById('analysisFormId');
+                                    const formSelect = document.getElementById('analysisFormTitle');
                                     const seenTitles = new Set();
                                     {% for form_id, form in config.forms.items() %}
                                     {
@@ -469,7 +469,7 @@
                                         const title = "{{ form.title }}";
                                         if (!seenTitles.has(title)) {
                                             seenTitles.add(title);
-                                            const opt = new Option(title, "{{ form_id }}");
+                                            const opt = new Option(title, title);
                                             formSelect.add(opt);
                                         }
                                         {% endif %}
@@ -478,11 +478,11 @@
                                 })();
                                 </script>
                             </select>
+                            <input type="hidden" id="analysisSelectedLanguage" value="">
                         </div>
                         <div id="analysisLanguageGroup" style="display:none;">
                             <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Language</label>
                             <select id="analysisLanguageSelect" onchange="updateAnalysisLanguage()" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:180px;">
-                                <option value="">Select language...</option>
                             </select>
                             <small id="analysisLanguageLabel" style="display:block; color:#666; font-size:11px; margin-top:3px; height:14px;"></small>
                         </div>
@@ -3062,14 +3062,24 @@
             await runAnalysisDashboard();
         }
 
-        async function refreshAnalysisFilters() {
-            const formId = document.getElementById('analysisFormId').value;
-            // Update the language selector based on the currently selected form
-            updateAnalysisLanguageSelector(formId);
+        async function refreshAnalysisFilters(isFormChange = true) {
+            const formTitle = document.getElementById('analysisFormTitle').value;
+            if (isFormChange) {
+                updateAnalysisLanguageSelector(formTitle);
+            }
             
             const monthSelect = document.getElementById('analysisMonth');
             const selectedMonth = monthSelect.value || '';
             try {
+                let formId;
+                const selectedLanguageId = document.getElementById('analysisSelectedLanguage').value;
+                if (selectedLanguageId && selectedLanguageId !== 'all') {
+                    formId = selectedLanguageId;
+                } else {
+                    formId = getFirstFormIdByTitle(formTitle);
+                }
+                if (!formId) throw new Error('Form not found');
+                
                 const params = new URLSearchParams({ form_id: formId });
                 if (selectedMonth) params.set('month', selectedMonth);
                 const res = await fetch(`/api/analysis/dashboard/filters?${params.toString()}`);
@@ -3087,66 +3097,82 @@
             }
         }
         
-        function updateAnalysisLanguageSelector(formId) {
+        function getFirstFormIdByTitle(formTitle) {
+            const languageVersions = FORM_BY_TITLE[formTitle] || [];
+            return languageVersions.length > 0 ? languageVersions[0].id : null;
+        }
+        
+        function getFormIdByTitleAndLanguage(formTitle, languageId) {
+            const languageVersions = FORM_BY_TITLE[formTitle] || [];
+            const version = languageVersions.find(v => v.id === languageId);
+            return version ? version.id : null;
+        }
+        
+        function updateAnalysisLanguageSelector(formTitle) {
             const languageSelect = document.getElementById('analysisLanguageSelect');
             const languageGroup = document.getElementById('analysisLanguageGroup');
             const languageLabel = document.getElementById('analysisLanguageLabel');
             
-            languageSelect.innerHTML = '<option value="">Select language...</option>';
-            languageGroup.style.display = 'none';
+            // Store current selection before clearing
+            const currentSelection = document.getElementById('analysisSelectedLanguage').value;
+            
+            languageSelect.innerHTML = '';
             languageLabel.textContent = '';
             
-            const formTitle = FORM_TITLE_MAP[formId];
-            if (!formTitle) return;
+            if (!formTitle) {
+                languageGroup.style.display = 'none';
+                return;
+            }
             
             const languageVersions = FORM_BY_TITLE[formTitle] || [];
             
             if (languageVersions.length > 1) {
-                // Add "Select All" option
-                const selectAllOpt = new Option('Select All Languages', 'select_all');
-                languageSelect.add(selectAllOpt);
+                // Add "All Languages" option
+                const allLangOpt = new Option('All Languages', 'all');
+                languageSelect.add(allLangOpt);
                 
                 // Add individual language options
                 languageVersions.forEach(version => {
                     const opt = new Option(version.language, version.id);
                     languageSelect.add(opt);
                 });
-                languageSelect.value = formId;
-                languageGroup.style.display = 'block';
-                const selectedOption = languageSelect.options[languageSelect.selectedIndex];
-                if (selectedOption && selectedOption.value) {
-                    languageLabel.textContent = `(${selectedOption.textContent})`;
+                
+                let selectedValue = languageVersions[0].id;
+                if (currentSelection && languageVersions.find(v => v.id === currentSelection)) {
+                    selectedValue = currentSelection;
                 }
+                languageSelect.value = selectedValue;
+                document.getElementById('analysisSelectedLanguage').value = selectedValue;
+                languageGroup.style.display = 'block';
+                
+                const selectedOption = languageSelect.options[languageSelect.selectedIndex];
+                if (selectedOption && selectedOption.text) {
+                    languageLabel.textContent = `(${selectedOption.text})`;
+                }
+            } else if (languageVersions.length === 1) {
+                document.getElementById('analysisSelectedLanguage').value = languageVersions[0].id;
+                languageGroup.style.display = 'none';
             }
         }
         
         function updateAnalysisLanguage() {
             const languageSelect = document.getElementById('analysisLanguageSelect');
             const languageLabel = document.getElementById('analysisLanguageLabel');
-            let selectedFormId = languageSelect.value;
+            let selectedValue = languageSelect.value;
             
-            if (selectedFormId === 'select_all') {
-                // Get all form versions and aggregate them
-                const formId = document.getElementById('analysisFormId').value;
-                const formTitle = FORM_TITLE_MAP[formId];
-                const languageVersions = FORM_BY_TITLE[formTitle] || [];
-                
-                if (languageVersions.length > 0) {
-                    // Store all form IDs for "Select All" to fetch and aggregate data
-                    selectedFormId = languageVersions.map(v => v.id).join(',');
-                    languageLabel.textContent = `(All Languages)`;
-                }
-            } else if (selectedFormId) {
-                document.getElementById('analysisFormId').value = selectedFormId;
-                const selectedOption = languageSelect.options[languageSelect.selectedIndex];
-                if (selectedOption && selectedOption.value) {
-                    languageLabel.textContent = `(${selectedOption.textContent})`;
-                }
+            // Store the selected language
+            document.getElementById('analysisSelectedLanguage').value = selectedValue;
+            
+            const selectedOption = languageSelect.options[languageSelect.selectedIndex];
+            if (selectedOption && selectedOption.text) {
+                languageLabel.textContent = `(${selectedOption.text})`;
             }
             
-            if (selectedFormId) {
-                refreshAnalysisFilters();
-            }
+            refreshAnalysisFilters(false).then(() => {
+                runAnalysisDashboard();
+            }).catch(err => {
+                console.error('Error updating language:', err);
+            });
         }
 
         function renderMonthOptions(months, selectedMonth) {
@@ -3231,7 +3257,8 @@
         }
 
         async function runAnalysisDashboard() {
-            const formId = document.getElementById('analysisFormId').value;
+            const formTitle = document.getElementById('analysisFormTitle').value;
+            const selectedLanguageId = document.getElementById('analysisSelectedLanguage').value;
             const month = document.getElementById('analysisMonth').value;
             const selectedQuestions = getSelectedAnalysisValues('question');
             const selectedCourses = getSelectedAnalysisValues('course');
@@ -3242,23 +3269,52 @@
                 return;
             }
 
-            const params = new URLSearchParams({ form_id: formId });
-            if (month) params.set('month', month);
-            params.set('sort', sortMode);
-            selectedQuestions.forEach(q => params.append('question', q));
-            selectedCourses.forEach(c => params.append('course_title', c));
+            if (!formTitle || !selectedLanguageId) {
+                alert('Please select a form and language.');
+                return;
+            }
 
             const summaryDiv = document.getElementById('analysisSummaryCards');
             summaryDiv.innerHTML = '<div style="color:#888;font-size:13px;">Loading analysis...</div>';
 
             try {
-                const res = await fetch(`/api/analysis/dashboard?${params.toString()}`);
-                const data = await res.json();
-                if (data.error) throw new Error(data.error);
-                analysisDashboardData = data;
-                renderAnalysisSummaryCards(data.summary || {});
-                renderAnalysisQuestionTable(data.bar || {}, data.rating_legend || {});
-                renderAnalysisInsights(data.insights || {});
+                let formIds = [];
+                if (selectedLanguageId === 'all') {
+                    // Get all form versions for this title
+                    const versions = FORM_BY_TITLE[formTitle] || [];
+                    formIds = versions.map(v => v.id);
+                } else {
+                    formIds = [selectedLanguageId];
+                }
+
+                if (formIds.length === 0) throw new Error('No form versions found');
+
+                // Fetch and aggregate data from all selected form versions
+                let aggregatedData = null;
+                for (const formId of formIds) {
+                    const params = new URLSearchParams({ form_id: formId });
+                    if (month) params.set('month', month);
+                    params.set('sort', sortMode);
+                    selectedQuestions.forEach(q => params.append('question', q));
+                    selectedCourses.forEach(c => params.append('course_title', c));
+
+                    const res = await fetch(`/api/analysis/dashboard?${params.toString()}`);
+                    const data = await res.json();
+                    if (data.error) throw new Error(data.error);
+
+                    if (!aggregatedData) {
+                        aggregatedData = data;
+                    } else {
+                        aggregatedData = aggregateAnalysisData(aggregatedData, data);
+                    }
+                }
+
+                if (!aggregatedData) throw new Error('No data available');
+
+                analysisDashboardData = aggregatedData;
+                renderAnalysisSummaryCards(aggregatedData.summary || {});
+                renderAnalysisQuestionTable(aggregatedData.bar || {}, aggregatedData.rating_legend || {});
+                renderAnalysisInsights(aggregatedData.insights || {});
                 renderAnalysisChart();
             } catch (err) {
                 summaryDiv.innerHTML = `<div style="color:#dc3545;font-size:13px;">${escHtml(err.message)}</div>`;
@@ -3273,6 +3329,40 @@
                     analysisChartInstance = null;
                 }
             }
+        }
+
+        function aggregateAnalysisData(data1, data2) {
+            if (!data2) return data1;
+            
+            const aggregated = JSON.parse(JSON.stringify(data1));
+            
+            if (aggregated.summary && data2.summary) {
+                aggregated.summary.response_count = (aggregated.summary.response_count || 0) + (data2.summary.response_count || 0);
+                aggregated.summary.total_ratings = (aggregated.summary.total_ratings || 0) + (data2.summary.total_ratings || 0);
+                aggregated.summary.question_count = aggregated.summary.question_count || data2.summary.question_count;
+                const total = aggregated.summary.total_ratings || 1;
+                const goodRatings = (aggregated.summary.rating_3_or_above_count || 0);
+                aggregated.summary.rating_3_or_above_pct = (goodRatings / total * 100);
+            }
+            
+            if (aggregated.bar && data2.bar) {
+                for (let i = 0; i < (data2.bar.datasets || []).length; i++) {
+                    if (aggregated.bar.datasets && aggregated.bar.datasets[i] && data2.bar.datasets[i]) {
+                        const ds1 = aggregated.bar.datasets[i];
+                        const ds2 = data2.bar.datasets[i];
+                        for (let j = 0; j < (ds2.data || []).length; j++) {
+                            ds1.data[j] = (ds1.data[j] || 0) + (ds2.data[j] || 0);
+                        }
+                    }
+                }
+            }
+            
+            if (aggregated.pie && data2.pie) {
+                aggregated.pie.values[0] = (aggregated.pie.values[0] || 0) + (data2.pie.values[0] || 0);
+                aggregated.pie.values[1] = (aggregated.pie.values[1] || 0) + (data2.pie.values[1] || 0);
+            }
+            
+            return aggregated;
         }
 
         function renderAnalysisSummaryCards(summary) {
