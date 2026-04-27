@@ -1027,3 +1027,25 @@ pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL S
 2026-04-24 11:17:44,042 - [DB-SAVE] Inserting into [trainer_evaluation_form_response_zh] for participant=C, id_number=C
 2026-04-24 11:17:44,042 - [DB-SAVE] Columns: ['id', 'submission_time', 'course_id', 'course_title', 'course_code', 'course_date', 'venue', 'language', 'participant_name', 'id_number', 'position_title', 'instructor1_name', 'instructor2_name', 'instructor3_name', 'A1', 'A1_comment', 'A2', 'A2_comment', 'A3', 'A3_comment', 'A4', 'A4_comment', 'A5', 'A5_comment', 'B1_1', 'B1_1_comment', 'B1_2', 'B1_2_comment', 'B1_3', 'B1_3_comment', 'B1_4', 'B1_4_comment', 'B1_5', 'B1_5_comment', 'B1_6', 'B1_6_comment', 'B2_1', 'B2_1_comment', 'B2_2', 'B2_2_comment', 'B2_3', 'B2_3_comment', 'B2_4', 'B2_4_comment', 'B2_5', 'B2_5_comment', 'B2_6', 'B2_6_comment', 'B3_1', 'B3_1_comment', 'B3_2', 'B3_2_comment', 'B3_3', 'B3_3_comment', 'B3_4', 'B3_4_comment', 'B3_5', 'B3_5_comment', 'B3_6', 'B3_6_comment', 'C1', 'C1_comment', 'C2', 'C2_comment', 'D', 'D_comment', 'E', 'E_comment', 'E1', 'E2', 'F', 'G', 'H']
 2026-04-24 11:17:44,050 - [DB-SAVE] SUCCESS: Saved for participant C
+2026-04-24 14:04:51,990 - ================================================================================
+2026-04-24 14:04:51,990 - Application started - Logging enabled
+2026-04-24 14:04:51,990 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-24 14:04:51,991 - ================================================================================
+2026-04-24 14:05:08,827 - ================================================================================
+2026-04-24 14:05:08,828 - Application started - Logging enabled
+2026-04-24 14:05:08,828 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-24 14:05:08,828 - ================================================================================
+2026-04-24 14:05:08,877 - [ALERT_INIT] Form form1_en: Found 15 rating questions, 5 text questions
+2026-04-24 14:05:08,877 - [ALERT_INIT] Text question IDs: ['E1', 'E2', 'F', 'G', 'H']
+2026-04-24 14:05:08,878 - [ALERT_INIT] Form data keys: ['name', 'position', 'A1', 'A2', 'A3', 'A4', 'A5', 'B1_1', 'B1_2', 'B1_3', 'B1_4', 'B1_5', 'B1_6', 'A1_comment', 'B1_1_comment']
+2026-04-24 14:05:08,897 - [ALERT_TEXT] Skipping E1: response too short (0 chars)
+2026-04-24 14:05:08,897 - [ALERT_TEXT] Skipping E2: response too short (0 chars)
+2026-04-24 14:05:08,898 - [ALERT_TEXT] Skipping F: response too short (0 chars)
+2026-04-24 14:05:08,898 - [ALERT_TEXT] Skipping G: response too short (0 chars)
+2026-04-24 14:05:08,899 - [ALERT_TEXT] Skipping H: response too short (0 chars)
+2026-04-24 14:05:08,899 - [NEGATIVE_MATCH] Processing text: 'terrible experience'
+2026-04-24 14:05:08,899 - [NEGATIVE_MATCH] ALERT - negative keywords: ['Terrible']
+2026-04-24 14:06:43,791 - ================================================================================
+2026-04-24 14:06:43,791 - Application started - Logging enabled
+2026-04-24 14:06:43,791 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-24 14:06:43,791 - ================================================================================

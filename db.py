@@ -1622,7 +1622,9 @@ def log_reminder_sent(class_code, participant_name, participant_email, participa
 
 
 def get_low_rating_responses(form_id, form_config, rating_threshold=2):
-    table = _get_table_name(form_config.get('title', form_id))
+    language_code = form_config.get('language_code', 'en')
+    form_title = form_config.get('title', form_id)
+    table = get_response_table_name_with_language(form_title, language_code)
     conn = get_fbs_connection()
     if not conn:
         return []
@@ -2006,7 +2008,9 @@ def check_rectification_already_sent(form_id, response_id, question_id):
         return False
 
 def get_text_question_responses(form_id, form_config):
-    table = _get_table_name(form_config.get('title', form_id))
+    language_code = form_config.get('language_code', 'en')
+    form_title = form_config.get('title', form_id)
+    table = get_response_table_name_with_language(form_title, language_code)
     conn = get_fbs_connection()
     if not conn:
         return []
