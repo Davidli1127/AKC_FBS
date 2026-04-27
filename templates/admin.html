@@ -3162,8 +3162,16 @@
                     languageLabel.textContent = `(${selectedOption.text})`;
                 }
             } else if (languageVersions.length === 1) {
+                const opt = new Option(languageVersions[0].language || 'English', languageVersions[0].id);
+                languageSelect.add(opt);
+                languageSelect.value = languageVersions[0].id;
                 document.getElementById('analysisSelectedLanguage').value = languageVersions[0].id;
-                languageGroup.style.display = 'none';
+                languageGroup.style.display = 'block';
+                
+                const selectedOption = languageSelect.options[0];
+                if (selectedOption && selectedOption.text) {
+                    languageLabel.textContent = `(${selectedOption.text})`;
+                }
             } else {
                 // Form not found - this shouldn't happen but handle it
                 languageGroup.style.display = 'none';

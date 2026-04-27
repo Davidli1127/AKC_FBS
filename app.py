@@ -1966,6 +1966,7 @@ def get_analysis_dashboard():
             'selected_month': month,
             'response_count': len(prepared_rows),
             'total_ratings': total_ratings,
+            'rating_3_or_above_count': good_count,
             'rating_3_or_above_pct': good_pct,
             'question_count': len(ranked_questions),
             'sort_mode': sort_mode
