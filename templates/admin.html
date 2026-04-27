@@ -3066,6 +3066,15 @@
             const formTitle = document.getElementById('analysisFormTitle').value;
             if (isFormChange) {
                 updateAnalysisLanguageSelector(formTitle);
+                // After language selector is updated, ensure a language is selected
+                const selectedLanguageId = document.getElementById('analysisSelectedLanguage').value;
+                if (!selectedLanguageId) {
+                    // No language selected yet, which shouldn't happen but handle it
+                    const firstFormId = getFirstFormIdByTitle(formTitle);
+                    if (firstFormId) {
+                        document.getElementById('analysisSelectedLanguage').value = firstFormId;
+                    }
+                }
             }
             
             const monthSelect = document.getElementById('analysisMonth');
@@ -3119,11 +3128,12 @@
             languageSelect.innerHTML = '';
             languageLabel.textContent = '';
             
-            if (!formTitle) {
+            if (!formTitle || !formTitle.trim()) {
                 languageGroup.style.display = 'none';
                 return;
             }
             
+            formTitle = formTitle.trim();
             const languageVersions = FORM_BY_TITLE[formTitle] || [];
             
             if (languageVersions.length > 1) {
@@ -3140,6 +3150,8 @@
                 let selectedValue = languageVersions[0].id;
                 if (currentSelection && languageVersions.find(v => v.id === currentSelection)) {
                     selectedValue = currentSelection;
+                } else if (currentSelection === 'all' && languageVersions.length > 1) {
+                    selectedValue = 'all';
                 }
                 languageSelect.value = selectedValue;
                 document.getElementById('analysisSelectedLanguage').value = selectedValue;
@@ -3152,6 +3164,10 @@
             } else if (languageVersions.length === 1) {
                 document.getElementById('analysisSelectedLanguage').value = languageVersions[0].id;
                 languageGroup.style.display = 'none';
+            } else {
+                // Form not found - this shouldn't happen but handle it
+                languageGroup.style.display = 'none';
+                console.warn('Form not found in FORM_BY_TITLE:', formTitle);
             }
         }
         
@@ -3339,9 +3355,10 @@
             if (aggregated.summary && data2.summary) {
                 aggregated.summary.response_count = (aggregated.summary.response_count || 0) + (data2.summary.response_count || 0);
                 aggregated.summary.total_ratings = (aggregated.summary.total_ratings || 0) + (data2.summary.total_ratings || 0);
+                aggregated.summary.rating_3_or_above_count = (aggregated.summary.rating_3_or_above_count || 0) + (data2.summary.rating_3_or_above_count || 0);
                 aggregated.summary.question_count = aggregated.summary.question_count || data2.summary.question_count;
                 const total = aggregated.summary.total_ratings || 1;
-                const goodRatings = (aggregated.summary.rating_3_or_above_count || 0);
+                const goodRatings = aggregated.summary.rating_3_or_above_count || 0;
                 aggregated.summary.rating_3_or_above_pct = (goodRatings / total * 100);
             }
             

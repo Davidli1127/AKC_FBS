@@ -1079,3 +1079,65 @@ pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL S
 2026-04-27 09:38:24,856 - 127.0.0.1 - - [27/Apr/2026 09:38:24] "[31m[1mPOST /api/admin-login HTTP/1.1[0m" 401 -
 2026-04-27 09:38:46,899 - 127.0.0.1 - - [27/Apr/2026 09:38:46] "[32mGET /admin HTTP/1.1[0m" 302 -
 2026-04-27 09:38:48,915 - 127.0.0.1 - - [27/Apr/2026 09:38:48] "GET /login HTTP/1.1" 200 -
+2026-04-27 14:17:42,453 - ================================================================================
+2026-04-27 14:17:42,454 - Application started - Logging enabled
+2026-04-27 14:17:42,454 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-27 14:17:42,454 - ================================================================================
+2026-04-27 14:17:42,551 - [FBS_Forms sync] 3/3 forms synced
+2026-04-27 14:17:42,569 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-27 14:17:42,601 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-27 14:17:42,626 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-27 14:17:42,648 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.64.23.70:5000
+2026-04-27 14:17:42,648 - [33mPress CTRL+C to quit[0m
+2026-04-27 14:17:42,650 -  * Restarting with stat
+2026-04-27 14:17:42,832 - ================================================================================
+2026-04-27 14:17:42,832 - Application started - Logging enabled
+2026-04-27 14:17:42,832 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-27 14:17:42,832 - ================================================================================
+2026-04-27 14:17:42,919 - [FBS_Forms sync] 3/3 forms synced
+2026-04-27 14:17:42,932 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-27 14:17:42,946 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-27 14:17:42,959 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-27 14:17:42,970 -  * Debugger is active!
+2026-04-27 14:17:42,972 -  * Debugger PIN: 126-439-623
+2026-04-27 14:18:11,671 - [FORM-PAGE] Loading form - request_course_id=form1_en, session_course_id=None, student=[NONE]/[NONE]
+2026-04-27 14:18:11,671 - [FORM-PAGE] Redirect to login - mismatch: None != form1_en
+2026-04-27 14:18:11,672 - 127.0.0.1 - - [27/Apr/2026 14:18:11] "[32mGET /form/form1_en HTTP/1.1[0m" 302 -
+2026-04-27 14:18:13,737 - 127.0.0.1 - - [27/Apr/2026 14:18:13] "[33mGET /student-login/form1_en HTTP/1.1[0m" 404 -
+2026-04-27 14:18:19,436 -  * Detected change in 'C:\\Users\\Li.Zhongyuan\\Desktop\\AKC_FBS\\test_dropdown_fixes.py', reloading
+2026-04-27 14:18:19,470 -  * Restarting with stat
+2026-04-27 14:18:19,658 - ================================================================================
+2026-04-27 14:18:19,658 - Application started - Logging enabled
+2026-04-27 14:18:19,658 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-27 14:18:19,658 - ================================================================================
+2026-04-27 14:18:19,744 - [FBS_Forms sync] 3/3 forms synced
+2026-04-27 14:18:19,756 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-27 14:18:19,769 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-27 14:18:19,781 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-27 14:18:19,793 -  * Debugger is active!
+2026-04-27 14:18:19,795 -  * Debugger PIN: 126-439-623
+2026-04-27 14:18:20,158 -  * Detected change in 'C:\\Users\\Li.Zhongyuan\\Desktop\\AKC_FBS\\test_dropdown_fixes.py', reloading
+2026-04-27 14:18:20,184 -  * Restarting with stat
+2026-04-27 14:18:20,369 - ================================================================================
+2026-04-27 14:18:20,369 - Application started - Logging enabled
+2026-04-27 14:18:20,369 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-04-27 14:18:20,370 - ================================================================================
+2026-04-27 14:18:20,452 - [FBS_Forms sync] 3/3 forms synced
+2026-04-27 14:18:20,464 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-04-27 14:18:20,477 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-04-27 14:18:20,489 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-04-27 14:18:20,500 -  * Debugger is active!
+2026-04-27 14:18:20,502 -  * Debugger PIN: 126-439-623
+2026-04-27 14:18:25,522 - 127.0.0.1 - - [27/Apr/2026 14:18:25] "[32mGET /admin HTTP/1.1[0m" 302 -
+2026-04-27 14:18:27,621 - 127.0.0.1 - - [27/Apr/2026 14:18:27] "GET /login HTTP/1.1" 200 -
+2026-04-27 15:00:28,819 - 127.0.0.1 - - [27/Apr/2026 15:00:28] "[32mGET / HTTP/1.1[0m" 302 -
+2026-04-27 15:00:30,845 - 127.0.0.1 - - [27/Apr/2026 15:00:30] "[32mGET /admin HTTP/1.1[0m" 302 -
+2026-04-27 15:00:32,862 - 127.0.0.1 - - [27/Apr/2026 15:00:32] "GET /login HTTP/1.1" 200 -
+2026-04-27 15:00:34,888 - 127.0.0.1 - - [27/Apr/2026 15:00:34] "[31m[1mGET /api/analysis/dashboard/filters?form_id=form1_en HTTP/1.1[0m" 401 -
+2026-04-27 15:00:36,930 - 127.0.0.1 - - [27/Apr/2026 15:00:36] "[31m[1mGET /api/analysis/dashboard/filters?form_id=form1_zh HTTP/1.1[0m" 401 -
+2026-04-27 15:00:38,969 - 127.0.0.1 - - [27/Apr/2026 15:00:38] "[31m[1mGET /api/analysis/dashboard/filters?form_id=form2_en HTTP/1.1[0m" 401 -
+2026-04-27 15:00:41,007 - 127.0.0.1 - - [27/Apr/2026 15:00:41] "[31m[1mGET /api/analysis/dashboard?form_id=form1_en&question=Q1 HTTP/1.1[0m" 401 -
+2026-04-27 15:00:43,024 - 127.0.0.1 - - [27/Apr/2026 15:00:43] "[31m[1mGET /api/analysis/dashboard?form_id=form1_zh&question=Q1 HTTP/1.1[0m" 401 -
