@@ -368,7 +368,6 @@
                             <label for="editFormLanguageSelect">Language Version:</label>
                             <select id="editFormLanguageSelect" onchange="loadFormForEdit('language')">
                             </select>
-                            <small id="editFormLanguageLabel" style="display:block; color:#666; font-size:11px; margin-top:3px; height:14px;"></small>
                         </div>
                         <div style="display:flex; gap:8px; padding-top:22px;">
                             <button class="btn btn-danger btn-sm" onclick="deleteSelectedForm()" id="deleteFormBtn" title="Delete this custom form">Delete Form</button>
@@ -484,7 +483,6 @@
                             <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Language</label>
                             <select id="analysisLanguageSelect" onchange="updateAnalysisLanguage()" style="padding:7px 12px;border:1px solid #c7d7ff;border-radius:6px;font-size:13px;min-width:180px;">
                             </select>
-                            <small id="analysisLanguageLabel" style="display:block; color:#666; font-size:11px; margin-top:3px; height:14px;"></small>
                         </div>
                         <div>
                             <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">Month Selection</label>
@@ -1698,7 +1696,6 @@
         async function loadFormForEdit(source = 'main') {
             let selectedFormId = document.getElementById('editFormSelect').value;
             const languageSelect = document.getElementById('editFormLanguageSelect');
-            const languageLabel = document.getElementById('editFormLanguageLabel');
             
             if (source === 'language') {
                 selectedFormId = languageSelect.value;
@@ -1740,9 +1737,7 @@
                 // Select the form that matches the selected language
                 editFormSelect.value = selectedFormId;
                 
-                // Update language label to show selected language
-                const selectedOption = languageSelect.options[languageSelect.selectedIndex];
-                languageLabel.textContent = `(${selectedOption.textContent})`;
+                // Language label removed
             } else {
                 const selectedTitle = FORM_TITLE_MAP[selectedFormId];
                 if (!selectedTitle) {
@@ -1762,10 +1757,7 @@
                         });
                         languageSelect.value = selectedFormId;
                         languageSelect.style.display = 'inline-block';
-                        languageLabel.style.display = 'block';
-                        // Update language label to show selected language
-                        const selectedOption = languageSelect.options[languageSelect.selectedIndex];
-                        languageLabel.textContent = `(${selectedOption.textContent})`;
+                        languageLabel.style.display = 'none';
                     } else {
                         languageSelect.style.display = 'none';
                         languageLabel.style.display = 'none';
@@ -3120,13 +3112,11 @@
         function updateAnalysisLanguageSelector(formTitle) {
             const languageSelect = document.getElementById('analysisLanguageSelect');
             const languageGroup = document.getElementById('analysisLanguageGroup');
-            const languageLabel = document.getElementById('analysisLanguageLabel');
             
             // Store current selection before clearing
             const currentSelection = document.getElementById('analysisSelectedLanguage').value;
             
             languageSelect.innerHTML = '';
-            languageLabel.textContent = '';
             
             if (!formTitle || !formTitle.trim()) {
                 languageGroup.style.display = 'none';
@@ -3156,24 +3146,14 @@
                 languageSelect.value = selectedValue;
                 document.getElementById('analysisSelectedLanguage').value = selectedValue;
                 languageGroup.style.display = 'block';
-                
-                const selectedOption = languageSelect.options[languageSelect.selectedIndex];
-                if (selectedOption && selectedOption.text) {
-                    languageLabel.textContent = `(${selectedOption.text})`;
-                }
+
             } else if (languageVersions.length === 1) {
                 const opt = new Option(languageVersions[0].language || 'English', languageVersions[0].id);
                 languageSelect.add(opt);
                 languageSelect.value = languageVersions[0].id;
                 document.getElementById('analysisSelectedLanguage').value = languageVersions[0].id;
                 languageGroup.style.display = 'block';
-                
-                const selectedOption = languageSelect.options[0];
-                if (selectedOption && selectedOption.text) {
-                    languageLabel.textContent = `(${selectedOption.text})`;
-                }
             } else {
-                // Form not found - this shouldn't happen but handle it
                 languageGroup.style.display = 'none';
                 console.warn('Form not found in FORM_BY_TITLE:', formTitle);
             }
@@ -3181,16 +3161,10 @@
         
         function updateAnalysisLanguage() {
             const languageSelect = document.getElementById('analysisLanguageSelect');
-            const languageLabel = document.getElementById('analysisLanguageLabel');
             let selectedValue = languageSelect.value;
             
             // Store the selected language
             document.getElementById('analysisSelectedLanguage').value = selectedValue;
-            
-            const selectedOption = languageSelect.options[languageSelect.selectedIndex];
-            if (selectedOption && selectedOption.text) {
-                languageLabel.textContent = `(${selectedOption.text})`;
-            }
             
             refreshAnalysisFilters(false).then(() => {
                 runAnalysisDashboard();
