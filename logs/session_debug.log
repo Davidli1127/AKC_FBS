@@ -1231,3 +1231,17 @@ pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL S
 2026-05-04 15:14:04,536 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
 2026-05-04 15:14:04,548 -  * Debugger is active!
 2026-05-04 15:14:04,551 -  * Debugger PIN: 126-439-623
+2026-05-04 15:14:51,994 - 127.0.0.1 - - [04/May/2026 15:14:51] "POST /api/admin-login HTTP/1.1" 200 -
+2026-05-04 15:14:52,310 - 127.0.0.1 - - [04/May/2026 15:14:52] "GET /admin HTTP/1.1" 200 -
+2026-05-04 15:14:52,346 - 127.0.0.1 - - [04/May/2026 15:14:52] "GET /static/style.css HTTP/1.1" 200 -
+2026-05-04 15:14:52,632 - 127.0.0.1 - - [04/May/2026 15:14:52] "GET /static/logo.png HTTP/1.1" 200 -
+2026-05-04 15:14:52,637 - 127.0.0.1 - - [04/May/2026 15:14:52] "GET /api/alerts/summary HTTP/1.1" 200 -
+2026-05-04 15:14:52,697 - 127.0.0.1 - - [04/May/2026 15:14:52] "GET /api/scan/qrcode HTTP/1.1" 200 -
+2026-05-04 15:14:55,787 - 127.0.0.1 - - [04/May/2026 15:14:55] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-05-04 15:14:56,045 - 127.0.0.1 - - [04/May/2026 15:14:56] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-05-04 15:14:58,279 - 127.0.0.1 - - [04/May/2026 15:14:58] "GET /api/forms/form2_en HTTP/1.1" 200 -
+2026-05-04 15:14:58,603 - 127.0.0.1 - - [04/May/2026 15:14:58] "GET /api/forms/form2_en/table-status HTTP/1.1" 200 -
+2026-05-04 15:14:59,842 - 127.0.0.1 - - [04/May/2026 15:14:59] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-05-04 15:15:00,171 - 127.0.0.1 - - [04/May/2026 15:15:00] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-05-04 15:15:00,918 - 127.0.0.1 - - [04/May/2026 15:15:00] "GET /api/forms/trainer_evaluation_form_zh HTTP/1.1" 200 -
+2026-05-04 15:15:01,239 - 127.0.0.1 - - [04/May/2026 15:15:01] "GET /api/forms/trainer_evaluation_form_zh/table-status HTTP/1.1" 200 -
