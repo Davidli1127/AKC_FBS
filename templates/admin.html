@@ -1742,7 +1742,6 @@
                 const selectedTitle = FORM_TITLE_MAP[selectedFormId];
                 if (!selectedTitle) {
                     languageSelect.style.display = 'none';
-                    languageLabel.style.display = 'none';
                     languageSelect.innerHTML = '';
                 } else {
                     const languageVersions = FORM_BY_TITLE[selectedTitle] || [];
@@ -1757,10 +1756,8 @@
                         });
                         languageSelect.value = selectedFormId;
                         languageSelect.style.display = 'inline-block';
-                        languageLabel.style.display = 'none';
                     } else {
                         languageSelect.style.display = 'none';
-                        languageLabel.style.display = 'none';
                     }
                 }
             }
@@ -3153,7 +3150,8 @@
                 languageSelect.value = languageVersions[0].id;
                 document.getElementById('analysisSelectedLanguage').value = languageVersions[0].id;
                 languageGroup.style.display = 'block';
-            } else {
+            } else {2
+                
                 languageGroup.style.display = 'none';
                 console.warn('Form not found in FORM_BY_TITLE:', formTitle);
             }

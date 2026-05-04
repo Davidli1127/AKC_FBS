@@ -1191,3 +1191,43 @@ pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL S
 2026-04-27 15:39:05,429 -  * Debugger PIN: 126-439-623
 2026-04-27 15:39:31,147 - 127.0.0.1 - - [27/Apr/2026 15:39:31] "[32mGET /admin HTTP/1.1[0m" 302 -
 2026-04-27 15:39:31,407 - 127.0.0.1 - - [27/Apr/2026 15:39:31] "GET /login HTTP/1.1" 200 -
+2026-05-04 15:12:16,888 - ================================================================================
+2026-05-04 15:12:16,888 - Application started - Logging enabled
+2026-05-04 15:12:16,888 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-05-04 15:12:16,888 - ================================================================================
+2026-05-04 15:12:17,138 - [FBS_Forms sync] 3/3 forms synced
+2026-05-04 15:12:17,199 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-05-04 15:12:17,238 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-05-04 15:12:17,271 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-05-04 15:12:17,310 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.64.23.74:5000
+2026-05-04 15:12:17,310 - [33mPress CTRL+C to quit[0m
+2026-05-04 15:12:17,313 -  * Restarting with stat
+2026-05-04 15:12:17,534 - ================================================================================
+2026-05-04 15:12:17,535 - Application started - Logging enabled
+2026-05-04 15:12:17,535 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-05-04 15:12:17,535 - ================================================================================
+2026-05-04 15:12:17,682 - [FBS_Forms sync] 3/3 forms synced
+2026-05-04 15:12:17,704 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-05-04 15:12:17,730 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-05-04 15:12:17,761 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-05-04 15:12:17,787 -  * Debugger is active!
+2026-05-04 15:12:17,790 -  * Debugger PIN: 126-439-623
+2026-05-04 15:12:37,883 - 127.0.0.1 - - [04/May/2026 15:12:37] "[32mGET /admin HTTP/1.1[0m" 302 -
+2026-05-04 15:12:38,148 - 127.0.0.1 - - [04/May/2026 15:12:38] "GET /login HTTP/1.1" 200 -
+2026-05-04 15:12:38,208 - 127.0.0.1 - - [04/May/2026 15:12:38] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-05-04 15:12:54,201 - 127.0.0.1 - - [04/May/2026 15:12:54] "[31m[1mPOST /api/admin-login HTTP/1.1[0m" 401 -
+2026-05-04 15:14:04,142 -  * Detected change in 'C:\\Users\\Li.Zhongyuan\\Desktop\\AKC_FBS\\verify_fix.py', reloading
+2026-05-04 15:14:04,186 -  * Restarting with stat
+2026-05-04 15:14:04,405 - ================================================================================
+2026-05-04 15:14:04,405 - Application started - Logging enabled
+2026-05-04 15:14:04,405 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-05-04 15:14:04,405 - ================================================================================
+2026-05-04 15:14:04,496 - [FBS_Forms sync] 3/3 forms synced
+2026-05-04 15:14:04,509 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-05-04 15:14:04,522 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-05-04 15:14:04,536 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-05-04 15:14:04,548 -  * Debugger is active!
+2026-05-04 15:14:04,551 -  * Debugger PIN: 126-439-623
