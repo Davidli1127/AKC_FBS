@@ -1875,16 +1875,61 @@
                                     <label style="font-size: 12px; font-weight: 600; color: #555;">Type:</label>
                                     <select style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;"
                                             onchange="updateSectionType('${section.id}', this.value)">
-                                        <option value="rating" ${section.type === 'rating' ? 'selected' : ''}>Rating</option>
+                                        <option value="rating" ${section.type === 'rating' ? 'selected' : ''}>Rating (1-5 Scale)</option>
                                         <option value="instructor_rating" ${section.type === 'instructor_rating' ? 'selected' : ''}>Instructor Rating</option>
                                         <option value="assessor_rating" ${section.type === 'assessor_rating' ? 'selected' : ''}>Assessor Rating</option>
                                         <option value="text_questions" ${section.type === 'text_questions' ? 'selected' : ''}>Text Questions</option>
                                         <option value="multiple_choice" ${section.type === 'multiple_choice' ? 'selected' : ''}>Multiple Choice</option>
+                                        <option value="course_date_selection" ${section.type === 'course_date_selection' ? 'selected' : ''}>Course Date Selection</option>
                                     </select>
                                 </div>
                                 <button class="btn btn-danger btn-sm" onclick="deleteSection('${section.id}')" style="margin-left: auto;">Delete Section</button>
                             </div>
                             <div class="card-body">
+                                ${['rating', 'instructor_rating', 'assessor_rating'].includes(section.type) ? `
+                                <div style="margin-bottom: 20px; padding: 12px; background: #f0f4ff; border-radius: 6px; border-left: 4px solid #5b7cff;">
+                                    <label style="font-size: 13px; font-weight: 600; color: #333; display: block; margin-bottom: 10px;">
+                                        Customize Rating Labels (1-5 Scale):
+                                    </label>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                        <div>
+                                            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 4px;">Label 1 (Lowest):</label>
+                                            <input type="text" value="${escHtml((section.rating_labels && section.rating_labels[0]) || 'Strongly Disagree')}" 
+                                                   placeholder="e.g., Strongly Disagree"
+                                                   style="width: 100%; padding: 6px 8px; border: 1px solid #c7d7ff; border-radius: 4px; font-size: 12px;"
+                                                   onchange="updateRatingLabel('${section.id}', 0, this.value)">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 4px;">Label 2:</label>
+                                            <input type="text" value="${escHtml((section.rating_labels && section.rating_labels[1]) || 'Disagree')}" 
+                                                   placeholder="e.g., Disagree"
+                                                   style="width: 100%; padding: 6px 8px; border: 1px solid #c7d7ff; border-radius: 4px; font-size: 12px;"
+                                                   onchange="updateRatingLabel('${section.id}', 1, this.value)">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 4px;">Label 3 (Neutral/Middle):</label>
+                                            <input type="text" value="${escHtml((section.rating_labels && section.rating_labels[2]) || 'Neutral')}" 
+                                                   placeholder="e.g., Neutral"
+                                                   style="width: 100%; padding: 6px 8px; border: 1px solid #c7d7ff; border-radius: 4px; font-size: 12px;"
+                                                   onchange="updateRatingLabel('${section.id}', 2, this.value)">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 4px;">Label 4:</label>
+                                            <input type="text" value="${escHtml((section.rating_labels && section.rating_labels[3]) || 'Agree')}" 
+                                                   placeholder="e.g., Agree"
+                                                   style="width: 100%; padding: 6px 8px; border: 1px solid #c7d7ff; border-radius: 4px; font-size: 12px;"
+                                                   onchange="updateRatingLabel('${section.id}', 3, this.value)">
+                                        </div>
+                                        <div style="grid-column: 1 / -1;">
+                                            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 4px;">Label 5 (Highest):</label>
+                                            <input type="text" value="${escHtml((section.rating_labels && section.rating_labels[4]) || 'Strongly Agree')}" 
+                                                   placeholder="e.g., Strongly Agree"
+                                                   style="width: 100%; padding: 6px 8px; border: 1px solid #c7d7ff; border-radius: 4px; font-size: 12px;"
+                                                   onchange="updateRatingLabel('${section.id}', 4, this.value)">
+                                        </div>
+                                    </div>
+                                </div>
+                                ` : ''}
                                 <div class="question-editor">
                     `;
                     
@@ -1941,6 +1986,7 @@
                 id: sectionId,
                 title: '',
                 type: 'rating',
+                rating_labels: ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'],
                 questions: []
             });
             
@@ -1996,6 +2042,18 @@
                 }
             }
             renderFormEditor();
+        }
+
+        function updateRatingLabel(sectionId, labelIndex, labelText) {
+            for (const section of currentFormData.sections) {
+                if (section.id === sectionId) {
+                    if (!section.rating_labels) {
+                        section.rating_labels = ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'];
+                    }
+                    section.rating_labels[labelIndex] = labelText;
+                    break;
+                }
+            }
         }
 
         function deleteSection(sectionId) {
@@ -2267,7 +2325,13 @@
         function builderAddSection() {
             builderSectionCounter++;
             const defaultId = String.fromCharCode(64 + builderSectionCounter); 
-            newFormSections.push({ id: defaultId, title: '', type: 'rating', questions: [] });
+            newFormSections.push({ 
+                id: defaultId, 
+                title: '', 
+                type: 'rating', 
+                rating_labels: ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'],
+                questions: [] 
+            });
             builderRender();
         }
 
@@ -2300,6 +2364,13 @@
             if (secEl) {
                 secEl.querySelectorAll('.b-qid').forEach((el, i) => { el.value = val + (i + 1); });
             }
+        }
+
+        function builderUpdateRatingLabel(secIdx, labelIndex, labelText) {
+            if (!newFormSections[secIdx].rating_labels) {
+                newFormSections[secIdx].rating_labels = ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'];
+            }
+            newFormSections[secIdx].rating_labels[labelIndex] = labelText;
         }
 
         function builderRender() {
@@ -2335,6 +2406,7 @@
                                 <option value="assessor_rating" ${sec.type==='assessor_rating'?'selected':''}>&#128101; Assessor Rating</option>
                                 <option value="text_questions" ${sec.type==='text_questions'?'selected':''}>&#9998; Short Answer / Text</option>
                                 <option value="multiple_choice" ${sec.type==='multiple_choice'?'selected':''}>&#9745; Multiple Choice</option>
+                                <option value="course_date_selection" ${sec.type==='course_date_selection'?'selected':''}>&#128344; Course Date Selection</option>
                                 <option value="yes_no" ${sec.type==='yes_no'?'selected':''}>&#10003;&#10007; Yes / No</option>
                                 <option value="scale_slider" ${sec.type==='scale_slider'?'selected':''}>&#128200; Scale 1&ndash;10</option>
                             </select>
@@ -2342,6 +2414,50 @@
                         <button type="button" class="btn btn-danger btn-sm" onclick="builderRemoveSection(${idx})" style="margin-left:auto;">Remove</button>
                     </div>
                     <div style="padding:10px 14px;">
+                        ${['rating', 'instructor_rating', 'assessor_rating'].includes(sec.type) ? `
+                        <div style="margin-bottom: 15px; padding: 10px; background: #f0f4ff; border-radius: 6px; border-left: 4px solid #5b7cff;">
+                            <label style="font-size: 12px; font-weight: 600; color: #333; display: block; margin-bottom: 8px;">
+                                Customize Rating Labels (1-5 Scale):
+                            </label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                <div>
+                                    <label style="font-size: 10px; color: #666; display: block; margin-bottom: 3px;">Label 1 (Lowest):</label>
+                                    <input type="text" value="${bEsc((sec.rating_labels && sec.rating_labels[0]) || 'Strongly Disagree')}" 
+                                           placeholder="Strongly Disagree"
+                                           style="width: 100%; padding: 5px 6px; border: 1px solid #c7d7ff; border-radius: 4px; font-size: 11px;"
+                                           onchange="builderUpdateRatingLabel(${idx}, 0, this.value)">
+                                </div>
+                                <div>
+                                    <label style="font-size: 10px; color: #666; display: block; margin-bottom: 3px;">Label 2:</label>
+                                    <input type="text" value="${bEsc((sec.rating_labels && sec.rating_labels[1]) || 'Disagree')}" 
+                                           placeholder="Disagree"
+                                           style="width: 100%; padding: 5px 6px; border: 1px solid #c7d7ff; border-radius: 4px; font-size: 11px;"
+                                           onchange="builderUpdateRatingLabel(${idx}, 1, this.value)">
+                                </div>
+                                <div>
+                                    <label style="font-size: 10px; color: #666; display: block; margin-bottom: 3px;">Label 3 (Neutral):</label>
+                                    <input type="text" value="${bEsc((sec.rating_labels && sec.rating_labels[2]) || 'Neutral')}" 
+                                           placeholder="Neutral"
+                                           style="width: 100%; padding: 5px 6px; border: 1px solid #c7d7ff; border-radius: 4px; font-size: 11px;"
+                                           onchange="builderUpdateRatingLabel(${idx}, 2, this.value)">
+                                </div>
+                                <div>
+                                    <label style="font-size: 10px; color: #666; display: block; margin-bottom: 3px;">Label 4:</label>
+                                    <input type="text" value="${bEsc((sec.rating_labels && sec.rating_labels[3]) || 'Agree')}" 
+                                           placeholder="Agree"
+                                           style="width: 100%; padding: 5px 6px; border: 1px solid #c7d7ff; border-radius: 4px; font-size: 11px;"
+                                           onchange="builderUpdateRatingLabel(${idx}, 3, this.value)">
+                                </div>
+                                <div style="grid-column: 1 / -1;">
+                                    <label style="font-size: 10px; color: #666; display: block; margin-bottom: 3px;">Label 5 (Highest):</label>
+                                    <input type="text" value="${bEsc((sec.rating_labels && sec.rating_labels[4]) || 'Strongly Agree')}" 
+                                           placeholder="Strongly Agree"
+                                           style="width: 100%; padding: 5px 6px; border: 1px solid #c7d7ff; border-radius: 4px; font-size: 11px;"
+                                           onchange="builderUpdateRatingLabel(${idx}, 4, this.value)">
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
 `;
                 if (sec.questions.length === 0) {
                     html += `<p style="color:#aaa;font-size:12px;margin:4px 0 8px;">No questions yet.</p>`;

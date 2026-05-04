@@ -1245,3 +1245,70 @@ pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL S
 2026-05-04 15:15:00,171 - 127.0.0.1 - - [04/May/2026 15:15:00] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
 2026-05-04 15:15:00,918 - 127.0.0.1 - - [04/May/2026 15:15:00] "GET /api/forms/trainer_evaluation_form_zh HTTP/1.1" 200 -
 2026-05-04 15:15:01,239 - 127.0.0.1 - - [04/May/2026 15:15:01] "GET /api/forms/trainer_evaluation_form_zh/table-status HTTP/1.1" 200 -
+2026-05-04 15:46:58,071 - ================================================================================
+2026-05-04 15:46:58,072 - Application started - Logging enabled
+2026-05-04 15:46:58,072 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-05-04 15:46:58,072 - ================================================================================
+2026-05-04 15:46:58,164 - [FBS_Forms sync] 3/3 forms synced
+2026-05-04 15:46:58,180 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-05-04 15:46:58,193 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-05-04 15:46:58,208 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-05-04 15:46:58,226 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.64.23.74:5000
+2026-05-04 15:46:58,226 - [33mPress CTRL+C to quit[0m
+2026-05-04 15:46:58,228 -  * Restarting with stat
+2026-05-04 15:46:58,411 - ================================================================================
+2026-05-04 15:46:58,411 - Application started - Logging enabled
+2026-05-04 15:46:58,411 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-05-04 15:46:58,411 - ================================================================================
+2026-05-04 15:46:58,507 - [FBS_Forms sync] 3/3 forms synced
+2026-05-04 15:46:58,520 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-05-04 15:46:58,533 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-05-04 15:46:58,548 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-05-04 15:46:58,560 -  * Debugger is active!
+2026-05-04 15:46:58,563 -  * Debugger PIN: 126-439-623
+2026-05-04 15:47:59,455 - 127.0.0.1 - - [04/May/2026 15:47:59] "[32mGET /admin HTTP/1.1[0m" 302 -
+2026-05-04 15:47:59,720 - 127.0.0.1 - - [04/May/2026 15:47:59] "GET /login HTTP/1.1" 200 -
+2026-05-04 15:47:59,762 - 127.0.0.1 - - [04/May/2026 15:47:59] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-05-04 15:48:08,291 - 127.0.0.1 - - [04/May/2026 15:48:08] "[31m[1mPOST /api/admin-login HTTP/1.1[0m" 401 -
+2026-05-04 15:49:20,112 - 127.0.0.1 - - [04/May/2026 15:49:20] "POST /api/admin-login HTTP/1.1" 200 -
+2026-05-04 15:49:20,370 - 127.0.0.1 - - [04/May/2026 15:49:20] "GET /admin HTTP/1.1" 200 -
+2026-05-04 15:49:20,439 - 127.0.0.1 - - [04/May/2026 15:49:20] "GET /static/style.css HTTP/1.1" 200 -
+2026-05-04 15:49:20,685 - 127.0.0.1 - - [04/May/2026 15:49:20] "GET /static/logo.png HTTP/1.1" 200 -
+2026-05-04 15:49:20,686 - 127.0.0.1 - - [04/May/2026 15:49:20] "GET /api/alerts/summary HTTP/1.1" 200 -
+2026-05-04 15:49:20,694 - 127.0.0.1 - - [04/May/2026 15:49:20] "GET /api/scan/qrcode HTTP/1.1" 200 -
+2026-05-04 15:49:24,588 - 127.0.0.1 - - [04/May/2026 15:49:24] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-05-04 15:49:24,908 - 127.0.0.1 - - [04/May/2026 15:49:24] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-05-04 15:51:57,785 - [DB] Creating new table [trainer_evaluation_form_response]
+2026-05-04 15:51:57,785 - [DB] Creating new table [trainer_evaluation_form_response]
+2026-05-04 15:51:57,791 - [DB] Error creating/updating table trainer_evaluation_form_response: ('42S01', "[42S01] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]There is already an object named 'PK_trainer_evaluation_form_response' in the database. (2714) (SQLExecDirectW); [42S01] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Could not create constraint or index. See previous errors. (1750)")
+2026-05-04 15:51:57,791 - [DB] Error creating/updating table trainer_evaluation_form_response: ('42S01', "[42S01] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]There is already an object named 'PK_trainer_evaluation_form_response' in the database. (2714) (SQLExecDirectW); [42S01] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Could not create constraint or index. See previous errors. (1750)")
+2026-05-04 15:51:57,792 - 127.0.0.1 - - [04/May/2026 15:51:57] "[35m[1mPUT /api/forms/form1_en HTTP/1.1[0m" 500 -
+2026-05-04 15:52:17,187 - 127.0.0.1 - - [04/May/2026 15:52:17] "GET /admin HTTP/1.1" 200 -
+2026-05-04 15:52:17,496 - 127.0.0.1 - - [04/May/2026 15:52:17] "[36mGET /static/logo.png HTTP/1.1[0m" 304 -
+2026-05-04 15:52:17,496 - 127.0.0.1 - - [04/May/2026 15:52:17] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-05-04 15:52:17,500 - 127.0.0.1 - - [04/May/2026 15:52:17] "GET /api/scan/qrcode HTTP/1.1" 200 -
+2026-05-04 15:52:17,762 - 127.0.0.1 - - [04/May/2026 15:52:17] "GET /api/alerts/summary HTTP/1.1" 200 -
+2026-05-04 15:52:23,644 - 127.0.0.1 - - [04/May/2026 15:52:23] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-05-04 15:52:23,970 - 127.0.0.1 - - [04/May/2026 15:52:23] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-05-04 15:54:59,885 - 127.0.0.1 - - [04/May/2026 15:54:59] "GET /api/forms/trainer_evaluation_form_zh HTTP/1.1" 200 -
+2026-05-04 15:55:00,122 - 127.0.0.1 - - [04/May/2026 15:55:00] "GET /api/forms/trainer_evaluation_form_zh/table-status HTTP/1.1" 200 -
+2026-05-04 15:55:02,134 - 127.0.0.1 - - [04/May/2026 15:55:02] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-05-04 15:55:02,459 - 127.0.0.1 - - [04/May/2026 15:55:02] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-05-04 15:55:03,565 - 127.0.0.1 - - [04/May/2026 15:55:03] "GET /api/forms/trainer_evaluation_form_zh HTTP/1.1" 200 -
+2026-05-04 15:55:03,896 - 127.0.0.1 - - [04/May/2026 15:55:03] "GET /api/forms/trainer_evaluation_form_zh/table-status HTTP/1.1" 200 -
+2026-05-04 15:55:04,988 - 127.0.0.1 - - [04/May/2026 15:55:04] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-05-04 15:55:05,310 - 127.0.0.1 - - [04/May/2026 15:55:05] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-05-04 15:55:09,492 - 127.0.0.1 - - [04/May/2026 15:55:09] "GET /api/forms/trainer_evaluation_form_zh HTTP/1.1" 200 -
+2026-05-04 15:55:09,826 - 127.0.0.1 - - [04/May/2026 15:55:09] "GET /api/forms/trainer_evaluation_form_zh/table-status HTTP/1.1" 200 -
+2026-05-04 15:55:12,323 - 127.0.0.1 - - [04/May/2026 15:55:12] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-05-04 15:55:12,645 - 127.0.0.1 - - [04/May/2026 15:55:12] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-05-04 16:03:23,773 - 127.0.0.1 - - [04/May/2026 16:03:23] "GET /admin HTTP/1.1" 200 -
+2026-05-04 16:03:23,934 - 127.0.0.1 - - [04/May/2026 16:03:23] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-05-04 16:03:24,103 - 127.0.0.1 - - [04/May/2026 16:03:24] "GET /api/scan/qrcode HTTP/1.1" 200 -
+2026-05-04 16:03:24,104 - 127.0.0.1 - - [04/May/2026 16:03:24] "[36mGET /static/logo.png HTTP/1.1[0m" 304 -
+2026-05-04 16:03:24,105 - 127.0.0.1 - - [04/May/2026 16:03:24] "GET /api/alerts/summary HTTP/1.1" 200 -
+2026-05-04 16:04:03,976 - 127.0.0.1 - - [04/May/2026 16:04:03] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-05-04 16:04:04,312 - 127.0.0.1 - - [04/May/2026 16:04:04] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
