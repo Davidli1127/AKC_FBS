@@ -1327,3 +1327,86 @@ pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 18 for SQL S
 2026-05-04 16:15:40,609 - 127.0.0.1 - - [04/May/2026 16:15:40] "GET /api/courses HTTP/1.1" 200 -
 2026-05-04 16:15:41,189 - 127.0.0.1 - - [04/May/2026 16:15:41] "GET /api/forms/form1_en HTTP/1.1" 200 -
 2026-05-04 16:15:41,509 - 127.0.0.1 - - [04/May/2026 16:15:41] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-05-05 09:51:21,796 - ================================================================================
+2026-05-05 09:51:21,796 - Application started - Logging enabled
+2026-05-05 09:51:21,796 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-05-05 09:51:21,796 - ================================================================================
+2026-05-05 09:51:21,966 - [FBS_Forms sync] 3/3 forms synced
+2026-05-05 09:51:21,996 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-05-05 09:51:22,048 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-05-05 09:51:22,085 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-05-05 09:51:22,124 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.64.23.74:5000
+2026-05-05 09:51:22,124 - [33mPress CTRL+C to quit[0m
+2026-05-05 09:51:22,127 -  * Restarting with stat
+2026-05-05 09:51:22,325 - ================================================================================
+2026-05-05 09:51:22,325 - Application started - Logging enabled
+2026-05-05 09:51:22,325 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-05-05 09:51:22,325 - ================================================================================
+2026-05-05 09:51:22,419 - [FBS_Forms sync] 3/3 forms synced
+2026-05-05 09:51:22,432 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-05-05 09:51:22,444 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-05-05 09:51:22,457 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-05-05 09:51:22,470 -  * Debugger is active!
+2026-05-05 09:51:22,473 -  * Debugger PIN: 126-439-623
+2026-05-05 09:51:50,061 - 127.0.0.1 - - [05/May/2026 09:51:50] "[32mGET /admin HTTP/1.1[0m" 302 -
+2026-05-05 09:51:50,325 - 127.0.0.1 - - [05/May/2026 09:51:50] "GET /login HTTP/1.1" 200 -
+2026-05-05 09:51:50,385 - 127.0.0.1 - - [05/May/2026 09:51:50] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-05-05 09:52:07,179 - 127.0.0.1 - - [05/May/2026 09:52:07] "POST /api/admin-login HTTP/1.1" 200 -
+2026-05-05 09:52:07,683 - 127.0.0.1 - - [05/May/2026 09:52:07] "GET /admin HTTP/1.1" 200 -
+2026-05-05 09:52:07,714 - 127.0.0.1 - - [05/May/2026 09:52:07] "GET /static/style.css HTTP/1.1" 200 -
+2026-05-05 09:52:07,998 - 127.0.0.1 - - [05/May/2026 09:52:07] "GET /static/logo.png HTTP/1.1" 200 -
+2026-05-05 09:52:08,011 - 127.0.0.1 - - [05/May/2026 09:52:08] "GET /api/alerts/summary HTTP/1.1" 200 -
+2026-05-05 09:52:08,079 - 127.0.0.1 - - [05/May/2026 09:52:08] "GET /api/scan/qrcode HTTP/1.1" 200 -
+2026-05-05 09:52:13,758 - 127.0.0.1 - - [05/May/2026 09:52:13] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-05-05 09:52:14,019 - 127.0.0.1 - - [05/May/2026 09:52:14] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-05-05 09:55:45,551 - 127.0.0.1 - - [05/May/2026 09:55:45] "POST /api/forms HTTP/1.1" 200 -
+2026-05-05 09:55:45,771 - 127.0.0.1 - - [05/May/2026 09:55:45] "GET /api/forms/test_basic_ratings_en HTTP/1.1" 200 -
+2026-05-05 09:55:45,882 - 127.0.0.1 - - [05/May/2026 09:55:45] "GET /api/forms/test_basic_ratings_en/table-status HTTP/1.1" 200 -
+2026-05-05 10:03:29,382 - 127.0.0.1 - - [05/May/2026 10:03:29] "DELETE /api/forms/test_basic_ratings_en HTTP/1.1" 200 -
+2026-05-05 10:03:29,585 - 127.0.0.1 - - [05/May/2026 10:03:29] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-05-05 10:03:37,768 - 127.0.0.1 - - [05/May/2026 10:03:37] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-05-05 10:04:11,056 - ================================================================================
+2026-05-05 10:04:11,056 - Application started - Logging enabled
+2026-05-05 10:04:11,057 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-05-05 10:04:11,057 - ================================================================================
+2026-05-05 10:04:38,597 -  * Detected change in 'C:\\Users\\Li.Zhongyuan\\Desktop\\AKC_FBS\\check_test_forms.py', reloading
+2026-05-05 10:04:38,627 -  * Restarting with stat
+2026-05-05 10:04:38,844 - ================================================================================
+2026-05-05 10:04:38,844 - Application started - Logging enabled
+2026-05-05 10:04:38,844 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-05-05 10:04:38,844 - ================================================================================
+2026-05-05 10:04:38,932 - [FBS_Forms sync] 3/3 forms synced
+2026-05-05 10:04:38,944 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-05-05 10:04:38,959 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-05-05 10:04:38,972 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-05-05 10:04:38,985 -  * Debugger is active!
+2026-05-05 10:04:38,987 -  * Debugger PIN: 126-439-623
+2026-05-05 10:05:29,202 -  * Detected change in 'C:\\Users\\Li.Zhongyuan\\Desktop\\AKC_FBS\\check_test_cleanup.py', reloading
+2026-05-05 10:05:29,237 -  * Restarting with stat
+2026-05-05 10:05:29,450 - ================================================================================
+2026-05-05 10:05:29,450 - Application started - Logging enabled
+2026-05-05 10:05:29,450 - Log file: C:\Users\Li.Zhongyuan\Desktop\AKC_FBS\logs\session_debug.log
+2026-05-05 10:05:29,450 - ================================================================================
+2026-05-05 10:05:29,655 - [FBS_Forms sync] 3/3 forms synced
+2026-05-05 10:05:29,668 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_en' already exists (reused)
+2026-05-05 10:05:29,679 -   [ASSESSOR EVALUATION FORM]: Table 'assessor_evaluation_form_response_en' already exists (reused)
+2026-05-05 10:05:29,690 -   [TRAINER EVALUATION FORM]: Table 'trainer_evaluation_form_response_zh' already exists (reused)
+2026-05-05 10:05:29,700 -  * Debugger is active!
+2026-05-05 10:05:29,703 -  * Debugger PIN: 126-439-623
+2026-05-05 10:08:44,996 - 127.0.0.1 - - [05/May/2026 10:08:44] "GET /admin HTTP/1.1" 200 -
+2026-05-05 10:08:45,208 - 127.0.0.1 - - [05/May/2026 10:08:45] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-05-05 10:08:45,314 - 127.0.0.1 - - [05/May/2026 10:08:45] "[36mGET /static/logo.png HTTP/1.1[0m" 304 -
+2026-05-05 10:08:45,315 - 127.0.0.1 - - [05/May/2026 10:08:45] "GET /api/alerts/summary HTTP/1.1" 200 -
+2026-05-05 10:08:45,326 - 127.0.0.1 - - [05/May/2026 10:08:45] "GET /api/scan/qrcode HTTP/1.1" 200 -
+2026-05-05 10:08:49,340 - 127.0.0.1 - - [05/May/2026 10:08:49] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-05-05 10:08:49,667 - 127.0.0.1 - - [05/May/2026 10:08:49] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
+2026-05-05 10:10:31,692 - 127.0.0.1 - - [05/May/2026 10:10:31] "GET /admin HTTP/1.1" 200 -
+2026-05-05 10:10:31,926 - 127.0.0.1 - - [05/May/2026 10:10:31] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-05-05 10:10:32,005 - 127.0.0.1 - - [05/May/2026 10:10:32] "[36mGET /static/logo.png HTTP/1.1[0m" 304 -
+2026-05-05 10:10:32,006 - 127.0.0.1 - - [05/May/2026 10:10:32] "GET /api/scan/qrcode HTTP/1.1" 200 -
+2026-05-05 10:10:32,006 - 127.0.0.1 - - [05/May/2026 10:10:32] "GET /api/alerts/summary HTTP/1.1" 200 -
+2026-05-05 10:10:37,057 - 127.0.0.1 - - [05/May/2026 10:10:37] "GET /api/forms/form1_en HTTP/1.1" 200 -
+2026-05-05 10:10:37,375 - 127.0.0.1 - - [05/May/2026 10:10:37] "GET /api/forms/form1_en/table-status HTTP/1.1" 200 -
